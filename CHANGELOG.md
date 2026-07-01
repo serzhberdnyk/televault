@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.17
+
+### Improved
+
+* global sidebar search now handles fast typing more reliably
+* stale search responses no longer overwrite newer results
+* global search loading and error states were made more stable
+
 ## 2.6.16
 
 ### Improved

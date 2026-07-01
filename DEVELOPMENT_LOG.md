@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.17 - global search stability polish
+
+Changed:
+- kept the existing 220ms global message search debounce and reused it for the sidebar search flow
+- added active `/api/search` cancellation with `AbortController` when the sidebar query changes or search is cleared
+- tightened stale response protection so global message results are applied only when the request token and current sidebar query still match
+- made the global message loading state compact with "ищу..." and kept "ничего не найдено" hidden until the current search finishes
+- changed the global message search error state to the compact "поиск временно недоступен" message
+- kept chat title search, global result click-to-open, jump highlight, in-chat search, media tabs, audio-only rendering and sticker/file separation unchanged
+- kept backend parser/storage and `/media` unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.17
+- confirm /api/status returns 2.6.17
+- type quickly in sidebar search and confirm stale message results do not overwrite the current query
+- confirm "ищу..." appears only for the active sidebar search and "ничего не найдено" waits until the active search finishes
+- global search for "лол" and confirm message cards still show highlighted snippets
+- click a global result and confirm the original chat opens, the full conversation is shown, the message is centered and briefly highlighted
+- confirm in-chat search still filters messages and keeps click-to-jump behavior
+- confirm photo, video, audio, sticker and file media tabs still render normally
+- confirm files and stickers remain separated as in 2.6.12
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.16 - global search result polish
 
 Changed:

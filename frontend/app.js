@@ -40,6 +40,7 @@ const state = {
 let jumpHighlightTimer = null;
 let pendingMessagesLoad = null;
 let pendingGlobalMessageSearch = null;
+let activeGlobalMessageSearchController = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -138,9 +139,9 @@ const text = {
   chatSearchNothingFound: 'ничего не найдено',
   chatSearchNothingFoundBody: 'попробуй изменить запрос',
   globalSearchTitle: 'Сообщения',
-  globalSearchLoading: 'ищу сообщения...',
-  globalSearchFailed: 'поиск не удался',
-  globalSearchFailedBody: 'попробуй повторить запрос',
+  globalSearchLoading: 'ищу...',
+  globalSearchFailed: 'поиск временно недоступен',
+  globalSearchFailedBody: '',
   globalSearchLimitHint: 'показаны первые {limit} результатов, уточни запрос',
   chatMessagesNotFound: 'сообщений не найдено',
   chatMessagesNotFoundBody: 'попробуй другой запрос',
@@ -446,7 +447,7 @@ function renderChats() {
     appendSidebarSearchState(box, text.globalSearchLoading, '');
   }
   if (hasSearch && messageSearchError && !messageResults.length) {
-    appendSidebarSearchState(box, text.globalSearchFailed, messageSearchError || text.globalSearchFailedBody);
+    appendSidebarSearchState(box, messageSearchError, text.globalSearchFailedBody);
   }
   if (hasSearch && messageResults.length) {
     appendSidebarSectionTitle(box, text.globalSearchTitle);
@@ -1005,6 +1006,8 @@ function clearMessageFiltersForJump() {
 }
 
 function resetGlobalMessageSearch() {
+  pendingGlobalMessageSearch?.cancel?.();
+  abortActiveGlobalMessageSearch();
   state.globalSearchResults = [];
   state.globalSearchLoading = false;
   state.globalSearchError = '';
@@ -1014,31 +1017,66 @@ function resetGlobalMessageSearch() {
   state.globalSearchRequestId += 1;
 }
 
-function handleSidebarSearchInput(value) {
-  state.chatSearchQuery = value;
-  pendingGlobalMessageSearch?.cancel?.();
-  resetGlobalMessageSearch();
-  renderChats();
-  if (state.chatSearchQuery.trim() && state.vaultLoaded) {
-    pendingGlobalMessageSearch?.();
-  }
+function abortActiveGlobalMessageSearch() {
+  activeGlobalMessageSearchController?.abort?.();
+  activeGlobalMessageSearchController = null;
 }
 
-async function loadGlobalMessageSearch() {
+function isCurrentGlobalMessageSearch(query, requestId) {
+  return Boolean(
+    query
+    && state.vaultLoaded
+    && requestId === state.globalSearchRequestId
+    && state.globalSearchQuery === query
+    && state.chatSearchQuery.trim() === query
+  );
+}
+
+function startGlobalMessageSearchWait(query) {
+  const requestId = ++state.globalSearchRequestId;
+  state.globalSearchResults = [];
+  state.globalSearchLoading = true;
+  state.globalSearchError = '';
+  state.globalSearchQuery = query;
+  state.globalSearchResultLimit = state.globalSearchLimit;
+  state.globalSearchLimitReached = false;
+  return requestId;
+}
+
+function handleSidebarSearchInput(value) {
+  state.chatSearchQuery = value;
+  resetGlobalMessageSearch();
   const query = state.chatSearchQuery.trim();
+  if (!query || !state.vaultLoaded) {
+    renderChats();
+    return;
+  }
+  const requestId = startGlobalMessageSearchWait(query);
+  renderChats();
+  pendingGlobalMessageSearch?.(query, requestId);
+}
+
+async function loadGlobalMessageSearch(query, requestId) {
+  query = String(query || state.chatSearchQuery.trim()).trim();
   if (!query || !state.vaultLoaded) {
     resetGlobalMessageSearch();
     renderChats();
     return;
   }
-  const requestId = ++state.globalSearchRequestId;
+  if (!isCurrentGlobalMessageSearch(query, requestId)) return;
+  abortActiveGlobalMessageSearch();
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  activeGlobalMessageSearchController = controller;
   state.globalSearchLoading = true;
   state.globalSearchError = '';
   state.globalSearchQuery = query;
   renderChats();
   try {
-    const data = await api(`/api/search?q=${encodeURIComponent(query)}&limit=${state.globalSearchLimit}`);
-    if (requestId !== state.globalSearchRequestId) return;
+    const data = await api(
+      `/api/search?q=${encodeURIComponent(query)}&limit=${state.globalSearchLimit}`,
+      controller ? { signal: controller.signal } : {}
+    );
+    if (!isCurrentGlobalMessageSearch(query, requestId) || controller?.signal?.aborted) return;
     state.globalSearchResults = Array.isArray(data.results) ? data.results : [];
     const responseLimit = Number(data.limit || state.globalSearchLimit);
     state.globalSearchResultLimit = Number.isFinite(responseLimit) && responseLimit > 0
@@ -1046,19 +1084,21 @@ async function loadGlobalMessageSearch() {
       : state.globalSearchLimit;
     state.globalSearchLimitReached = state.globalSearchResults.length >= state.globalSearchResultLimit;
   } catch (e) {
-    if (requestId !== state.globalSearchRequestId) return;
+    if (!isCurrentGlobalMessageSearch(query, requestId) || controller?.signal?.aborted || e?.name === 'AbortError') return;
     state.globalSearchResults = [];
-    state.globalSearchError = cleanErrorMessage(e);
+    state.globalSearchError = text.globalSearchFailed;
     state.globalSearchLimitReached = false;
   } finally {
-    if (requestId !== state.globalSearchRequestId) return;
+    if (activeGlobalMessageSearchController === controller) {
+      activeGlobalMessageSearchController = null;
+    }
+    if (!isCurrentGlobalMessageSearch(query, requestId) || controller?.signal?.aborted) return;
     state.globalSearchLoading = false;
     renderChats();
   }
 }
 
 function clearSidebarSearch() {
-  pendingGlobalMessageSearch?.cancel?.();
   state.chatSearchQuery = '';
   const input = $('chatSearch');
   if (input) input.value = '';
