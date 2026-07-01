@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.12 - sticker media tab cleanup
+
+Changed:
+- added a dedicated `sticker` media tab next to Audio and Files
+- reused the existing `isSticker(msg)` detection for sticker tab filtering
+- removed all sticker media from the Files tab by excluding `isSticker(msg)` there
+- kept stickers visible in the All tab and preserved the 2.6.11 sticker-first layout
+- left photo, video, audio and regular file rendering paths unchanged
+- kept `.tgs` stickers as lightweight non-animated sticker fallback previews without adding Lottie or new dependencies
+- left backend parsing, storage format, `/media`, Range handling, URL encoding and security checks unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.12
+- confirm /api/status returns 2.6.12
+- confirm the media tabs include "стикеры"
+- open a chat with `.tgs`, `.webp` or `.webm` stickers and confirm they appear in the Stickers tab
+- confirm sticker media no longer appears in the Files tab
+- confirm stickers remain visible in the All tab
+- confirm the Files tab still shows ordinary files and document-like attachments
+- confirm photo, video and audio tabs still render normally
+- confirm the 2.6.11 sticker-first fallback does not show `AnimatedSticker.tgs` as primary text
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.11 - media chrome cleanup
 
 Changed:

@@ -150,6 +150,7 @@ const text = {
     photo: 'фото',
     video: 'видео',
     audio: 'аудио',
+    sticker: 'стикеры',
     file: 'файлы',
   },
   mediaEmptyStates: {
@@ -164,6 +165,10 @@ const text = {
     audio: {
       title: 'аудио не найдено',
       body: 'в этой переписке нет аудио',
+    },
+    sticker: {
+      title: 'стикеры не найдены',
+      body: 'в этой переписке нет стикеров',
     },
     file: {
       title: 'файлы не найдены',
@@ -915,7 +920,8 @@ function matchesMediaMode(msg, mode) {
   if (mode === 'photo') return isPhoto(msg) || isStickerImage(msg);
   if (mode === 'video') return isVideo(msg) || isStickerVideo(msg);
   if (mode === 'audio') return isAudio(msg);
-  if (mode === 'file') return !isPhoto(msg) && !isVideo(msg) && !isAudio(msg) && !isStickerImage(msg) && !isStickerVideo(msg);
+  if (mode === 'sticker') return isSticker(msg);
+  if (mode === 'file') return !isPhoto(msg) && !isVideo(msg) && !isAudio(msg) && !isSticker(msg);
   return true;
 }
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.12
+
+### Improved
+
+* stickers now have their own media tab instead of being mixed into regular files
+* the Files tab now focuses on document-like attachments
+* sticker-first presentation from 2.6.11 was preserved
+
 ## 2.6.11
 
 ### Improved

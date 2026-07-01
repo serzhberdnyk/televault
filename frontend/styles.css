@@ -650,6 +650,7 @@ code {
 
 .messages.media-mode-video,
 .messages.media-mode-audio,
+.messages.media-mode-sticker,
 .messages.media-mode-file {
   grid-template-columns: minmax(0, 760px);
 }
