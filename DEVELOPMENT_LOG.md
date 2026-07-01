@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.2 - channel photo service message rendering
+
+Changed:
+- added targeted parser support for Telegram photo update service events
+- confirmed the NOT BAND! export uses `action: edit_group_photo` for the 2025-01-09 channel photo update event
+- preserved the real `service_action` while rendering `service_text: Фотография канала обновлена` when `actor_id` identifies a channel
+- reused existing photo/media URL fields so available service photos can render through the existing `/media` path
+- rendered photo update service events as compact centered notices with an optional circular preview
+- kept photo update service events out of photo/video/audio/file media cards because they remain system events
+- kept `create_channel`, `pin_message`, regular media rendering, `/media`, Range handling, URL encoding, security checks and storage format unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.2
+- confirm /api/status returns 2.6.2
+- confirm startup vault autoloads when the saved export path is available
+- open NOT BAND! around 9 January 2025 and confirm the photo update event shows "Фотография канала обновлена" instead of generic "системное событие Telegram"
+- confirm the event shows a circular preview when `photos/photo_8@09-01-2025_10-16-15.jpg` is available
+- confirm a missing service photo leaves the text notice visible without a broken image
+- confirm create_channel and pinned service notices still render correctly
+- confirm date separators, chat search, media tabs, regular messages, incoming/outgoing alignment, stickers, photo lightbox, video playback, audio cards, files and single active playback still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+
 ## 2.6.1 - empty Telegram service messages fix
 
 Changed:

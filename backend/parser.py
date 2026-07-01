@@ -12,6 +12,7 @@ import mimetypes
 SERVICE_PREVIEW_LIMIT = 76
 CREATE_CHANNEL_ACTIONS = {"create_channel"}
 CREATE_CHAT_ACTIONS = {"create_chat", "create_group"}
+PHOTO_UPDATE_ACTIONS = {"edit_channel_photo", "edit_chat_photo", "edit_group_photo", "update_photo"}
 GENERIC_SERVICE_TEXT = "системное событие Telegram"
 
 
@@ -272,6 +273,8 @@ def normalize_service_kind(action: str) -> str:
         return "create_channel"
     if normalized in CREATE_CHAT_ACTIONS:
         return "create_chat"
+    if normalized in PHOTO_UPDATE_ACTIONS:
+        return normalized
     return normalized or "generic_service"
 
 
@@ -285,7 +288,18 @@ def service_notice_text(message: dict[str, Any], service_kind: str) -> str:
         return f"{actor} создал(а) канал" if actor else "канал создан"
     if service_kind == "create_chat":
         return f"{actor} создал(а) чат" if actor else "чат создан"
+    if service_kind in PHOTO_UPDATE_ACTIONS:
+        return photo_update_service_text(message, service_kind)
     return existing_text or GENERIC_SERVICE_TEXT
+
+
+def photo_update_service_text(message: dict[str, Any], service_kind: str) -> str:
+    actor_id = compact_text(message.get("actor_id", "")).lower()
+    if service_kind == "edit_channel_photo" or actor_id.startswith("channel"):
+        return "Фотография канала обновлена"
+    if service_kind in {"edit_chat_photo", "edit_group_photo"}:
+        return "Фотография чата обновлена"
+    return "Фотография обновлена"
 
 
 def summarize_chat(json_path: Path, chat_id: str) -> ChatSummary:

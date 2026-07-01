@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.2
+
+### Improved
+
+* Telegram channel/chat photo update service events now render as clear system notices
+* channel photo updates can show a circular preview when the exported image is available
+* generic service fallbacks are used less often for known Telegram events
+
 ## 2.6.1
 
 ### Fixed

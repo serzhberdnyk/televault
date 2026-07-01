@@ -1015,6 +1015,13 @@ function renderDateSeparator(dayKey) {
   `;
 }
 
+const photoUpdateServiceActions = new Set([
+  'edit_channel_photo',
+  'edit_chat_photo',
+  'edit_group_photo',
+  'update_photo',
+]);
+
 function isServiceMessage(msg) {
   return msg?.message_kind === 'service' || msg?.type === 'service';
 }
@@ -1025,6 +1032,10 @@ function serviceAction(msg) {
 
 function isPinnedServiceMessage(msg) {
   return isServiceMessage(msg) && serviceAction(msg) === 'pin_message';
+}
+
+function isPhotoUpdateServiceMessage(msg) {
+  return isServiceMessage(msg) && photoUpdateServiceActions.has(serviceAction(msg));
 }
 
 function serviceActor(msg) {
@@ -1061,6 +1072,12 @@ function serviceNoticeLabel(msg) {
   const action = serviceAction(msg);
   if (action === 'create_channel') return actor ? `${actor} создал(а) канал` : 'канал создан';
   if (action === 'create_chat' || action === 'create_group') return actor ? `${actor} создал(а) чат` : 'чат создан';
+  if (isPhotoUpdateServiceMessage(msg)) {
+    const actorId = String(msg?.actor_id || '').toLowerCase();
+    if (action === 'edit_channel_photo' || actorId.startsWith('channel')) return 'Фотография канала обновлена';
+    if (action === 'edit_chat_photo' || action === 'edit_group_photo') return 'Фотография чата обновлена';
+    return 'Фотография обновлена';
+  }
 
   const body = senderName(msg?.text || '');
   return body || text.genericService;
@@ -1081,13 +1098,27 @@ function renderPinnedServiceMessage(msg) {
 function renderServiceMessage(msg) {
   const time = messageTime(msg);
   const label = serviceNoticeLabel(msg);
+  const photoUpdate = isPhotoUpdateServiceMessage(msg);
+  const noticeClasses = ['service-notice', photoUpdate ? 'service-notice--photo' : ''].filter(Boolean).join(' ');
+  const photoPreview = photoUpdate ? renderServicePhotoPreview(msg, label) : '';
   return `
     <article class="message message--service" aria-label="${escapeAttr(label)}">
-      <div class="service-notice">
+      <div class="${noticeClasses}">
         <span class="service-notice__text">${escapeHtml(label)}</span>
+        ${photoPreview}
         ${time ? `<span class="service-notice__time">${escapeHtml(time)}</span>` : ''}
       </div>
     </article>
+  `;
+}
+
+function renderServicePhotoPreview(msg, label) {
+  const previewUrl = getPhotoPreviewUrl(msg);
+  if (!previewUrl) return '';
+  return `
+    <span class="service-photo-preview" data-media-container>
+      <img class="service-photo-image" src="${escapeAttr(previewUrl)}" alt="${escapeAttr(label)}" loading="lazy" data-media-element />
+    </span>
   `;
 }
 
