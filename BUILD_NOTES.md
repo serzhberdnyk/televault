@@ -1,6 +1,8 @@
 # Build Notes
 
-TeleVault 2.6.0 не собирает exe. Этот файл фиксирует подготовительные заметки для будущего Windows release.
+TeleVault 2.6.4 не собирает exe. Этот файл фиксирует подготовительные заметки для будущего Windows release.
+
+Подробный assessment текущего runtime, файлов для будущей сборки, рисков и packaging candidates находится в [BUILD_ASSESSMENT.md](BUILD_ASSESSMENT.md).
 
 ## Цель будущего этапа
 

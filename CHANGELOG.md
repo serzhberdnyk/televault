@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.6.4
+
+### Added
+
+* added a build environment assessment for future Windows exe packaging
+* documented packaging candidates, required files and release risks
+
+### Improved
+
+* clarified the next steps toward a Windows release without changing app behavior
+
 ## 2.6.3
 
 ### Improved

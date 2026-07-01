@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.4 - Windows build environment assessment
+
+Changed:
+- added BUILD_ASSESSMENT.md as the focused assessment for future Windows exe packaging
+- documented the current `run_windows.bat` launch path, local server, default browser UI, folder picker, startup vault settings and frontend static files
+- documented that the project currently has no bundled Python runtime, `requirements.txt` or `package.json`
+- documented the current Python imports and that the runtime uses the Python standard library plus local backend modules
+- documented files to include and exclude from a future build
+- documented PyInstaller, Nuitka and Python embeddable runtime candidates with risks and checks
+- added the 2.7.0 first Windows exe prototype as the next build step
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+- kept app startup behavior, port logic, folder picker, `/media`, parser, storage format and frontend rendering unchanged
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.4
+- confirm /api/status returns 2.6.4
+- confirm startup vault autoloads when the saved export path is available
+- confirm the sidebar shows the conversation list and conversation search works
+- confirm a chat opens by click
+- confirm create_channel, photo update and pinned service notices still render correctly
+- confirm date separators, photo lightbox, video poster/duration/playback, audio cards, stickers, files/media tabs and single active media playback still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.3 - sidebar controls cleanup
 
 Changed:
