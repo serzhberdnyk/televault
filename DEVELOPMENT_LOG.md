@@ -38,6 +38,24 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.4 - bundled runtime import path fix
+
+Changed:
+- added an explicit project root insertion to `sys.path` before importing `backend.library`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.7.4
+- kept run_windows.bat runtime selection, bundled Python `_pth`, backend logic, frontend app logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `python -m py_compile app.py backend/parser.py backend/library.py`
+- run `python -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` using `runtime\python\python.exe` and confirm the UI shows v2.7.4
+- confirm `/api/status` returns 2.7.4
+- run `build_portable.bat` and confirm `dist/TeleVault-v2.7.4/` is created
+- confirm portable `dist\TeleVault-v2.7.4\run_windows.bat` launches through bundled runtime
+- run `git status --short` after builder and confirm ignored `dist/` output is not listed
+- run `git diff --check`
+
 ## 2.7.3 - bundled python runtime support
 
 Changed:

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.4
+
+### Fixed
+
+* bundled Python runtime startup now resolves TeleVault project modules correctly
+* app startup no longer fails with ModuleNotFoundError for the backend package when using runtime/python/python.exe
+
 ## 2.7.3
 
 ### Improved
