@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.5
+
+### Fixed
+
+* Telegram voice messages now render with a usable horizontal audio player
+* audio controls no longer collapse into a narrow vertical block
+* audio card styling remains compatible with dark UI and lazy metadata loading
+
 ## 2.6.4
 
 ### Added

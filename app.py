@@ -15,7 +15,7 @@ import webbrowser
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.6.4"
+APP_VERSION = "2.6.5"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"

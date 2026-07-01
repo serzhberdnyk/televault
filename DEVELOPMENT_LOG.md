@@ -38,6 +38,29 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.5 - voice audio layout fix
+
+Changed:
+- gave inline voice/audio cards a definite responsive width so native browser audio controls do not shrink to their minimum vertical capsule
+- kept audio cards capped at the existing 430px visual width and allowed them to shrink on narrow viewports without horizontal overflow
+- kept the native audio element, `preload="none"` and lazy audio metadata loading unchanged
+- kept single active regular media playback unchanged; sticker `.webm` previews remain excluded from that logic
+- left frontend audio markup, backend parsing, `/media`, Range handling, URL encoding, security checks and storage format unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.5
+- confirm /api/status returns 2.6.5
+- confirm startup vault autoloads when the saved export path is available
+- open a chat with Telegram voice messages and confirm each voice message renders as a usable horizontal audio player
+- confirm audio controls do not collapse into a narrow vertical block and do not overflow the message bubble on desktop or narrow viewports
+- confirm audio starts, pauses, shows metadata/duration after lazy metadata loading and still shows the missing-audio fallback when needed
+- start audio after audio, audio after video and video after audio to confirm only one regular media player continues playing
+- confirm date separators, incoming/outgoing alignment, create_channel/photo update/pinned service notices, photo lightbox, video poster/playback/seeking, stickers, files/media tabs, empty states and storage status still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.4 - Windows build environment assessment
 
 Changed:
