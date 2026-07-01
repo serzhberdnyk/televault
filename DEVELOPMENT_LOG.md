@@ -38,6 +38,22 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.18 - release readiness docs cleanup
+
+Changed:
+- refreshed README.md to describe the current folder picker, multi-result export loading, chat list, message viewer, media tabs, global sidebar search, in-chat search jump behavior and startup vault autoload
+- clarified README_RUN.md for normal Windows double-click startup through run_windows.bat
+- prepared release notes for the next Windows app packaging phase without adding packaging or exe build work
+- updated APP_VERSION, frontend version placeholder and run_windows.bat startup text to 2.6.18
+- kept frontend behavior, backend logic, `/media`, search logic, parser/storage, media classification and media tabs unchanged
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.18
+- confirm /api/status returns 2.6.18
+- confirm README.md and README_RUN.md match the current folder picker workflow
+- confirm README.md does not promise unfinished Windows exe packaging
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.17 - global search stability polish
 
 Changed:

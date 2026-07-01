@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.18
+
+### Improved
+
+* documentation was refreshed to match the current TeleVault workflow
+* Windows run instructions were clarified for normal double-click startup
+* release notes were prepared for the next Windows app packaging phase
+
 ## 2.6.17
 
 ### Improved
