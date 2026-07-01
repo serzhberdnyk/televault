@@ -498,6 +498,20 @@ select:focus-visible {
   grid-template-columns: minmax(240px, 520px);
 }
 
+.filters--search-hint {
+  row-gap: 4px;
+  padding-bottom: 7px;
+}
+
+.filters--search-hint::after {
+  content: "клик по результату откроет сообщение в переписке";
+  grid-column: 1 / -1;
+  justify-self: start;
+  color: #7f8e9c;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
 #resetFilters {
   min-width: 68px;
   border-color: transparent;
@@ -709,6 +723,10 @@ code {
   line-height: 1.4;
   text-align: center;
   box-shadow: none;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    box-shadow 420ms ease;
 }
 
 .service-notice--photo {
@@ -1925,7 +1943,8 @@ code {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
   transition:
     background-color var(--transition),
-    border-color var(--transition);
+    border-color var(--transition),
+    box-shadow 420ms ease;
 }
 
 .message--media:not(.message--audio-only):not(.message--sticker) .message-bubble {
@@ -1939,22 +1958,6 @@ code {
 .conversation-message-card:hover {
   border-color: rgba(67, 90, 112, 0.56);
   background: rgba(31, 41, 50, 0.94);
-}
-
-.message--jump-highlight .conversation-message-card,
-.message--jump-highlight .service-notice {
-  border-color: rgba(111, 199, 255, 0.82);
-  background: rgba(42, 171, 238, 0.14);
-  box-shadow:
-    0 0 0 3px rgba(42, 171, 238, 0.18),
-    0 8px 26px rgba(0, 0, 0, 0.26);
-}
-
-.message--jump-highlight .bubble--audio-only,
-.message--jump-highlight .bubble--sticker {
-  border-radius: var(--radius-md);
-  background: rgba(42, 171, 238, 0.12);
-  box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.16);
 }
 
 .message--outgoing .conversation-message-card {
@@ -1985,6 +1988,9 @@ code {
   background: transparent;
   padding: 0;
   box-shadow: none;
+  transition:
+    background-color var(--transition),
+    box-shadow 420ms ease;
 }
 
 .bubble--audio-only:hover,
@@ -2055,6 +2061,9 @@ code {
   background: transparent;
   padding: 2px 0 0;
   box-shadow: none;
+  transition:
+    background-color var(--transition),
+    box-shadow 420ms ease;
 }
 
 .bubble--sticker:hover,
@@ -2103,6 +2112,53 @@ code {
 
 .message--sticker .sticker-preview-button:hover {
   background: rgba(111, 199, 255, 0.06);
+}
+
+.message--search-result:hover .conversation-message-card {
+  border-color: rgba(111, 199, 255, 0.34);
+  background: rgba(31, 44, 55, 0.96);
+  box-shadow:
+    0 0 0 1px rgba(111, 199, 255, 0.07),
+    0 3px 12px rgba(0, 0, 0, 0.16);
+}
+
+.message--search-result.message--outgoing:hover .conversation-message-card {
+  border-color: rgba(111, 199, 255, 0.42);
+  background: rgba(34, 61, 76, 0.96);
+}
+
+.message--search-result:hover .service-notice {
+  border-color: rgba(111, 199, 255, 0.3);
+  background: rgba(31, 44, 55, 0.9);
+  box-shadow: 0 0 0 2px rgba(111, 199, 255, 0.06);
+}
+
+.message--search-result:hover .bubble--audio-only,
+.message--search-result:hover .bubble--sticker {
+  border-radius: var(--radius-md);
+  background: rgba(111, 199, 255, 0.035);
+  box-shadow: 0 0 0 2px rgba(111, 199, 255, 0.08);
+}
+
+.message--jump-highlight .conversation-message-card,
+.message--jump-highlight .service-notice {
+  border-color: rgba(111, 199, 255, 0.64);
+  background: rgba(42, 171, 238, 0.11);
+  box-shadow:
+    0 0 0 2px rgba(42, 171, 238, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.message--jump-highlight.message--outgoing .conversation-message-card {
+  border-color: rgba(111, 199, 255, 0.7);
+  background: rgba(42, 171, 238, 0.15);
+}
+
+.message--jump-highlight .bubble--audio-only,
+.message--jump-highlight .bubble--sticker {
+  border-radius: var(--radius-md);
+  background: rgba(42, 171, 238, 0.08);
+  box-shadow: 0 0 0 2px rgba(42, 171, 238, 0.14);
 }
 
 .vault-card {

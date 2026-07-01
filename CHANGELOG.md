@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.14
+
+### Improved
+
+* search results now have clearer clickable styling
+* in-chat search now shows a small hint that results can be opened in context
+* jumped message highlighting was polished for better readability
+
 ## 2.6.13
 
 ### Improved

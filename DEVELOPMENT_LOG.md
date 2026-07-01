@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.14 - search result polish
+
+Changed:
+- added a subtle hover state for clickable in-chat search result messages
+- added a compact search hint on the existing filter bar when an active in-chat search has results in the regular conversation view
+- polished the jump highlight with softer dark-theme colors and smoother fade-out transitions
+- kept the 2.6.13 search result jump behavior unchanged, including ignored clicks from links, buttons, photo triggers and native audio/video controls
+- kept audio-only layout, media spacing, compact Audio tab, sticker cleanup, sticker tab, backend parsing, storage, `/media`, Range handling and media classification unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.14
+- confirm /api/status returns 2.6.14
+- search inside a selected chat and confirm matching messages appear with a clear pointer/hover state
+- confirm the search hint appears only when the search query is active and results are visible in the regular conversation view
+- click a text search result and confirm search clears, the full conversation opens and the original message is centered
+- confirm the jumped message highlight appears, reads well in the dark theme and fades out smoothly without moving layout
+- click a link inside a search result and confirm it remains a normal link action
+- click native audio/video controls or photo triggers inside a search result and confirm they do not trigger jump
+- confirm audio-only messages still render without an outer bubble
+- confirm photo, video, audio, file and sticker media tabs still render normally
+- confirm sticker and file tabs from 2.6.12 still separate stickers from regular files
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.13 - click search result to jump
 
 Changed:

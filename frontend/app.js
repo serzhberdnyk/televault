@@ -751,6 +751,9 @@ function renderSelectedChat(data, search = '', options = {}) {
 
   const messages = filterMessages(data.messages || [], search, $('senderFilter').value);
   const searchActive = Boolean(search.trim());
+  updateChatFilterControls(senderNames, {
+    showSearchHint: state.mediaMode === 'all' && searchActive && messages.length > 0,
+  });
   if (state.mediaMode === 'all') {
     $('chatMeta').textContent = `${messages.length} из ${data.total} ${text.messages} · локальное хранилище`;
     renderMessages(messages, data.chat, data.senders || [], { searchActive });
@@ -917,7 +920,7 @@ function chatSenderNames(chatData = {}) {
   return uniqueSenderNames((chatData.messages || []).map(messageSender));
 }
 
-function updateChatFilterControls(senders = null) {
+function updateChatFilterControls(senders = null, options = {}) {
   const filters = $('filters');
   const select = $('senderFilter');
   const reset = $('resetFilters');
@@ -937,6 +940,7 @@ function updateChatFilterControls(senders = null) {
   reset.hidden = !(hasSearch || hasSender);
   filters.classList.toggle('filters--no-sender', hideSender);
   filters.classList.toggle('filters--has-reset', !reset.hidden);
+  filters.classList.toggle('filters--search-hint', hasSearch && Boolean(options.showSearchHint));
 }
 
 function detectOwnerSenderKey() {
