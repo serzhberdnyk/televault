@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.2
+
+### Improved
+
+* generated release and development artifacts are now ignored by Git
+* portable dry-run output is documented as a rebuildable artifact that should not be committed
+
 ## 2.7.1
 
 ### Added

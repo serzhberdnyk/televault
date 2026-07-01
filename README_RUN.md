@@ -24,7 +24,7 @@ http://127.0.0.1:8766
 
 ## Создание portable-папки
 
-TeleVault 2.7.1 добавляет только dry-run builder для подготовки чистой Windows-папки. Он не собирает exe, не добавляет упаковщик и не меняет поведение приложения.
+TeleVault использует dry-run builder для подготовки чистой Windows-папки. Он не собирает exe, не добавляет упаковщик и не меняет поведение приложения.
 
 Способ для двойного клика:
 
@@ -47,13 +47,15 @@ python tools\build_portable.py
 Builder создаёт:
 
 ```text
-dist\TeleVault-v2.7.1\
+dist\TeleVault-v2.7.2\
 ```
+
+Папка `dist\` является generated artifact: её можно удалить или пересоздать повторным запуском `build_portable.bat`, и она не должна попадать в commit.
 
 В portable-папку копируются только allowlist-файлы:
 
 ```text
-TeleVault-v2.7.1/
+TeleVault-v2.7.2/
 - run_windows.bat
 - app.py
 - backend/
@@ -69,7 +71,7 @@ TeleVault-v2.7.1/
 
 В текущей исходной папке проекта bundled Python нет. Поэтому builder печатает предупреждение: dry-run папка запускается через `run_windows.bat` только на Windows, где уже доступен `py` или `python`.
 
-Готовый exe в 2.7.1 не создаётся.
+Готовый exe в 2.7.2 не создаётся.
 
 ## Как открыть Telegram export
 
@@ -83,4 +85,4 @@ TeleVault-v2.7.1/
 
 Версия видна в правом верхнем углу интерфейса и в ответе `/api/status`.
 
-Текущая версия: `2.7.1`.
+Текущая версия: `2.7.2`.

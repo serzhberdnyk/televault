@@ -38,6 +38,24 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.2 - release artifact git hygiene
+
+Changed:
+- updated `.gitignore` so generated release/dev artifacts such as `dist/`, `build/`, Python caches, virtual environments, `node_modules/`, logs, temp/cache/screenshot folders and local settings stay out of git
+- documented that portable dry-run output is a rebuildable generated artifact and should not be committed
+- updated the portable dry-run version constant so the generated folder is `dist/TeleVault-v2.7.2/`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.7.2
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage, search/media logic and release builder copy logic unchanged
+
+Manual test:
+- run `python -m py_compile app.py backend/parser.py backend/library.py`
+- run `python -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with run_windows.bat and confirm the UI shows v2.7.2
+- confirm /api/status returns 2.7.2
+- run `build_portable.bat` and confirm `dist/` is created but does not appear as untracked in `git status --short`
+- run `git diff --check`
+
 ## 2.7.1 - portable package dry run
 
 Changed:

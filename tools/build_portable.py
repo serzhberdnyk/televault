@@ -5,7 +5,7 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.7.1"
+APP_VERSION = "2.7.2"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -193,9 +193,9 @@ def build() -> int:
     print("- run python -m py_compile app.py backend/parser.py backend/library.py")
     print("- run python -m py_compile tools/build_portable.py")
     print("- run node --check frontend/app.js")
-    print("- open dist/TeleVault-v2.7.1/ and confirm only allowlisted project files are present")
-    print("- run dist/TeleVault-v2.7.1/run_windows.bat if Windows Python is available")
-    print("- confirm the UI and /api/status show 2.7.1")
+    print(f"- open dist/{PACKAGE_NAME}/ and confirm only allowlisted project files are present")
+    print(f"- run dist/{PACKAGE_NAME}/run_windows.bat if Windows Python is available")
+    print(f"- confirm the UI and /api/status show {APP_VERSION}")
 
     print()
     print(f"done: {PACKAGE_ROOT}")

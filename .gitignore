@@ -1,9 +1,13 @@
 __pycache__/
 *.pyc
+*.pyo
 
 .venv/
 venv/
 node_modules/
+
+dist/
+build/
 
 .pytest_cache/
 .mypy_cache/
@@ -20,6 +24,8 @@ Thumbs.db
 settings.json
 tmp/
 temp/
+cache/
+screenshots/
 backup/
 backups/
 synthetic_exports/
