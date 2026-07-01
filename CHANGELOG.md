@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.9
+
+### Improved
+
+* media message spacing was lightly polished for a more consistent reading experience
+* photo, video, audio, file, and sticker messages now feel more visually aligned
+* audio-only bubble removal from 2.6.8 was preserved
+
 ## 2.6.8
 
 ### Improved

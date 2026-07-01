@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.9 - media message spacing polish
+
+Changed:
+- reduced the extra vertical gap before inline media inside regular conversation bubbles
+- slightly tightened media bubble padding and media-card wrapper spacing for photo, video, audio, file and sticker messages
+- kept audio-only messages on the 2.6.8 no-outer-bubble path with compact sender/time above the native audio player
+- kept audio + text messages on the regular conversation bubble path
+- kept native audio controls, lazy audio metadata loading and single active regular media playback unchanged
+- preserved the responsive audio width fix from 2.6.5 so audio controls stay horizontal and do not overflow
+- left backend parsing, storage format, `/media`, Range handling, URL encoding and security checks unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.9
+- confirm /api/status returns 2.6.9
+- confirm startup vault autoloads when the saved export path is available
+- open a chat with photo, video, audio, file and sticker messages and confirm media spacing feels consistent
+- confirm audio-only messages still show compact sender/time followed directly by the rounded native audio player without an outer rectangular bubble
+- confirm audio + text messages still use the regular message bubble and keep readable text/caption spacing
+- confirm audio controls stay horizontal, do not collapse into a vertical capsule and do not overflow on desktop or narrow viewports
+- confirm photo lightbox, video playback, stickers and files/media tabs still work
+- confirm date separators, service notices, storage status and sidebar still work
+- confirm manual path input and the old load button did not return
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.8 - audio-only bubble removal
 
 Changed:
