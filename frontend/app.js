@@ -988,6 +988,14 @@ function isAudio(msg) {
   return kind === 'audio' || mime.startsWith('audio/') || mediaType.includes('audio') || mediaType.includes('voice');
 }
 
+function hasMessageText(msg) {
+  return String(msg?.text || '').trim().length > 0;
+}
+
+function isAudioOnlyMessage(msg) {
+  return isAudio(msg) && hasMedia(msg) && !hasMessageText(msg);
+}
+
 function createMessageDirectionContext(chat = {}, senders = []) {
   return {
     chatTitle: senderKey(chat?.title),
@@ -1173,24 +1181,28 @@ function renderMessages(messages, chat = {}, senders = []) {
       return;
     }
     const stickerMessage = isSticker(msg);
+    const messageHasText = hasMessageText(msg);
+    const audioOnlyMessage = isAudioOnlyMessage(msg);
     const direction = getMessageDirection(msg, directionContext);
     const messageClasses = [
       'message',
       direction ? `message--${direction}` : 'message--neutral',
       stickerMessage ? 'message--sticker' : '',
+      audioOnlyMessage ? 'message--audio-only' : '',
       hasMedia(msg) ? 'message--media' : '',
-      msg.text ? 'message--text' : 'message--no-text',
+      messageHasText ? 'message--text' : 'message--no-text',
     ].filter(Boolean).join(' ');
     const bubbleClasses = [
       'message-bubble',
       'conversation-message-card',
       stickerMessage ? 'bubble--sticker' : '',
+      audioOnlyMessage ? 'bubble--audio-only' : '',
     ].filter(Boolean).join(' ');
     html.push(`
       <article class="${messageClasses}">
       <div class="${bubbleClasses}">
         <div class="meta"><span class="sender">${escapeHtml(messageSender(msg) || text.system)}</span><span>${escapeHtml(messageTime(msg))}</span></div>
-        ${msg.text ? `<div class="text">${escapeHtml(msg.text)}</div>` : ''}
+        ${messageHasText ? `<div class="text">${escapeHtml(msg.text)}</div>` : ''}
         ${renderInlineMedia(msg, photoContext)}
       </div>
       </article>

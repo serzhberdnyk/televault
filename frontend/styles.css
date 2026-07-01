@@ -1862,6 +1862,63 @@ code {
   color: #b5e8ff;
 }
 
+.message.message--audio-only {
+  width: min(430px, calc(100vw - 96px));
+  max-width: 100%;
+}
+
+.bubble--audio-only,
+.message--outgoing .bubble--audio-only {
+  gap: 5px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.bubble--audio-only:hover,
+.message--outgoing .bubble--audio-only:hover {
+  border: 0;
+  background: transparent;
+}
+
+.message--audio-only .meta {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(17, 23, 30, 0.62);
+  color: #8998a5;
+}
+
+.message--audio-only.message--outgoing .meta {
+  justify-self: end;
+  background: rgba(28, 52, 65, 0.62);
+}
+
+.message--audio-only .media {
+  margin-top: 2px;
+}
+
+.message--audio-only .media-audio,
+.message--audio-only .audio-card-body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.message--audio-only .audio-card-body {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.message--audio-only .audio-card-body audio {
+  min-width: min(220px, 100%);
+}
+
 .message--sticker {
   max-width: min(40ch, 72vw, 380px);
 }

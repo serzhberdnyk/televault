@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.8
+
+### Improved
+
+* audio-only and voice-only messages now render without an extra outer message bubble
+* the rounded native audio player is now the main visual block for pure audio messages
+* responsive audio layout improvements from 2.6.5 were preserved
+
 ## 2.6.7
 
 ### Fixed

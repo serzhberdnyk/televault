@@ -38,6 +38,33 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.8 - audio-only bubble removal
+
+Changed:
+- added an `audio-only` conversation message modifier for pure audio/voice messages without text
+- removed the regular outer conversation bubble background, border and padding for pure audio/voice messages
+- kept sender/time as a compact metadata row above the native audio player
+- kept audio + text messages on the regular conversation bubble path
+- kept the native audio element, `preload="none"` and lazy audio metadata loading unchanged
+- kept single active regular media playback unchanged
+- preserved the responsive audio width fix from 2.6.5 so audio controls stay horizontal and do not overflow
+- left backend parsing, storage format, `/media`, Range handling, URL encoding and security checks unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.8
+- confirm /api/status returns 2.6.8
+- confirm startup vault autoloads when the saved export path is available
+- open a chat with voice/audio messages and confirm audio-only messages show sender/time followed directly by the rounded native audio player
+- confirm audio-only messages no longer show the rectangular outer message bubble
+- confirm audio controls stay horizontal, do not collapse into a vertical capsule and do not overflow on desktop or narrow viewports
+- confirm audio + text messages still use the regular message bubble and keep their text
+- start audio after audio, audio after video and video after audio to confirm only one regular media player continues playing
+- confirm date separators, incoming/outgoing alignment, service notices, photo lightbox, video playback, stickers, files/media tabs, storage status and sidebar still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.7 - storage status cancel polish
 
 Changed:
