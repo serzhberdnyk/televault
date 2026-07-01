@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.3
+
+### Improved
+
+* simplified the sidebar by removing the visible chat sort dropdown
+* chats continue to use the default newest-first order
+* chat search now has a cleaner layout in the sidebar
+
 ## 2.6.2
 
 ### Improved

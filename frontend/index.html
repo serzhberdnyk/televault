@@ -32,7 +32,7 @@
 
     <!-- TODO: advanced sections may return later. Minimal vault UI keeps conversations as the only visible mode. -->
 
-    <div class="chat-tools" aria-label="поиск и сортировка переписок">
+    <div class="chat-tools" aria-label="поиск переписок">
       <label class="search-field chat-search-field" for="chatSearch">
         <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M10.8 4.5a6.3 6.3 0 1 1 0 12.6 6.3 6.3 0 0 1 0-12.6Zm0 2a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6Z" />
@@ -40,13 +40,6 @@
         </svg>
         <input id="chatSearch" placeholder="поиск по перепискам" autocomplete="off" />
       </label>
-      <select id="chatSort" class="chat-sort" aria-label="сортировка переписок">
-        <option value="newest">новые сначала</option>
-        <option value="oldest">старые сначала</option>
-        <option value="title">по названию</option>
-        <option value="messages">больше сообщений</option>
-        <option value="media">больше медиа</option>
-      </select>
     </div>
 
     <div id="chatListTitle" class="chat-list-title">Переписки</div>
@@ -59,7 +52,7 @@
         <h2 id="chatTitle">TeleVault</h2>
         <p id="chatMeta">personal vault for Telegram exports</p>
       </div>
-      <div class="version" id="version">v2.6.2</div>
+      <div class="version" id="version">v2.6.3</div>
     </header>
 
     <section id="vaultSection" class="app-section app-section-vault active" data-section-panel="vault">

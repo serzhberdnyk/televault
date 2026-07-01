@@ -1670,8 +1670,8 @@ code {
 
 .chat-tools {
   display: grid;
-  gap: 8px;
-  padding: 2px 8px 12px;
+  gap: 0;
+  padding: 2px 8px 7px;
 }
 
 .chat-search-field {
@@ -1682,18 +1682,8 @@ code {
   min-height: 34px;
 }
 
-.chat-sort {
-  width: 100%;
-  min-height: 36px;
-  border-radius: var(--radius-sm);
-  color: var(--muted-strong);
-  background: var(--control);
-  padding: 7px 12px;
-  font-size: 13px;
-}
-
 .chat-list-title {
-  margin: 0 8px 7px;
+  margin: 0 8px 6px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;

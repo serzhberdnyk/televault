@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.3 - sidebar controls cleanup
+
+Changed:
+- removed the visible chat sort dropdown from the sidebar
+- kept the existing chat sorting helper and newest-first default as the internal sidebar order
+- kept conversation search visible and tightened the sidebar search-to-list spacing
+- kept storage status, folder picker, chat opening, service notices, media rendering and `/media` behavior unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.3
+- confirm /api/status returns 2.6.3
+- confirm startup vault autoloads when the saved export path is available
+- confirm the sidebar shows storage status and the "добавить в хранилище" action
+- confirm conversation search is visible, returns matches, shows the empty state with no matches, and restores the full list when cleared
+- confirm the chat sort dropdown is no longer visible and no empty space is left in its place
+- confirm the conversation list remains newest-first and opens chats by click
+- confirm create_channel, photo update and pinned service notices still render correctly
+- confirm date separators, photo lightbox, video, audio, stickers, files/media tabs and single active media playback still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+
 ## 2.6.2 - channel photo service message rendering
 
 Changed:

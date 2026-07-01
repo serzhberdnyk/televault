@@ -1,3 +1,5 @@
+const DEFAULT_CHAT_SORT_MODE = 'newest';
+
 const state = {
   chats: [],
   vaultLoaded: false,
@@ -16,7 +18,7 @@ const state = {
   activeSection: 'vault',
   conversationMode: 'chats',
   chatSearchQuery: '',
-  chatSortMode: 'newest',
+  chatSortMode: DEFAULT_CHAT_SORT_MODE,
   chatCache: {},
   senderFilterSignature: '',
   messagesRequestId: 0,
@@ -538,14 +540,13 @@ async function afterLibraryLoaded(data) {
   state.selectedPersonKey = null;
   state.conversationMode = 'chats';
   state.chatSearchQuery = '';
-  state.chatSortMode = 'newest';
+  state.chatSortMode = DEFAULT_CHAT_SORT_MODE;
   state.photoContexts = {};
   state.photoContextIndexes = {};
   closeLightbox();
   $('searchBox').value = '';
   $('senderFilter').value = '';
   $('chatSearch').value = '';
-  $('chatSort').value = 'newest';
   updateMediaTabs();
   renderMediaOnlyButton();
   setActiveSection('vault', { render: false });
@@ -2403,10 +2404,6 @@ function bindControls() {
   }
   $('chatSearch').addEventListener('input', event => {
     state.chatSearchQuery = event.target.value;
-    renderChats();
-  });
-  $('chatSort').addEventListener('change', event => {
-    state.chatSortMode = event.target.value || 'newest';
     renderChats();
   });
   const debouncedLoadMessages = debounce(loadMessages);
