@@ -1231,6 +1231,11 @@ function renderMediaMode(messages) {
   }
   const html = [];
   let previousDayKey = '';
+  const mediaCardClasses = [
+    'media-card',
+    `media-card-${state.mediaMode}`,
+    state.mediaMode === 'audio' ? 'media-item--audio-compact' : '',
+  ].filter(Boolean).join(' ');
   messages.forEach((msg, index) => {
     const dayKey = messageDayKey(msg);
     if (dayKey !== previousDayKey) {
@@ -1238,7 +1243,7 @@ function renderMediaMode(messages) {
       previousDayKey = dayKey;
     }
     html.push(`
-      <article class="media-card media-card-${state.mediaMode}" data-media-card="true">
+      <article class="${mediaCardClasses}" data-media-card="true">
         ${renderMediaCard(msg, index, photoContext)}
       </article>
     `);

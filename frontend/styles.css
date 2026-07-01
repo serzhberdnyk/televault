@@ -1023,6 +1023,36 @@ code {
   background: var(--bubble-hover);
 }
 
+.media-card.media-item--audio-compact {
+  width: min(430px, 100%);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.media-card.media-item--audio-compact:hover {
+  border: 0;
+  background: transparent;
+}
+
+.media-item--audio-compact .audio-card-body {
+  gap: 5px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.media-item--audio-compact .audio-card-body audio {
+  min-width: min(220px, 100%);
+}
+
 .media-preview {
   position: relative;
   display: grid;

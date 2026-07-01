@@ -38,6 +38,32 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.10 - audio tab compact layout
+
+Changed:
+- added a scoped `media-item--audio-compact` modifier for Audio media tab items
+- removed the heavy outer media-card background, border, padding and shadow only for Audio tab items
+- made Audio tab audio bodies transparent so the native audio player remains the main visual block
+- kept filename/open-original links, sender/time metadata and optional captions visible
+- preserved the 2.6.8 chat audio-only no-outer-bubble layout
+- preserved the 2.6.9 regular media spacing for chat media and non-audio media tabs
+- kept native audio controls, lazy audio metadata loading and single active regular media playback unchanged
+- left backend parsing, storage format, `/media`, Range handling, URL encoding and security checks unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.10
+- confirm /api/status returns 2.6.10
+- open the Audio media tab and confirm audio items no longer show a large rectangular outer card
+- confirm the native audio player stays horizontal, responsive and does not overflow on desktop or narrow viewports
+- confirm filename/open-original links work when an audio item has a file name or media URL
+- confirm sender/time metadata remains visible
+- start audio after audio to confirm single active regular media playback still works
+- confirm photo, video, file and sticker tabs still use their existing card layouts
+- confirm chat audio-only messages still use the 2.6.8 compact no-outer-bubble layout
+- confirm audio + text messages in the regular chat feed still use the normal message bubble
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.9 - media message spacing polish
 
 Changed:

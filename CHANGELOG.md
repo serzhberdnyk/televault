@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.10
+
+### Improved
+
+* audio items in the Audio media tab now use a lighter compact layout
+* the native audio player is now the main visual block in the Audio tab
+* chat audio-only behavior from 2.6.8 and media spacing from 2.6.9 were preserved
+
 ## 2.6.9
 
 ### Improved
