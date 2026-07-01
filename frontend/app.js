@@ -82,12 +82,12 @@ const icons = {
 const text = {
   telegramSticker: 'стикер Telegram',
   animatedTelegramSticker: 'анимированный стикер Telegram',
-  chooseFolder: 'добавить в хранилище',
+  chooseFolder: 'выбрать папку экспорта',
   choosingFolder: 'ожидание выбора...',
   openingPicker: 'открываю системное окно выбора папки...',
-  checkingStartupVault: 'проверяем последнее хранилище...',
+  checkingStartupVault: 'проверяем последнюю папку экспорта...',
   pasteFolderFirst: 'сначала вставь путь к папке экспорта',
-  indexingVault: 'индексирую хранилище...',
+  indexingVault: 'индексирую экспорт...',
   chatsFound: 'найдено чатов',
   errors: 'ошибок',
   messages: 'сообщений',
@@ -120,7 +120,7 @@ const text = {
   unknownType: 'тип неизвестен',
   backToTimeline: 'назад к Timeline',
   backToPeople: 'назад к людям',
-  addFirstExport: 'добавь первый экспорт в хранилище',
+  addFirstExport: 'выбери первый экспорт',
   conversationsNotFound: 'переписки не найдены',
   conversationsEmptyBody: 'добавь экспорт, чтобы увидеть сохранённые переписки',
   chatSearchNothingFound: 'ничего не найдено',
@@ -131,21 +131,20 @@ const text = {
   mediaFilterNothingFoundBody: 'попробуй изменить фильтр или вкладку',
   noChatMessages: 'сообщений нет',
   noChatMessagesBody: 'в этом чате пока нечего показать',
-  savedVaultMissing: 'сохранённое хранилище не найдено',
-  savedVaultMissingBody: 'Последняя папка недоступна. Добавь папку экспорта Telegram ещё раз.',
-  storageReady: 'хранилище открыто',
-  storageLoading: 'загружаем хранилище...',
-  storageNotSelected: 'хранилище не выбрано',
+  savedVaultMissing: 'сохранённая папка экспорта не найдена',
+  savedVaultMissingBody: 'Последняя папка недоступна. Выбери папку экспорта Telegram ещё раз.',
+  storageReady: 'экспорт открыт',
+  storageLoading: 'открываем экспорт...',
+  storageNotSelected: 'экспорт не выбран',
   storageNotSelectedBody: 'Добавь папку экспорта Telegram, чтобы увидеть переписки.',
   storageNoChatsBody: 'В выбранной папке не найдены подходящие чаты Telegram export.',
-  storageLoadFailed: 'не удалось открыть хранилище',
+  storageLoadFailed: 'не удалось открыть экспорт',
   storageLoadFailedBody: 'Проверь, что выбрана папка экспорта Telegram.',
-  storageTryAnotherFolder: 'Попробуй добавить другую папку через кнопку "добавить в хранилище".',
+  storageTryAnotherFolder: 'Попробуй выбрать другую папку экспорта.',
   storagePartialErrors: 'часть файлов не загрузилась',
-  storageReadyShort: 'готово',
   storageFolderFallback: 'папка экспорта',
   chooseConversationTitle: 'Выбери переписку слева',
-  chooseConversationBody: 'Хранилище загружено. Открой любую переписку, чтобы читать сообщения и медиа.',
+  chooseConversationBody: 'Экспорт загружен. Открой любую переписку, чтобы читать сообщения и медиа.',
   mediaLabels: {
     all: 'все',
     photo: 'фото',
@@ -225,11 +224,10 @@ function setLibraryLoading(message = text.storageLoading, details = {}) {
   });
 }
 
-function setLibraryReady(data, totalMessages = null) {
+function setLibraryReady(data) {
   const root = data.root || state.vaultRoot || data.lastVaultPath || '';
   const chats = Array.isArray(data.chats) ? data.chats : state.chats;
   const errors = Array.isArray(data.errors) ? data.errors : state.vaultErrors;
-  const messageCount = Number.isFinite(totalMessages) ? totalMessages : countMessagesFromChats(chats);
   state.vaultRoot = root;
   state.vaultErrors = errors;
   state.vaultLoadError = '';
@@ -240,12 +238,7 @@ function setLibraryReady(data, totalMessages = null) {
     title: errors.length ? text.storagePartialErrors : text.storageReady,
     body: root ? folderNameFromPath(root) : text.storageFolderFallback,
     path: root,
-    stats: [
-      `${formatNumber(chats.length)} ${pluralRu(chats.length, 'чат', 'чата', 'чатов')}`,
-      `${formatNumber(messageCount)} ${text.messages}`,
-      ...(errors.length ? [`${formatNumber(errors.length)} ${text.errors}`] : []),
-      text.storageReadyShort,
-    ],
+    detail: errors.length ? `${formatNumber(errors.length)} ${text.errors}` : '',
   });
 }
 
@@ -293,7 +286,7 @@ function formatLibraryError(error) {
   if (lower.includes('папка не выбрана')) {
     return {
       title: 'папка не выбрана',
-      body: 'Выбор папки отменён. Хранилище не изменилось.',
+      body: 'Выбор папки отменён. Текущий экспорт не изменился.',
       detail: '',
     };
   }
@@ -560,9 +553,8 @@ async function afterLibraryLoaded(data) {
   renderVaultWelcome({ mode: 'loading', lead: text.indexingVault });
   await preloadArchiveMessages();
   state.ownerSenderKey = detectOwnerSenderKey();
-  const totalMessages = state.allMessages.length;
   renderConversationList();
-  setLibraryReady(data, totalMessages);
+  setLibraryReady(data);
   renderVaultWelcome();
 }
 
@@ -657,7 +649,7 @@ function renderVaultWelcome(options = {}) {
   const mode = options.mode || (hasLoadedConversations ? 'ready' : state.vaultLoadError ? 'error' : 'empty');
   $('chatTitle').textContent = 'TeleVault';
   if (hasLoadedConversations) {
-    $('chatMeta').textContent = `${state.chats.length} ${pluralRu(state.chats.length, 'переписка', 'переписки', 'переписок')} в хранилище`;
+    $('chatMeta').textContent = `${state.chats.length} ${pluralRu(state.chats.length, 'переписка', 'переписки', 'переписок')} в экспорте`;
   } else if (mode === 'loading') {
     $('chatMeta').textContent = text.storageLoading;
   } else if (mode === 'error') {
@@ -1834,7 +1826,7 @@ function renderSectionEmpty(title = text.addFirstExport, body = 'Выбери п
     <div class="section-empty">
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(body)}</p>
-      <button class="primary section-empty-action" type="button" data-pick-folder>${icons.folder}<span>Добавить в хранилище</span></button>
+      <button class="primary section-empty-action" type="button" data-pick-folder>${icons.folder}<span>${text.chooseFolder}</span></button>
     </div>
   `;
 }

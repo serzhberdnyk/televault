@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.6 - sidebar storage status cleanup
+
+Changed:
+- renamed the sidebar folder action to "выбрать папку экспорта"
+- changed the opened storage title from "хранилище открыто" to "экспорт открыт"
+- kept the opened status compact: status title, export folder name and full path
+- removed chat count, message count and "готово" chips from the opened sidebar storage block
+- reduced repeated "хранилище" wording in nearby sidebar loading, empty and error copy
+- kept the folder picker, startup vault autoload, chat list, chat search, media rendering, service notices, backend storage data and `/media` behavior unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder, run_windows.bat startup text and current-version README notes
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.6
+- confirm /api/status returns 2.6.6
+- confirm startup vault autoloads when the saved export path is available
+- confirm the sidebar action says "выбрать папку экспорта" and still opens the system folder picker
+- confirm an opened export shows compact status with "экспорт открыт", the folder name and the path
+- confirm the sidebar storage status no longer shows chat count, message count or "готово" chips
+- confirm the word "хранилище" no longer repeats several times in a row in the sidebar
+- confirm the conversation list, conversation search and chat opening still work
+- confirm service notices, photo lightbox, video/audio/stickers/files and single active media playback still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.5 - voice audio layout fix
 
 Changed:

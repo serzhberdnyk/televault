@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.6
+
+### Improved
+
+* simplified the sidebar storage status copy
+* reduced repeated "storage" wording in the sidebar
+* removed noisy chat/message/status chips from the compact storage block
+
 ## 2.6.5
 
 ### Fixed

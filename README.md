@@ -4,7 +4,7 @@ TeleVault - локальный просмотрщик Telegram exports.
 
 Приложение открывает экспортированные папки Telegram Desktop в браузере, показывает переписки и медиа, а данные остаются на компьютере пользователя.
 
-Текущая версия: `2.6.4`.
+Текущая версия: `2.6.6`.
 
 Статус: desktop/local app preparation. В 2.6.4 добавлен build environment assessment для будущей Windows exe packaging, но exe и installer пока не собираются.
 
