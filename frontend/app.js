@@ -171,6 +171,7 @@ const text = {
 };
 
 let audioMetadataObserver = null;
+let videoMetadataObserver = null;
 
 async function api(path, options = {}) {
   const res = await fetch(path, options);
@@ -1065,6 +1066,7 @@ function renderMessages(messages, chat = {}, senders = []) {
   const photoContext = 'vault-current';
   setPhotoContext(photoContext, messages);
   resetAudioMetadataObserver();
+  resetVideoMetadataObserver();
   box.className = 'messages';
   box.style.display = 'flex';
   box.innerHTML = '';
@@ -1112,6 +1114,7 @@ function renderMessages(messages, chat = {}, senders = []) {
   box.innerHTML = html.join('');
   bindMediaErrorHandlers(box);
   bindLazyAudioMetadata(box);
+  bindLazyVideoMetadata(box);
   bindPhotoTriggers(box);
 }
 
@@ -1120,6 +1123,7 @@ function renderMediaMode(messages) {
   const photoContext = 'vault-current';
   state.lightboxPhotos = setPhotoContext(photoContext, messages);
   resetAudioMetadataObserver();
+  resetVideoMetadataObserver();
   box.className = `messages media-mode media-mode-${state.mediaMode}`;
   box.style.display = 'grid';
   box.innerHTML = '';
@@ -1145,6 +1149,7 @@ function renderMediaMode(messages) {
   box.innerHTML = html.join('');
   bindMediaErrorHandlers(box);
   bindLazyAudioMetadata(box);
+  bindLazyVideoMetadata(box);
   bindPhotoTriggers(box);
 }
 
@@ -1359,7 +1364,7 @@ function renderVideoCard(msg) {
   const poster = videoPosterAttribute(msg);
   return `
     <div class="media-preview media-preview-video" data-media-container>
-      <video controls preload="none"${poster} src="${escapeAttr(videoUrl)}" data-media-element></video>
+      <video controls preload="none"${poster} src="${escapeAttr(videoUrl)}" data-video-preload="lazy" data-media-element></video>
       ${renderMissingNotice('video', msg)}
     </div>
     ${renderCardMeta(msg)}
@@ -1458,7 +1463,7 @@ function renderInlineMedia(msg, photoContext = 'vault-current') {
   }
   if (isMediaMissing(msg)) return `<div class="media">${renderMediaFallback(mediaFallbackKind(msg), msg, { className: 'inline-media-fallback' })}</div>`;
   const videoUrl = getVideoSourceUrl(msg);
-  if (isVideo(msg) && videoUrl && canPlayVideo(msg)) return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} src="${escapeAttr(videoUrl)}" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
+  if (isVideo(msg) && videoUrl && canPlayVideo(msg)) return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} src="${escapeAttr(videoUrl)}" data-video-preload="lazy" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
   if (isAudio(msg)) return `<div class="media media-audio">${renderAudioPlayer(msg)}</div>`;
   return `<div class="media">${renderFileCard(msg)}</div>`;
 }
@@ -1494,6 +1499,12 @@ function resetAudioMetadataObserver() {
   if (!audioMetadataObserver) return;
   audioMetadataObserver.disconnect();
   audioMetadataObserver = null;
+}
+
+function resetVideoMetadataObserver() {
+  if (!videoMetadataObserver) return;
+  videoMetadataObserver.disconnect();
+  videoMetadataObserver = null;
 }
 
 function bindLazyAudioMetadata(root) {
@@ -1534,6 +1545,46 @@ function bindLazyAudioMetadata(root) {
   audioElements.forEach(audio => audioMetadataObserver.observe(audio));
 }
 
+function requestVideoMetadata(video) {
+  if (!video || video.dataset.videoMetadataLoaded === '1') return;
+  if (!isRegularPlayableMedia(video)) return;
+  video.dataset.videoMetadataLoaded = '1';
+  video.preload = 'metadata';
+  if (videoMetadataObserver) videoMetadataObserver.unobserve(video);
+  if (video.readyState === 0 && video.paused) {
+    try {
+      video.load();
+    } catch {}
+  }
+}
+
+function bindLazyVideoMetadata(root) {
+  resetVideoMetadataObserver();
+  const videoElements = Array.from(root.querySelectorAll('video[data-video-preload="lazy"]'))
+    .filter(isRegularPlayableMedia);
+  if (!videoElements.length) return;
+
+  videoElements.forEach(video => {
+    video.addEventListener('pointerenter', () => requestVideoMetadata(video), { once: true });
+    video.addEventListener('focus', () => requestVideoMetadata(video), { once: true });
+    video.addEventListener('play', () => requestVideoMetadata(video), { once: true });
+  });
+
+  if (!('IntersectionObserver' in window)) return;
+
+  videoMetadataObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) requestVideoMetadata(entry.target);
+    });
+  }, {
+    root: root.id === 'messages' ? root : null,
+    rootMargin: '220px 0px',
+    threshold: 0.01,
+  });
+
+  videoElements.forEach(video => videoMetadataObserver.observe(video));
+}
+
 function isMediaElement(element) {
   if (!element) return false;
   if (typeof HTMLMediaElement !== 'undefined' && element instanceof HTMLMediaElement) return true;
@@ -1565,6 +1616,7 @@ function pauseOtherRegularMedia(activeElement) {
 function handleRegularMediaPlay(event) {
   const element = event.target;
   if (!isRegularPlayableMedia(element)) return;
+  if (String(element.tagName || '').toLowerCase() === 'video') requestVideoMetadata(element);
   pauseOtherRegularMedia(element);
 }
 

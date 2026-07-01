@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.5.27
+
+### Fixed
+
+* removed the separate video duration badge from video previews
+* regular videos now load metadata lazily so native controls can show duration more naturally
+* video previews remain lightweight without preloading every video at once
+
+## 2.5.26
+
+### Improved
+
+* video thumbnails now show a compact duration badge when duration metadata is available
+* video previews remain lightweight and keep the performance improvements from 2.5.20
+
 ## 2.5.25
 
 ### Maintenance

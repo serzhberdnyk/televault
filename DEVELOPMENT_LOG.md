@@ -38,6 +38,48 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.5.27 - native video duration metadata fix
+
+Changed:
+- removed the separate video duration badge UI and its frontend formatting helpers/styles
+- added lazy metadata loading for regular native video elements using the same cautious pattern as audio metadata loading
+- kept rendered regular videos lightweight with `preload="none"` until a video is visible/nearby, hovered, focused or played
+- excluded Telegram sticker videos from regular video metadata loading by leaving them on the sticker render path and reusing regular-media checks
+- kept regular video poster/thumbnail selection, playback, seeking, width clamp and media fallback behavior unchanged
+- kept audio lazy metadata from 2.5.24 unchanged
+- left backend parsing, `/media`, Range handling, URL encoding, security checks, storage format and performance cache unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.5.27
+- confirm /api/status returns 2.5.27
+- open regular videos and confirm there is no separate duration badge over the preview
+- confirm visible/nearby regular videos switch from `preload="none"` to `preload="metadata"` lazily and native controls can show duration after metadata loads
+- confirm a big video tab does not set metadata preload on every video at once
+- confirm regular video poster, playback, seeking and 206 Partial Content still behave normally
+- confirm `.webm` stickers still autoplay loop muted without controls and do not use regular video lazy metadata
+- confirm `.webp` stickers, `.tgs` fallback, photo lightbox, audio cards, files, pinned service notices and single active playback still work
+- confirm /media 200/206/416/403 and path traversal protection still work
+
+## 2.5.26 - video duration badge
+
+Changed:
+- added a compact frontend duration badge for regular video previews when Telegram export metadata provides `duration_seconds`
+- kept the existing parser data shape because `duration_seconds` was already passed through from Telegram export messages
+- kept regular video playback, seeking, `preload="none"` and poster selection unchanged
+- kept sticker rendering unchanged, including `.webm` Telegram stickers as autoplay loop muted videos without controls
+- left `/media`, Range handling, URL encoding, security checks, storage format and performance cache unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.5.26
+- confirm /api/status returns 2.5.26
+- open a regular video with `duration_seconds` and confirm a small dark duration badge appears over the preview
+- confirm videos without duration do not show a false 0:00 badge
+- confirm video poster, playback, seeking, bubble width clamp and media fallbacks still behave normally
+- confirm `.webm` stickers, `.webp` stickers, `.tgs` fallback, photo lightbox, audio cards, files, pinned service notices and single active playback still work
+- confirm /media 200/206/416/403 and path traversal protection still work
+
 ## 2.5.25 - project safety checkpoint
 
 Changed:
