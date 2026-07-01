@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.6.15
+
+### Added
+
+* sidebar search now supports basic global message search across the opened export
+
+### Improved
+
+* global search results can be clicked to open the original chat message in context
+* sidebar search now handles both chat title matches and message matches
+
 ## 2.6.14
 
 ### Improved

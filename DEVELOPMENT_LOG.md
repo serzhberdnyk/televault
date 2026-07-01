@@ -38,6 +38,26 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.15 - global message search v1
+
+Changed:
+- added a minimal `/api/search?q=...&limit=50` endpoint that searches loaded messages in the currently opened export
+- kept sidebar chat title search intact and added compact message result cards under the same sidebar search input
+- global message results open the original chat, clear sidebar search, reset in-chat filters, render the full conversation and reuse the existing jump highlight
+- kept in-chat search, media tabs, audio-only rendering, sticker/file separation, parser, storage format and `/media` unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.15
+- confirm /api/status returns 2.6.15
+- search the sidebar by chat title and confirm conversation matches still appear
+- search the sidebar by a word that exists only inside messages and confirm message results appear instead of "ничего не найдено"
+- click a global message result and confirm the original chat opens, the full conversation is shown, the message is centered and briefly highlighted
+- confirm in-chat search inside the selected conversation still filters messages and click-to-jump behavior still works
+- confirm photo, video, audio, sticker and file media tabs still render normally
+- confirm audio-only messages, stickers and files keep the behavior from 2.6.8-2.6.12
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.14 - search result polish
 
 Changed:

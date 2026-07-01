@@ -19,6 +19,12 @@ const state = {
   conversationMode: 'chats',
   chatSearchQuery: '',
   chatSortMode: DEFAULT_CHAT_SORT_MODE,
+  globalSearchLimit: 50,
+  globalSearchQuery: '',
+  globalSearchResults: [],
+  globalSearchLoading: false,
+  globalSearchError: '',
+  globalSearchRequestId: 0,
   chatCache: {},
   senderFilterSignature: '',
   messagesRequestId: 0,
@@ -31,6 +37,7 @@ const state = {
 
 let jumpHighlightTimer = null;
 let pendingMessagesLoad = null;
+let pendingGlobalMessageSearch = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -128,6 +135,10 @@ const text = {
   conversationsEmptyBody: 'добавь экспорт, чтобы увидеть сохранённые переписки',
   chatSearchNothingFound: 'ничего не найдено',
   chatSearchNothingFoundBody: 'попробуй изменить запрос',
+  globalSearchTitle: 'Сообщения',
+  globalSearchLoading: 'ищу сообщения...',
+  globalSearchFailed: 'поиск не удался',
+  globalSearchFailedBody: 'попробуй повторить запрос',
   chatMessagesNotFound: 'сообщений не найдено',
   chatMessagesNotFoundBody: 'попробуй другой запрос',
   chatFilterNothingFoundBody: 'попробуй изменить фильтр',
@@ -409,44 +420,118 @@ function renderConversationList() {
 
 function renderChats() {
   const box = $('chatList');
-  $('chatListTitle').textContent = 'Переписки';
+  const query = state.chatSearchQuery.trim();
+  const hasSearch = Boolean(query);
   const chats = getVisibleChats();
+  const messageResults = getVisibleGlobalMessageResults(query);
+  const messageSearchLoading = isGlobalMessageSearchLoading(query);
+  const messageSearchReady = isGlobalMessageSearchReady(query);
+  const messageSearchError = getGlobalMessageSearchError(query);
+  $('chatListTitle').textContent = hasSearch ? 'Результаты поиска' : 'Переписки';
   box.innerHTML = '';
-  if (!chats.length) {
-    const hasSearch = Boolean(state.chatSearchQuery.trim());
-    const title = hasSearch
-      ? text.chatSearchNothingFound
-      : state.vaultLoaded
-        ? text.conversationsNotFound
-        : text.storageNotSelected;
-    const body = hasSearch
-      ? text.chatSearchNothingFoundBody
-      : state.vaultLoaded
-        ? text.storageNoChatsBody
-        : text.storageNotSelectedBody;
+  if (!hasSearch && !chats.length) {
     box.innerHTML = renderEmptyState(
-      title,
-      body,
+      state.vaultLoaded ? text.conversationsNotFound : text.storageNotSelected,
+      state.vaultLoaded ? text.storageNoChatsBody : text.storageNotSelectedBody,
       { className: 'empty-state--sidebar' }
     );
     return;
   }
-  chats.forEach(chat => {
-    const div = document.createElement('button');
-    div.type = 'button';
-    div.className = 'chat-card' + (chat.id === state.selectedChatId ? ' active' : '');
-    const range = [chat.first_date, chat.last_date].filter(Boolean).join(' → ');
-    div.innerHTML = `
-      <span class="chat-card__title">${escapeHtml(chat.title)}</span>
-      <span class="chat-card__stats">${chat.message_count} ${text.messages} · ${chat.media_count} ${text.media}</span>
-      <span class="chat-card__date">последнее: ${escapeHtml(chat.last_date || text.noDate)}</span>
-      ${range ? `<span class="chat-card__range">${escapeHtml(range)}</span>` : ''}
-    `;
-    div.addEventListener('click', () => {
-      selectChat(chat.id);
-    });
-    box.appendChild(div);
+  chats.forEach(chat => box.appendChild(renderChatCard(chat)));
+
+  if (hasSearch && messageSearchLoading) {
+    appendSidebarSearchState(box, text.globalSearchLoading, '');
+  }
+  if (hasSearch && messageSearchError && !messageResults.length) {
+    appendSidebarSearchState(box, text.globalSearchFailed, messageSearchError || text.globalSearchFailedBody);
+  }
+  if (hasSearch && messageResults.length) {
+    appendSidebarSectionTitle(box, text.globalSearchTitle);
+    messageResults.forEach(result => box.appendChild(renderGlobalMessageResult(result)));
+  }
+  if (
+    hasSearch
+    && !chats.length
+    && !messageResults.length
+    && !messageSearchLoading
+    && !messageSearchError
+    && messageSearchReady
+  ) {
+    box.innerHTML = renderEmptyState(
+      text.chatSearchNothingFound,
+      text.chatSearchNothingFoundBody,
+      { className: 'empty-state--sidebar' }
+    );
+  }
+}
+
+function renderChatCard(chat) {
+  const div = document.createElement('button');
+  div.type = 'button';
+  div.className = 'chat-card' + (chat.id === state.selectedChatId ? ' active' : '');
+  const range = [chat.first_date, chat.last_date].filter(Boolean).join(' → ');
+  div.innerHTML = `
+    <span class="chat-card__title">${escapeHtml(chat.title)}</span>
+    <span class="chat-card__stats">${chat.message_count} ${text.messages} · ${chat.media_count} ${text.media}</span>
+    <span class="chat-card__date">последнее: ${escapeHtml(chat.last_date || text.noDate)}</span>
+    ${range ? `<span class="chat-card__range">${escapeHtml(range)}</span>` : ''}
+  `;
+  div.addEventListener('click', () => {
+    selectChat(chat.id);
   });
+  return div;
+}
+
+function appendSidebarSectionTitle(box, title) {
+  const div = document.createElement('div');
+  div.className = 'sidebar-results-title';
+  div.textContent = title;
+  box.appendChild(div);
+}
+
+function appendSidebarSearchState(box, title, body) {
+  box.insertAdjacentHTML('beforeend', renderEmptyState(
+    title,
+    body,
+    { className: 'empty-state--sidebar sidebar-search-state' }
+  ));
+}
+
+function getVisibleGlobalMessageResults(query) {
+  if (!query || state.globalSearchQuery !== query) return [];
+  return state.globalSearchResults || [];
+}
+
+function isGlobalMessageSearchLoading(query) {
+  return Boolean(query && state.globalSearchQuery === query && state.globalSearchLoading);
+}
+
+function isGlobalMessageSearchReady(query) {
+  return !query || !state.vaultLoaded || state.globalSearchQuery === query;
+}
+
+function getGlobalMessageSearchError(query) {
+  if (!query || state.globalSearchQuery !== query) return '';
+  return state.globalSearchError || '';
+}
+
+function renderGlobalMessageResult(result) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'global-message-card';
+  const chatTitle = result.chat_title || result.chatTitle || text.conversationsNotFound;
+  const snippet = result.snippet || result.media_type || 'сообщение';
+  const sender = result.sender || text.system;
+  const date = result.date || text.noDate;
+  button.innerHTML = `
+    <span class="global-message-card__chat">${escapeHtml(chatTitle)}</span>
+    <span class="global-message-card__snippet">${escapeHtml(snippet)}</span>
+    <span class="global-message-card__meta">${escapeHtml(sender)} · ${escapeHtml(date)}</span>
+  `;
+  button.addEventListener('click', () => {
+    openGlobalSearchResult(result);
+  });
+  return button;
 }
 
 function getVisibleChats() {
@@ -569,6 +654,7 @@ async function afterLibraryLoaded(data) {
   state.conversationMode = 'chats';
   state.chatSearchQuery = '';
   state.chatSortMode = DEFAULT_CHAT_SORT_MODE;
+  resetGlobalMessageSearch();
   state.photoContexts = {};
   state.photoContextIndexes = {};
   closeLightbox();
@@ -853,6 +939,97 @@ function clearMessageFiltersForJump() {
   updateChatFilterControls();
   updateMediaTabs();
   renderMediaOnlyButton();
+}
+
+function resetGlobalMessageSearch() {
+  state.globalSearchResults = [];
+  state.globalSearchLoading = false;
+  state.globalSearchError = '';
+  state.globalSearchQuery = '';
+  state.globalSearchRequestId += 1;
+}
+
+function handleSidebarSearchInput(value) {
+  state.chatSearchQuery = value;
+  pendingGlobalMessageSearch?.cancel?.();
+  resetGlobalMessageSearch();
+  renderChats();
+  if (state.chatSearchQuery.trim() && state.vaultLoaded) {
+    pendingGlobalMessageSearch?.();
+  }
+}
+
+async function loadGlobalMessageSearch() {
+  const query = state.chatSearchQuery.trim();
+  if (!query || !state.vaultLoaded) {
+    resetGlobalMessageSearch();
+    renderChats();
+    return;
+  }
+  const requestId = ++state.globalSearchRequestId;
+  state.globalSearchLoading = true;
+  state.globalSearchError = '';
+  state.globalSearchQuery = query;
+  renderChats();
+  try {
+    const data = await api(`/api/search?q=${encodeURIComponent(query)}&limit=${state.globalSearchLimit}`);
+    if (requestId !== state.globalSearchRequestId) return;
+    state.globalSearchResults = Array.isArray(data.results) ? data.results : [];
+  } catch (e) {
+    if (requestId !== state.globalSearchRequestId) return;
+    state.globalSearchResults = [];
+    state.globalSearchError = cleanErrorMessage(e);
+  } finally {
+    if (requestId !== state.globalSearchRequestId) return;
+    state.globalSearchLoading = false;
+    renderChats();
+  }
+}
+
+function clearSidebarSearch() {
+  pendingGlobalMessageSearch?.cancel?.();
+  state.chatSearchQuery = '';
+  const input = $('chatSearch');
+  if (input) input.value = '';
+  resetGlobalMessageSearch();
+}
+
+function globalResultChatId(result) {
+  return String(result?.chat_id || result?.chatId || '');
+}
+
+function globalResultMessageId(result) {
+  const value = result?.message_id ?? result?.messageId ?? result?.sourceIndex ?? '';
+  return value === null || value === undefined ? '' : String(value);
+}
+
+async function openGlobalSearchResult(result) {
+  const chatId = globalResultChatId(result);
+  const messageId = globalResultMessageId(result);
+  if (!chatId || !messageId) return;
+  try {
+    clearSidebarSearch();
+    clearMessageFiltersForJump();
+    state.selectedChatId = chatId;
+    state.conversationMode = 'chats';
+    state.selectedPersonKey = null;
+    state.senderFilterSignature = '';
+    closeLightbox();
+    renderConversationList();
+
+    const cached = state.chatCache[chatId];
+    if (cached && Array.isArray(cached.messages) && !cached.error) {
+      renderSelectedChat(cached, '', {
+        jumpToMessageId: messageId,
+        perfStartedAt: performance.now(),
+        perfSource: 'cache',
+      });
+      return;
+    }
+    await loadMessages({ jumpToMessageId: messageId });
+  } catch (e) {
+    setLibraryError(e);
+  }
 }
 
 function handleSearchResultClick(event) {
@@ -2555,9 +2732,10 @@ function bindControls() {
     });
   }
   $('messages').addEventListener('click', handleSearchResultClick);
+  const debouncedGlobalMessageSearch = debounce(loadGlobalMessageSearch, 220);
+  pendingGlobalMessageSearch = debouncedGlobalMessageSearch;
   $('chatSearch').addEventListener('input', event => {
-    state.chatSearchQuery = event.target.value;
-    renderChats();
+    handleSidebarSearchInput(event.target.value);
   });
   const debouncedLoadMessages = debounce(loadMessages);
   pendingMessagesLoad = debouncedLoadMessages;

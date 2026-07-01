@@ -5,6 +5,63 @@ from typing import Any
 from .parser import summarize_chat, load_chat_messages, to_dict
 
 
+DEFAULT_SEARCH_LIMIT = 50
+MAX_SEARCH_LIMIT = 100
+
+
+def compact_value(value: Any) -> str:
+    return " ".join(str(value or "").split())
+
+
+def clamp_search_limit(value: int) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_SEARCH_LIMIT
+    return max(1, min(limit, MAX_SEARCH_LIMIT))
+
+
+def message_search_text(message: dict[str, Any]) -> str:
+    fields = (
+        message.get("text"),
+        message.get("from"),
+        message.get("actor"),
+        message.get("service_text"),
+        message.get("service_kind"),
+        message.get("service_action"),
+        message.get("pinned_message_preview"),
+        message.get("pinned_message_id"),
+        message.get("media"),
+        message.get("media_name"),
+        message.get("media_kind"),
+        message.get("media_type"),
+        message.get("mime_type"),
+        message.get("sticker_emoji"),
+    )
+    return " ".join(compact_value(field) for field in fields).casefold()
+
+
+def message_media_type(message: dict[str, Any]) -> str:
+    return compact_value(
+        message.get("media_kind")
+        or message.get("media_type")
+        or message.get("mime_type")
+    )
+
+
+def message_snippet(message: dict[str, Any]) -> str:
+    for key in ("text", "service_text", "pinned_message_preview"):
+        value = compact_value(message.get(key))
+        if value:
+            return value[:117].rstrip() + "..." if len(value) > 120 else value
+
+    media_type = message_media_type(message)
+    media_name = compact_value(message.get("media_name") or Path(str(message.get("media") or "")).name)
+    if media_type and media_name:
+        return f"{media_type}: {media_name}"
+    return media_name or media_type or "сообщение"
+
+
 class ExportLibrary:
     def __init__(self) -> None:
         self.root: Path | None = None
@@ -69,4 +126,42 @@ class ExportLibrary:
             "total": len(items),
             "shown": len(filtered),
             "senders": senders,
+        }
+
+    def search_messages(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> dict[str, Any]:
+        q = compact_value(query)
+        result_limit = clamp_search_limit(limit)
+        results: list[dict[str, Any]] = []
+        if not q or not self.root:
+            return {"query": q, "limit": result_limit, "count": 0, "results": []}
+
+        needle = q.casefold()
+        for chat_id, chat in self.chats.items():
+            for index, message in enumerate(self.messages.get(chat_id, [])):
+                if needle not in message_search_text(message):
+                    continue
+                message_id = message.get("id", index)
+                results.append({
+                    "chat_id": chat_id,
+                    "chat_title": chat.get("title", ""),
+                    "message_id": message_id,
+                    "sourceIndex": index,
+                    "sender": message.get("from") or message.get("actor") or "",
+                    "date": message.get("date", ""),
+                    "snippet": message_snippet(message),
+                    "media_type": message_media_type(message),
+                })
+                if len(results) >= result_limit:
+                    return {
+                        "query": q,
+                        "limit": result_limit,
+                        "count": len(results),
+                        "results": results,
+                    }
+
+        return {
+            "query": q,
+            "limit": result_limit,
+            "count": len(results),
+            "results": results,
         }

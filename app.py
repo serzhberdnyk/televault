@@ -15,7 +15,7 @@ import webbrowser
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.6.14"
+APP_VERSION = "2.6.15"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"
@@ -256,6 +256,16 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, LIBRARY.get_chat(chat_id, query, sender, media_only))
             except Exception as e:
                 json_response(self, {"error": str(e)}, 400)
+            return
+
+        if path == "/api/search":
+            params = parse_qs(parsed.query)
+            query = params.get("q", [""])[0]
+            try:
+                limit = int(params.get("limit", ["50"])[0])
+            except ValueError:
+                limit = 50
+            json_response(self, LIBRARY.search_messages(query, limit))
             return
 
         if path == "/media" or path.startswith("/media/"):
