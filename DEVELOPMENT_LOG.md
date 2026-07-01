@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.1 - empty Telegram service messages fix
+
+Changed:
+- added explicit parser metadata for Telegram service events without regular text
+- preserved the real `create_channel` action from the NOT BAND! export as `service_kind: create_channel`
+- rendered channel/chat creation and unknown empty service events as compact centered system notices
+- kept pinned service notices on the existing `pin_message` path
+- kept `/media`, Range handling, URL encoding, security checks, storage format and media rendering paths unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.1
+- confirm /api/status returns 2.6.1
+- confirm startup vault autoloads when the saved export path is available
+- open NOT BAND! around 11 October 2024 and confirm the `create_channel` service event is a compact system notice, not an empty bubble
+- confirm pinned service notices still render as compact centered notices
+- confirm date separators, regular text messages, incoming/outgoing alignment, chat search and media tabs still work
+- confirm stickers, photo lightbox, video poster/duration/playback, audio cards, files and single active playback still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+
 ## 2.6.0 - Windows release preparation notes
 
 Changed:

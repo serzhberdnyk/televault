@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.1
+
+### Fixed
+
+* Telegram service messages without regular text no longer render as empty message bubbles
+* channel/chat creation events now show as compact system notices
+* pinned service notices continue to render correctly
+
 ## 2.6.0
 
 ### Added

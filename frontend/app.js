@@ -101,6 +101,7 @@ const text = {
   systemSender: 'Системные события',
   pinnedMessage: 'закреплено сообщение',
   pinnedMessageFallback: 'сообщение',
+  genericService: 'системное событие Telegram',
   requestFailed: 'не удалось выполнить запрос',
   fileMissing: 'файл не найден',
   imageUnavailable: 'изображение недоступно',
@@ -866,6 +867,7 @@ function filterMessages(messages, search, sender = '') {
 function messageSearchText(msg) {
   return [
     msg.text,
+    isServiceMessage(msg) ? serviceNoticeLabel(msg) : '',
     msg.from,
     msg.actor,
     msg.service_kind,
@@ -898,7 +900,7 @@ function matchesMediaMode(msg, mode) {
 }
 
 function hasMedia(msg) {
-  return Boolean(msg.media || msg.media_url);
+  return !isServiceMessage(msg) && Boolean(msg.media || msg.media_url);
 }
 
 function mediaExtension(msg) {
@@ -1049,12 +1051,40 @@ function pinnedServiceLabel(msg) {
   return text.pinnedMessage;
 }
 
+function serviceNoticeLabel(msg) {
+  if (isPinnedServiceMessage(msg)) return pinnedServiceLabel(msg);
+
+  const explicit = senderName(msg?.service_text || '');
+  if (explicit) return explicit;
+
+  const actor = serviceActor(msg);
+  const action = serviceAction(msg);
+  if (action === 'create_channel') return actor ? `${actor} создал(а) канал` : 'канал создан';
+  if (action === 'create_chat' || action === 'create_group') return actor ? `${actor} создал(а) чат` : 'чат создан';
+
+  const body = senderName(msg?.text || '');
+  return body || text.genericService;
+}
+
 function renderPinnedServiceMessage(msg) {
   const time = messageTime(msg);
   return `
     <article class="message message--service" aria-label="${escapeAttr(text.pinnedMessage)}">
       <div class="service-notice service-notice--pin">
         <span class="service-notice__text">${escapeHtml(pinnedServiceLabel(msg))}</span>
+        ${time ? `<span class="service-notice__time">${escapeHtml(time)}</span>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+function renderServiceMessage(msg) {
+  const time = messageTime(msg);
+  const label = serviceNoticeLabel(msg);
+  return `
+    <article class="message message--service" aria-label="${escapeAttr(label)}">
+      <div class="service-notice">
+        <span class="service-notice__text">${escapeHtml(label)}</span>
         ${time ? `<span class="service-notice__time">${escapeHtml(time)}</span>` : ''}
       </div>
     </article>
@@ -1085,6 +1115,10 @@ function renderMessages(messages, chat = {}, senders = []) {
     }
     if (isPinnedServiceMessage(msg)) {
       html.push(renderPinnedServiceMessage(msg));
+      return;
+    }
+    if (isServiceMessage(msg)) {
+      html.push(renderServiceMessage(msg));
       return;
     }
     const stickerMessage = isSticker(msg);

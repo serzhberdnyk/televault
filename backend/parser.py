@@ -10,6 +10,9 @@ import mimetypes
 
 
 SERVICE_PREVIEW_LIMIT = 76
+CREATE_CHANNEL_ACTIONS = {"create_channel"}
+CREATE_CHAT_ACTIONS = {"create_chat", "create_group"}
+GENERIC_SERVICE_TEXT = "системное событие Telegram"
 
 
 @dataclass
@@ -235,18 +238,23 @@ def normalize_service_fields(
     message: dict[str, Any],
     messages_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    action = str(message.get("action") or "")
+    action = str(message.get("action") or "").strip()
+    service_kind = normalize_service_kind(action)
     fields: dict[str, Any] = {
         "message_kind": "service",
-        "service_kind": action,
+        "service_kind": service_kind,
         "service_action": action,
         "actor": message.get("actor") or "",
         "actor_id": message.get("actor_id") or "",
+        "service_title": message.get("title") or "",
+        "service_old_title": message.get("old_title") or "",
+        "service_new_title": message.get("new_title") or "",
+        "service_text": service_notice_text(message, service_kind),
         "pinned_message_id": "",
         "pinned_message_preview": "",
         "pinned_message_found": False,
     }
-    if action != "pin_message":
+    if service_kind != "pin_message":
         return fields
 
     pinned_message_id = message.get("message_id")
@@ -256,6 +264,28 @@ def normalize_service_fields(
     if referenced:
         fields["pinned_message_preview"] = referenced_message_preview(referenced)
     return fields
+
+
+def normalize_service_kind(action: str) -> str:
+    normalized = action.strip().lower()
+    if normalized in CREATE_CHANNEL_ACTIONS:
+        return "create_channel"
+    if normalized in CREATE_CHAT_ACTIONS:
+        return "create_chat"
+    return normalized or "generic_service"
+
+
+def service_notice_text(message: dict[str, Any], service_kind: str) -> str:
+    existing_text = compact_text(message.get("text", ""))
+    if service_kind == "pin_message":
+        return existing_text
+
+    actor = compact_text(message.get("actor", ""))
+    if service_kind == "create_channel":
+        return f"{actor} создал(а) канал" if actor else "канал создан"
+    if service_kind == "create_chat":
+        return f"{actor} создал(а) чат" if actor else "чат создан"
+    return existing_text or GENERIC_SERVICE_TEXT
 
 
 def summarize_chat(json_path: Path, chat_id: str) -> ChatSummary:
