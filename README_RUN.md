@@ -53,7 +53,8 @@ python tools\build_portable.py
 Builder создаёт:
 
 ```text
-dist\TeleVault-v2.7.3\
+dist\TeleVault-v2.7.6\
+dist\TeleVault-v2.7.6.zip
 ```
 
 Папка `dist\` является generated artifact: её можно удалить или пересоздать повторным запуском `build_portable.bat`, и она не должна попадать в commit.
@@ -61,7 +62,7 @@ dist\TeleVault-v2.7.3\
 В portable-папку копируются только allowlist-файлы:
 
 ```text
-TeleVault-v2.7.3/
+TeleVault-v2.7.6/
 - run_windows.bat
 - app.py
 - backend/
@@ -78,7 +79,17 @@ TeleVault-v2.7.3/
 
 Если в исходной папке есть `runtime/python/python.exe`, builder копирует всю папку `runtime/python/` в portable-комплект. Если runtime отсутствует, builder не падает и печатает предупреждение: portable folder создан, но без bundled Python; запуск будет работать только там, где есть `py` или `python`.
 
-Готовый exe в 2.7.3 не создаётся.
+## Portable zip
+
+1. Запустите `build_portable.bat`.
+2. Получите архив `dist\TeleVault-v2.7.6.zip`.
+3. Распакуйте zip в обычную папку.
+4. Откройте распакованную папку `TeleVault-v2.7.6`.
+5. Дважды нажмите `run_windows.bat`.
+
+Zip содержит верхнюю папку `TeleVault-v2.7.6\`, а внутри неё те же файлы, что и clean portable folder. Если в исходном проекте есть `runtime\python\python.exe`, bundled Python попадёт и в zip. Если runtime отсутствует, zip всё равно создаётся, но для запуска на другой машине понадобится установленный `py` или `python`.
+
+Готовый exe в 2.7.6 не создаётся.
 
 ## Как открыть Telegram export
 
@@ -92,4 +103,4 @@ TeleVault-v2.7.3/
 
 Версия видна в правом верхнем углу интерфейса и в ответе `/api/status`.
 
-Текущая версия: `2.7.3`.
+Текущая версия: `2.7.6`.

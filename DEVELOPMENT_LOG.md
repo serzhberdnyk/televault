@@ -38,6 +38,34 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.6 - portable zip package
+
+Changed:
+- updated `tools/build_portable.py` so the portable builder creates `dist\TeleVault-v2.7.6.zip` after creating the clean portable folder
+- made the zip archive from the already prepared `dist\TeleVault-v2.7.6\` folder so it keeps the same allowlisted contents
+- kept the top-level `TeleVault-v2.7.6/` folder inside the zip
+- updated README_RUN.md and RELEASE_CHECKLIST.md with portable zip instructions and checks
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.7.6
+- kept `build_portable.bat` Python selection unchanged: `runtime\python\python.exe`, then `py`, then `python`
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm it uses `runtime\python\python.exe`
+- confirm `/api/status` returns 2.7.6
+- confirm the UI contains v2.7.6
+- run `build_portable.bat` without manual PATH changes
+- confirm `dist\TeleVault-v2.7.6\` is created
+- confirm `dist\TeleVault-v2.7.6.zip` is created
+- confirm the zip contains top-level `TeleVault-v2.7.6/`
+- confirm the zip contains `run_windows.bat`, `app.py`, `backend/` and `frontend/`
+- confirm the zip contains `runtime/python/python.exe` when bundled runtime exists in the source project
+- extract the zip and confirm the extracted copy launches through bundled runtime
+- run `git status --short` after builder and confirm ignored `dist/` output is not listed
+- run `git diff --check`
+
 ## 2.7.5 - portable builder bundled runtime launcher
 
 Changed:

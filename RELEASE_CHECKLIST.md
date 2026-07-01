@@ -1,6 +1,6 @@
 # TeleVault: release checklist
 
-TeleVault 2.7.3 - patch-релиз для bundled Python runtime support в portable-запуске. Этот чеклист фиксирует, что нужно проверить после подготовки `dist/TeleVault-v2.7.3/`. В 2.7.3 exe не собирается, installer не добавляется, упаковщик не выбирается, поведение приложения не меняется.
+TeleVault 2.7.6 - patch-релиз для portable zip package. Этот чеклист фиксирует, что нужно проверить после подготовки `dist/TeleVault-v2.7.6/` и `dist/TeleVault-v2.7.6.zip`. В 2.7.6 exe не собирается, installer не добавляется, упаковщик не выбирается, поведение приложения не меняется.
 
 ## Что должно быть в Windows-комплекте
 
@@ -21,10 +21,10 @@ TeleVault 2.7.3 - patch-релиз для bundled Python runtime support в port
 
 ## Portable dry-run папка
 
-В 2.7.3 эту папку создаёт `tools/build_portable.py`. Это dry run: он готовит чистую папку по allowlist, но не собирает exe.
+В 2.7.6 эту папку создаёт `tools/build_portable.py`. Это dry run: он готовит чистую папку по allowlist, но не собирает exe.
 
 ```text
-TeleVault-v2.7.3/
+TeleVault-v2.7.6/
 - run_windows.bat
 - app.py
 - backend/
@@ -45,7 +45,7 @@ TeleVault-v2.7.3/
 ## Проверка portable dry run
 
 1. Запустить `py tools\build_portable.py` или `build_portable.bat`.
-2. Убедиться, что создана папка `dist/TeleVault-v2.7.3/`.
+2. Убедиться, что создана папка `dist/TeleVault-v2.7.6/`.
 3. Убедиться, что builder печатает список скопированных файлов и каталогов.
 4. Убедиться, что portable folder содержит `runtime/python/python.exe` или builder явно предупреждает, что runtime отсутствует.
 5. Убедиться, что `run_windows.bat` запускается через bundled runtime, если он есть.
@@ -54,7 +54,19 @@ TeleVault-v2.7.3/
 8. Убедиться, что в portable-папке нет `.git/`, `__pycache__/`, `.venv/`, `venv/`, `node_modules/`, `dist/`, `build/`, `*.pyc`, `*.log`, локальных export-папок, screenshots/cache/dev artifacts и пользовательских настроек с личными путями.
 9. Убедиться, что `dist/` является generated artifact и не добавляется в commit.
 10. После запуска `build_portable.bat` выполнить `git status --short` и убедиться, что он не показывает `dist/` как untracked.
-11. Если на dev-машине доступен `py` или `python`, запустить `dist\TeleVault-v2.7.3\run_windows.bat` без bundled runtime и проверить fallback-старт приложения.
+11. Запустить `dist\TeleVault-v2.7.6\run_windows.bat` и проверить старт приложения через bundled runtime, если он есть.
+
+## Проверка portable zip
+
+1. Убедиться, что создан zip `dist\TeleVault-v2.7.6.zip`.
+2. Убедиться, что внутри zip есть верхняя папка `TeleVault-v2.7.6/`.
+3. Убедиться, что внутри `TeleVault-v2.7.6/` есть `run_windows.bat`.
+4. Убедиться, что внутри `TeleVault-v2.7.6/` есть `app.py`, `backend/` и `frontend/`.
+5. Если в исходном проекте есть bundled runtime, убедиться, что внутри zip есть `TeleVault-v2.7.6/runtime/python/python.exe`.
+6. Распаковать zip в отдельную папку.
+7. Запустить распакованный `TeleVault-v2.7.6\run_windows.bat`.
+8. Убедиться, что распакованная копия запускается через bundled runtime, если он есть.
+9. Убедиться, что распакованная копия показывает `v2.7.6` в UI и `"version": "2.7.6"` в `/api/status`.
 
 ## Запуск двойным кликом
 
@@ -65,9 +77,9 @@ TeleVault-v2.7.3/
 
 ## Проверка версии
 
-1. Убедиться, что в правом верхнем углу UI показано `v2.7.3`.
+1. Убедиться, что в правом верхнем углу UI показано `v2.7.6`.
 2. Открыть `/api/status`.
-3. Убедиться, что JSON содержит `"version": "2.7.3"`.
+3. Убедиться, что JSON содержит `"version": "2.7.6"`.
 
 ## Проверка startup vault
 
@@ -120,6 +132,6 @@ TeleVault-v2.7.3/
 
 ## Проверка документации
 
-- `README.md`, `README_RUN.md` и этот чеклист не должны обещать готовый exe в 2.7.3.
+- `README.md`, `README_RUN.md` и этот чеклист не должны обещать готовый exe в 2.7.6.
 - Документация должна оставлять `run_windows.bat` текущим поддерживаемым способом запуска.
 - Документация не должна возвращать ручной ввод пути или старую кнопку загрузки.

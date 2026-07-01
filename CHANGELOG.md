@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.7.6
+
+### Added
+
+* portable builder now creates a zip archive for Windows release testing
+
+### Improved
+
+* release checklist now includes portable zip verification steps
+
 ## 2.7.5
 
 ### Fixed

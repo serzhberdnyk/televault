@@ -5,12 +5,13 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.7.5"
+APP_VERSION = "2.7.6"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST_ROOT = ROOT / "dist"
 PACKAGE_ROOT = DIST_ROOT / PACKAGE_NAME
+ZIP_PATH = DIST_ROOT / f"{PACKAGE_NAME}.zip"
 
 ALLOWLIST_FILES = [
     "app.py",
@@ -77,6 +78,13 @@ def ensure_target_is_safe() -> None:
         package_root.relative_to(dist_root)
     except ValueError as exc:
         raise RuntimeError(f"unsafe package path: {PACKAGE_ROOT}") from exc
+    zip_path = ZIP_PATH.resolve()
+    try:
+        zip_path.relative_to(dist_root)
+    except ValueError as exc:
+        raise RuntimeError(f"unsafe zip path: {ZIP_PATH}") from exc
+    if zip_path.suffix.lower() != ".zip":
+        raise RuntimeError(f"unsafe zip path: {ZIP_PATH}")
 
 
 def should_skip_file(path: Path) -> bool:
@@ -126,11 +134,25 @@ def scan_forbidden_files() -> list[str]:
     return issues
 
 
+def create_zip_archive() -> Path:
+    if ZIP_PATH.exists():
+        print(f"cleaning existing portable zip: {ZIP_PATH}")
+        ZIP_PATH.unlink()
+    archive = shutil.make_archive(
+        str(ZIP_PATH.with_suffix("")),
+        "zip",
+        root_dir=DIST_ROOT,
+        base_dir=PACKAGE_NAME,
+    )
+    return Path(archive)
+
+
 def build() -> int:
     print(f"{APP_NAME} portable package dry run")
     print(f"version: {APP_VERSION}")
     print(f"project root: {ROOT}")
     print(f"portable folder: {PACKAGE_ROOT}")
+    print(f"portable zip: {ZIP_PATH}")
     print()
 
     ensure_target_is_safe()
@@ -163,7 +185,7 @@ def build() -> int:
         copied = copy_tree(bundled_python, destination)
         print(f"bundled Python: found {relative(bundled_python)} and copied {copied} files")
     else:
-        print("WARNING: portable folder создан, но без bundled Python; запуск будет работать только там, где есть py/python")
+        print("WARNING: package created without bundled Python; it will need system py/python on the target machine")
 
     issues = scan_forbidden_files()
     if issues:
@@ -174,9 +196,22 @@ def build() -> int:
         return 1
 
     print()
+    print("creating portable zip")
+    zip_path = create_zip_archive()
+    print(f"created zip: {zip_path}")
+
+    print()
     print("not copied by design:")
     print("- .git/, __pycache__/, .venv/, venv/, node_modules/, dist/, build/")
     print("- *.pyc, *.log, settings.json, local export folders, screenshots/cache/dev artifacts")
+
+    print()
+    print("package summary:")
+    print(f"- portable folder: {PACKAGE_ROOT}")
+    print(f"- portable zip: {zip_path}")
+    print(f"- bundled Python: {'yes' if bundled_python else 'no'}")
+    if not bundled_python:
+        print("- WARNING: zip is not fully portable without bundled Python")
 
     print()
     print("next manual checks:")
@@ -184,11 +219,14 @@ def build() -> int:
     print("- run python -m py_compile tools/build_portable.py")
     print("- run node --check frontend/app.js")
     print(f"- open dist/{PACKAGE_NAME}/ and confirm only allowlisted project files are present")
+    print(f"- open dist/{PACKAGE_NAME}.zip and confirm it contains {PACKAGE_NAME}/ at the top level")
     print(f"- run dist/{PACKAGE_NAME}/run_windows.bat if Windows Python is available")
+    print(f"- extract dist/{PACKAGE_NAME}.zip and run {PACKAGE_NAME}/run_windows.bat")
     print(f"- confirm the UI and /api/status show {APP_VERSION}")
 
     print()
     print(f"done: {PACKAGE_ROOT}")
+    print(f"zip: {zip_path}")
     return 0
 
 
