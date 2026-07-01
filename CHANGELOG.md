@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.7.1
+
+### Added
+
+* portable package dry-run builder for preparing a clean Windows release folder
+
+### Improved
+
+* release checklist now includes portable folder verification steps
+
 ## 2.7.0
 
 ### Improved

@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.1 - portable package dry run
+
+Changed:
+- added `tools/build_portable.py` as an allowlist-based dry-run builder for `dist/TeleVault-v2.7.1/`
+- added `build_portable.bat` as a Windows convenience wrapper for the builder
+- copied only app/runtime docs and source folders needed for the portable dry run: `app.py`, `run_windows.bat`, `backend/`, `frontend/`, `README.md`, `README_RUN.md`, `CHANGELOG.md`, `RELEASE_CHECKLIST.md` and `DEVELOPMENT_LOG.md`
+- kept `.git/`, caches, virtual environments, `node_modules/`, generated `dist/`/`build/`, logs, local exports, screenshots/cache/dev artifacts and user settings out of the portable folder by allowlist
+- documented that bundled Python is not present inside the current project, so the dry-run folder needs an existing Windows `py` or `python` command unless a bundled runtime is added later
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.7.1
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage, media classification and media/search rendering unchanged
+
+Manual test:
+- run `python -m py_compile app.py backend/parser.py backend/library.py`
+- run `python -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with run_windows.bat and confirm the UI shows v2.7.1
+- confirm /api/status returns 2.7.1
+- run `python tools/build_portable.py` and confirm `dist/TeleVault-v2.7.1/` is created
+- confirm the portable folder does not contain `.git/`, `__pycache__/`, `.venv/`, `venv/`, `node_modules/`, old export folders, cache/dev artifacts, logs or user settings
+- run `dist\TeleVault-v2.7.1\run_windows.bat` if Windows Python is available
+- run `git diff --check`
+
 ## 2.7.0 - windows release preparation baseline
 
 Changed:

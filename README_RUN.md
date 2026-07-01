@@ -22,25 +22,54 @@ http://127.0.0.1:8766
 
 В исходной папке проекта скрипт пробует запустить приложение через доступный Python для Windows. Если TeleVault передан как подготовленная папка со встроенным Python, запуск выглядит так же: пользователь просто нажимает `run_windows.bat`, а технические детали остаются внутри комплекта.
 
-## Будущая portable-сборка
+## Создание portable-папки
 
-В 2.7.0 основной запуск остаётся через `run_windows.bat`. Этот релиз только документирует ожидания перед будущей Windows/portable-упаковкой.
+TeleVault 2.7.1 добавляет только dry-run builder для подготовки чистой Windows-папки. Он не собирает exe, не добавляет упаковщик и не меняет поведение приложения.
 
-Будущий portable-комплект может выглядеть так:
+Способ для двойного клика:
+
+1. Откройте исходную папку проекта.
+2. Дважды нажмите `build_portable.bat`.
+3. Проверьте вывод в консоли.
+
+Способ из терминала:
+
+```bat
+py tools\build_portable.py
+```
+
+Если `py` недоступен:
+
+```bat
+python tools\build_portable.py
+```
+
+Builder создаёт:
 
 ```text
-TeleVault/
+dist\TeleVault-v2.7.1\
+```
+
+В portable-папку копируются только allowlist-файлы:
+
+```text
+TeleVault-v2.7.1/
 - run_windows.bat
 - app.py
 - backend/
 - frontend/
 - README_RUN.md
 - README.md
+- CHANGELOG.md
 - RELEASE_CHECKLIST.md
-- python/ или другой bundled Python, если он будет выбран для комплекта
+- DEVELOPMENT_LOG.md
 ```
 
-Exe/portable packaging будет отдельным следующим этапом. TeleVault 2.7.0 не обещает готовый exe и не добавляет упаковщик.
+Не копируются `.git/`, `__pycache__/`, `.venv/`, `venv/`, `node_modules/`, `dist/`, `build/`, `*.pyc`, `*.log`, локальные export-папки, временные screenshots/cache/dev artifacts и пользовательские настройки с личными путями.
+
+В текущей исходной папке проекта bundled Python нет. Поэтому builder печатает предупреждение: dry-run папка запускается через `run_windows.bat` только на Windows, где уже доступен `py` или `python`.
+
+Готовый exe в 2.7.1 не создаётся.
 
 ## Как открыть Telegram export
 
@@ -54,4 +83,4 @@ Exe/portable packaging будет отдельным следующим этап
 
 Версия видна в правом верхнем углу интерфейса и в ответе `/api/status`.
 
-Текущая версия: `2.7.0`.
+Текущая версия: `2.7.1`.
