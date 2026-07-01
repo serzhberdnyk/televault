@@ -1,6 +1,6 @@
 # TeleVault: release checklist
 
-TeleVault 2.7.2 - patch-релиз для git hygiene вокруг generated release artifacts. Этот чеклист фиксирует, что нужно проверить после подготовки `dist/TeleVault-v2.7.2/`. В 2.7.2 exe не собирается, installer не добавляется, упаковщик не выбирается, поведение приложения не меняется.
+TeleVault 2.7.3 - patch-релиз для bundled Python runtime support в portable-запуске. Этот чеклист фиксирует, что нужно проверить после подготовки `dist/TeleVault-v2.7.3/`. В 2.7.3 exe не собирается, installer не добавляется, упаковщик не выбирается, поведение приложения не меняется.
 
 ## Что должно быть в Windows-комплекте
 
@@ -15,16 +15,16 @@ TeleVault 2.7.2 - patch-релиз для git hygiene вокруг generated rel
 - `CHANGELOG.md`
 - `RELEASE_CHECKLIST.md`
 - `DEVELOPMENT_LOG.md`
-- bundled Python только если подготовленный комплект будет использовать встроенный Python
+- `runtime/python/` только если в исходном проекте есть `runtime/python/python.exe`
 
-В текущей исходной папке проекта bundled Python нет. `run_windows.bat` сейчас пробует `py app.py`, а затем `python app.py`.
+`run_windows.bat` сначала пробует `runtime\python\python.exe`, затем системный `py`, затем системный `python`. Если Python не найден, окно остаётся открытым и показывает понятное сообщение.
 
 ## Portable dry-run папка
 
-В 2.7.2 эту папку создаёт `tools/build_portable.py`. Это dry run: он готовит чистую папку по allowlist, но не собирает exe.
+В 2.7.3 эту папку создаёт `tools/build_portable.py`. Это dry run: он готовит чистую папку по allowlist, но не собирает exe.
 
 ```text
-TeleVault-v2.7.2/
+TeleVault-v2.7.3/
 - run_windows.bat
 - app.py
 - backend/
@@ -39,19 +39,22 @@ TeleVault-v2.7.2/
 - CHANGELOG.md
 - RELEASE_CHECKLIST.md
 - DEVELOPMENT_LOG.md
+- runtime/python/ optional, only when `runtime/python/python.exe` exists in the source project
 ```
 
 ## Проверка portable dry run
 
 1. Запустить `py tools\build_portable.py` или `build_portable.bat`.
-2. Убедиться, что создана папка `dist/TeleVault-v2.7.2/`.
+2. Убедиться, что создана папка `dist/TeleVault-v2.7.3/`.
 3. Убедиться, что builder печатает список скопированных файлов и каталогов.
-4. Убедиться, что builder явно пишет предупреждение, если bundled Python не найден внутри проекта.
-5. Убедиться, что в portable-папке есть только allowlist-файлы и каталоги из раздела выше.
-6. Убедиться, что в portable-папке нет `.git/`, `__pycache__/`, `.venv/`, `venv/`, `node_modules/`, `dist/`, `build/`, `*.pyc`, `*.log`, локальных export-папок, screenshots/cache/dev artifacts и пользовательских настроек с личными путями.
-7. Убедиться, что `dist/` является generated artifact и не добавляется в commit.
-8. После запуска `build_portable.bat` выполнить `git status --short` и убедиться, что он не показывает `dist/` как untracked.
-9. Если на машине доступен `py` или `python`, запустить `dist\TeleVault-v2.7.2\run_windows.bat` и проверить обычный старт приложения.
+4. Убедиться, что portable folder содержит `runtime/python/python.exe` или builder явно предупреждает, что runtime отсутствует.
+5. Убедиться, что `run_windows.bat` запускается через bundled runtime, если он есть.
+6. Убедиться, что fallback на system `py` или `python` используется только для dev/local use, когда bundled runtime отсутствует.
+7. Убедиться, что в portable-папке есть только allowlist-файлы и каталоги из раздела выше.
+8. Убедиться, что в portable-папке нет `.git/`, `__pycache__/`, `.venv/`, `venv/`, `node_modules/`, `dist/`, `build/`, `*.pyc`, `*.log`, локальных export-папок, screenshots/cache/dev artifacts и пользовательских настроек с личными путями.
+9. Убедиться, что `dist/` является generated artifact и не добавляется в commit.
+10. После запуска `build_portable.bat` выполнить `git status --short` и убедиться, что он не показывает `dist/` как untracked.
+11. Если на dev-машине доступен `py` или `python`, запустить `dist\TeleVault-v2.7.3\run_windows.bat` без bundled runtime и проверить fallback-старт приложения.
 
 ## Запуск двойным кликом
 
@@ -62,9 +65,9 @@ TeleVault-v2.7.2/
 
 ## Проверка версии
 
-1. Убедиться, что в правом верхнем углу UI показано `v2.7.2`.
+1. Убедиться, что в правом верхнем углу UI показано `v2.7.3`.
 2. Открыть `/api/status`.
-3. Убедиться, что JSON содержит `"version": "2.7.2"`.
+3. Убедиться, что JSON содержит `"version": "2.7.3"`.
 
 ## Проверка startup vault
 
@@ -117,6 +120,6 @@ TeleVault-v2.7.2/
 
 ## Проверка документации
 
-- `README.md`, `README_RUN.md` и этот чеклист не должны обещать готовый exe в 2.7.2.
+- `README.md`, `README_RUN.md` и этот чеклист не должны обещать готовый exe в 2.7.3.
 - Документация должна оставлять `run_windows.bat` текущим поддерживаемым способом запуска.
 - Документация не должна возвращать ручной ввод пути или старую кнопку загрузки.

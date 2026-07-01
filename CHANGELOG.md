@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.7.3
+
+### Improved
+
+* Windows launcher now prefers a bundled local Python runtime when available
+* portable builder now copies runtime/python when present
+* portable run instructions now explain bundled Python fallback behavior
+
 ## 2.7.2
 
 ### Improved

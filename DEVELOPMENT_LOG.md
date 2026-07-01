@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.3 - bundled python runtime support
+
+Changed:
+- updated `run_windows.bat` so it first uses `runtime\python\python.exe` when present, then falls back to `py`, then `python`
+- made the Windows launcher print a clear `python runtime не найден` message when no bundled or system Python runtime is available
+- updated `tools/build_portable.py` so it copies `runtime/python/` only when `runtime/python/python.exe` exists
+- kept the portable builder allowlist behavior and warning flow when bundled Python is absent
+- set the Windows batch launchers to UTF-8 console output so Russian runtime warnings stay readable
+- added source-tree notes for placing a local portable Python runtime under `runtime/python/` without committing Python binaries
+- updated README_RUN.md and RELEASE_CHECKLIST.md for the 2.7.3 portable runtime behavior
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.7.3
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage and search/media logic unchanged
+
+Manual test:
+- run `python -m py_compile app.py backend/parser.py backend/library.py`
+- run `python -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm the UI shows v2.7.3
+- confirm `/api/status` returns 2.7.3
+- run `build_portable.bat` and confirm `dist/TeleVault-v2.7.3/` is created
+- confirm builder warning appears when `runtime/python/python.exe` is absent
+- confirm portable `run_windows.bat` falls back to system `py` or `python` for dev/local use
+- run `git status --short` after builder and confirm ignored `dist/` output is not listed
+- run `git diff --check`
+
 ## 2.7.2 - release artifact git hygiene
 
 Changed:

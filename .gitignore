@@ -8,6 +8,7 @@ node_modules/
 
 dist/
 build/
+runtime/python/
 
 .pytest_cache/
 .mypy_cache/

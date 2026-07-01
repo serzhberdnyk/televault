@@ -5,7 +5,7 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.7.2"
+APP_VERSION = "2.7.3"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,13 +27,7 @@ ALLOWLIST_DIRS = [
     "frontend",
 ]
 
-BUNDLED_PYTHON_CANDIDATES = [
-    ROOT / "python",
-    ROOT / "python-embed",
-    ROOT / "python_embedded",
-    ROOT / "runtime" / "python",
-    ROOT / "vendor" / "python",
-]
+BUNDLED_PYTHON_DIR = ROOT / "runtime" / "python"
 
 SKIP_DIR_NAMES = {
     ".git",
@@ -117,11 +111,8 @@ def copy_tree(source: Path, destination: Path) -> int:
 
 
 def find_bundled_python() -> Path | None:
-    for candidate in BUNDLED_PYTHON_CANDIDATES:
-        if not candidate.is_dir():
-            continue
-        if (candidate / "python.exe").exists() or (candidate / "pythonw.exe").exists():
-            return candidate
+    if (BUNDLED_PYTHON_DIR / "python.exe").is_file():
+        return BUNDLED_PYTHON_DIR
     return None
 
 
@@ -172,8 +163,7 @@ def build() -> int:
         copied = copy_tree(bundled_python, destination)
         print(f"bundled Python: found {relative(bundled_python)} and copied {copied} files")
     else:
-        print("WARNING: bundled Python was not found inside the TeleVault project.")
-        print("This dry-run folder can run only on Windows where `py` or `python` is already installed.")
+        print("WARNING: portable folder создан, но без bundled Python; запуск будет работать только там, где есть py/python")
 
     issues = scan_forbidden_files()
     if issues:

@@ -20,7 +20,13 @@ http://127.0.0.1:8766
 
 `run_windows.bat` запускает локальный сервер TeleVault и печатает адрес, который нужно открыть в браузере.
 
-В исходной папке проекта скрипт пробует запустить приложение через доступный Python для Windows. Если TeleVault передан как подготовленная папка со встроенным Python, запуск выглядит так же: пользователь просто нажимает `run_windows.bat`, а технические детали остаются внутри комплекта.
+Порядок запуска:
+
+1. Если рядом с приложением есть `runtime\python\python.exe`, используется этот bundled Python runtime.
+2. Если bundled runtime нет, скрипт пробует системный `py`.
+3. Если `py` недоступен, скрипт пробует системный `python`.
+
+Если Python не найден ни одним способом, окно не закрывается мгновенно и показывает понятное сообщение. Для настоящей portable-папки нужен bundled Python runtime внутри `runtime\python\`.
 
 ## Создание portable-папки
 
@@ -47,7 +53,7 @@ python tools\build_portable.py
 Builder создаёт:
 
 ```text
-dist\TeleVault-v2.7.2\
+dist\TeleVault-v2.7.3\
 ```
 
 Папка `dist\` является generated artifact: её можно удалить или пересоздать повторным запуском `build_portable.bat`, и она не должна попадать в commit.
@@ -55,7 +61,7 @@ dist\TeleVault-v2.7.2\
 В portable-папку копируются только allowlist-файлы:
 
 ```text
-TeleVault-v2.7.2/
+TeleVault-v2.7.3/
 - run_windows.bat
 - app.py
 - backend/
@@ -65,13 +71,14 @@ TeleVault-v2.7.2/
 - CHANGELOG.md
 - RELEASE_CHECKLIST.md
 - DEVELOPMENT_LOG.md
+- runtime/python/ только если в исходном проекте есть runtime/python/python.exe
 ```
 
 Не копируются `.git/`, `__pycache__/`, `.venv/`, `venv/`, `node_modules/`, `dist/`, `build/`, `*.pyc`, `*.log`, локальные export-папки, временные screenshots/cache/dev artifacts и пользовательские настройки с личными путями.
 
-В текущей исходной папке проекта bundled Python нет. Поэтому builder печатает предупреждение: dry-run папка запускается через `run_windows.bat` только на Windows, где уже доступен `py` или `python`.
+Если в исходной папке есть `runtime/python/python.exe`, builder копирует всю папку `runtime/python/` в portable-комплект. Если runtime отсутствует, builder не падает и печатает предупреждение: portable folder создан, но без bundled Python; запуск будет работать только там, где есть `py` или `python`.
 
-Готовый exe в 2.7.2 не создаётся.
+Готовый exe в 2.7.3 не создаётся.
 
 ## Как открыть Telegram export
 
@@ -85,4 +92,4 @@ TeleVault-v2.7.2/
 
 Версия видна в правом верхнем углу интерфейса и в ответе `/api/status`.
 
-Текущая версия: `2.7.2`.
+Текущая версия: `2.7.3`.
