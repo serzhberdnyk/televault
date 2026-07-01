@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.6.0
+
+### Added
+
+* added project documentation for Windows release preparation
+* added build preparation notes for future exe packaging
+
+### Improved
+
+* clarified how to run TeleVault locally on Windows
+* documented the current project structure and stable app status
+
 ## 2.5.27
 
 ### Fixed

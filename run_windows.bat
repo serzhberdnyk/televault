@@ -1,6 +1,6 @@
 @echo off
 cd /d %~dp0
-echo starting TeleVault v2.5.27...
+echo starting TeleVault v2.6.0...
 py app.py
 if errorlevel 1 (
   echo.

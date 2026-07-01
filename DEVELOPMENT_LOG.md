@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.0 - Windows release preparation notes
+
+Changed:
+- updated README.md as a short product overview for the local desktop app
+- updated README_RUN.md with the current Windows startup flow and v2.6.0
+- added PROJECT_STRUCTURE.md as a short map of the main project files
+- added BUILD_NOTES.md with preparation notes for future Windows exe packaging
+- documented that 2.6.0 does not build an exe, add an installer or add dependencies
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.0
+- confirm /api/status returns 2.6.0
+- confirm startup vault autoloads when the saved export path is available
+- confirm conversation list, chat search/sort, chat click, date separators, empty states and storage status still work
+- confirm stickers, photo lightbox, video poster/duration/playback, audio cards, pinned service notices and single active playback still work
+- confirm manual path input and the old load button did not return
+- confirm /media 200/206/416/403 and path traversal protection still work
+
 ## 2.5.27 - native video duration metadata fix
 
 Changed:
