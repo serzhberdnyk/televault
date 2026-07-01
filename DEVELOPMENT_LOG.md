@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.16 - global search result polish
+
+Changed:
+- changed global search message cards to a snippet-first layout with compact metadata underneath
+- reduced repeated chat/sender metadata by omitting the chat title when it matches the sender
+- added soft, escaped query highlighting inside global search snippets
+- added a small sidebar hint when the global search response reaches the configured 50 result limit
+- kept the 2.6.15 `/api/search` endpoint unchanged
+- kept global result click-to-open, jump highlight, in-chat search, media tabs, audio-only rendering and sticker/file separation unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.16
+- confirm /api/status returns 2.6.16
+- global search for "лол" and confirm message cards show the snippet first
+- confirm matching "лол" text is softly highlighted in snippets regardless of case
+- confirm chat title and sender are not duplicated when they are the same visual label
+- confirm a 50-result global search shows "показаны первые 50 результатов, уточни запрос"
+- click a global result and confirm the original chat opens, the full conversation is shown, the message is centered and briefly highlighted
+- confirm in-chat search still filters messages and keeps click-to-jump behavior
+- confirm photo, video, audio, sticker and file media tabs still render normally
+- confirm files and stickers remain separated as in 2.6.12
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.15 - global message search v1
 
 Changed:

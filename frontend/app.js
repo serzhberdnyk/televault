@@ -25,6 +25,8 @@ const state = {
   globalSearchLoading: false,
   globalSearchError: '',
   globalSearchRequestId: 0,
+  globalSearchResultLimit: 50,
+  globalSearchLimitReached: false,
   chatCache: {},
   senderFilterSignature: '',
   messagesRequestId: 0,
@@ -139,6 +141,7 @@ const text = {
   globalSearchLoading: 'ищу сообщения...',
   globalSearchFailed: 'поиск не удался',
   globalSearchFailedBody: 'попробуй повторить запрос',
+  globalSearchLimitHint: 'показаны первые {limit} результатов, уточни запрос',
   chatMessagesNotFound: 'сообщений не найдено',
   chatMessagesNotFoundBody: 'попробуй другой запрос',
   chatFilterNothingFoundBody: 'попробуй изменить фильтр',
@@ -448,6 +451,9 @@ function renderChats() {
   if (hasSearch && messageResults.length) {
     appendSidebarSectionTitle(box, text.globalSearchTitle);
     messageResults.forEach(result => box.appendChild(renderGlobalMessageResult(result)));
+    if (state.globalSearchLimitReached) {
+      appendSidebarLimitHint(box, state.globalSearchResultLimit);
+    }
   }
   if (
     hasSearch
@@ -497,6 +503,13 @@ function appendSidebarSearchState(box, title, body) {
   ));
 }
 
+function appendSidebarLimitHint(box, limit) {
+  const div = document.createElement('div');
+  div.className = 'sidebar-limit-hint';
+  div.textContent = text.globalSearchLimitHint.replace('{limit}', formatNumber(limit || state.globalSearchLimit));
+  box.appendChild(div);
+}
+
 function getVisibleGlobalMessageResults(query) {
   if (!query || state.globalSearchQuery !== query) return [];
   return state.globalSearchResults || [];
@@ -519,19 +532,69 @@ function renderGlobalMessageResult(result) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'global-message-card';
-  const chatTitle = result.chat_title || result.chatTitle || text.conversationsNotFound;
   const snippet = result.snippet || result.media_type || 'сообщение';
-  const sender = result.sender || text.system;
-  const date = result.date || text.noDate;
+  const meta = buildGlobalSearchResultMeta(result);
   button.innerHTML = `
-    <span class="global-message-card__chat">${escapeHtml(chatTitle)}</span>
-    <span class="global-message-card__snippet">${escapeHtml(snippet)}</span>
-    <span class="global-message-card__meta">${escapeHtml(sender)} · ${escapeHtml(date)}</span>
+    <span class="global-message-card__snippet">${renderHighlightedSearchSnippet(snippet, state.globalSearchQuery || state.chatSearchQuery)}</span>
+    <span class="global-message-card__meta">${escapeHtml(meta)}</span>
   `;
   button.addEventListener('click', () => {
     openGlobalSearchResult(result);
   });
   return button;
+}
+
+function normalizeSearchMetaValue(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function sameSearchMetaValue(a, b) {
+  const left = normalizeSearchMetaValue(a).toLocaleLowerCase('ru-RU');
+  const right = normalizeSearchMetaValue(b).toLocaleLowerCase('ru-RU');
+  return Boolean(left && right && left === right);
+}
+
+function buildGlobalSearchResultMeta(result) {
+  const chatTitle = normalizeSearchMetaValue(result.chat_title || result.chatTitle);
+  const sender = normalizeSearchMetaValue(result.sender);
+  const date = normalizeSearchMetaValue(result.date) || text.noDate;
+  const parts = [];
+  if (chatTitle && sender) {
+    if (sameSearchMetaValue(chatTitle, sender)) {
+      parts.push(sender);
+    } else {
+      parts.push(`чат: ${chatTitle}`);
+      parts.push(sender);
+    }
+  } else if (chatTitle) {
+    parts.push(chatTitle);
+  } else if (sender) {
+    parts.push(sender);
+  }
+  if (date) parts.push(date);
+  return parts.join(' · ');
+}
+
+function renderHighlightedSearchSnippet(value, query) {
+  const source = String(value || '');
+  const needle = String(query || '').trim();
+  if (!source || !needle) return escapeHtml(source);
+
+  const lowerSource = source.toLocaleLowerCase('ru-RU');
+  const lowerNeedle = needle.toLocaleLowerCase('ru-RU');
+  if (!lowerNeedle) return escapeHtml(source);
+
+  let html = '';
+  let index = 0;
+  while (index < source.length) {
+    const matchIndex = lowerSource.indexOf(lowerNeedle, index);
+    if (matchIndex < 0) break;
+    html += escapeHtml(source.slice(index, matchIndex));
+    html += `<mark class="global-message-card__match">${escapeHtml(source.slice(matchIndex, matchIndex + needle.length))}</mark>`;
+    index = matchIndex + needle.length;
+  }
+  html += escapeHtml(source.slice(index));
+  return html || escapeHtml(source);
 }
 
 function getVisibleChats() {
@@ -946,6 +1009,8 @@ function resetGlobalMessageSearch() {
   state.globalSearchLoading = false;
   state.globalSearchError = '';
   state.globalSearchQuery = '';
+  state.globalSearchResultLimit = state.globalSearchLimit;
+  state.globalSearchLimitReached = false;
   state.globalSearchRequestId += 1;
 }
 
@@ -975,10 +1040,16 @@ async function loadGlobalMessageSearch() {
     const data = await api(`/api/search?q=${encodeURIComponent(query)}&limit=${state.globalSearchLimit}`);
     if (requestId !== state.globalSearchRequestId) return;
     state.globalSearchResults = Array.isArray(data.results) ? data.results : [];
+    const responseLimit = Number(data.limit || state.globalSearchLimit);
+    state.globalSearchResultLimit = Number.isFinite(responseLimit) && responseLimit > 0
+      ? responseLimit
+      : state.globalSearchLimit;
+    state.globalSearchLimitReached = state.globalSearchResults.length >= state.globalSearchResultLimit;
   } catch (e) {
     if (requestId !== state.globalSearchRequestId) return;
     state.globalSearchResults = [];
     state.globalSearchError = cleanErrorMessage(e);
+    state.globalSearchLimitReached = false;
   } finally {
     if (requestId !== state.globalSearchRequestId) return;
     state.globalSearchLoading = false;

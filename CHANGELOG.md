@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.16
+
+### Improved
+
+* global search result cards now use a cleaner snippet-first layout
+* repeated chat/sender metadata is reduced in sidebar search results
+* matched search text is softly highlighted in global search snippets
+
 ## 2.6.15
 
 ### Added
