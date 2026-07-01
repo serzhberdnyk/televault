@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TeleVault</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <path class="brand-logo__shield" d="M24 4 39 10v11c0 10.5-6.2 18.7-15 22-8.8-3.3-15-11.5-15-22V10L24 4Z" />
+        <path class="brand-logo__vault" d="M17.2 22.5c0-4.4 2.9-7.6 6.8-7.6s6.8 3.2 6.8 7.6v10.7H17.2V22.5Zm4.1 0h5.4c0-2.1-1-3.5-2.7-3.5s-2.7 1.4-2.7 3.5Z" />
+        <circle class="brand-logo__lock" cx="24" cy="28" r="2.1" />
+      </svg>
+      <div>
+        <h1>TeleVault</h1>
+        <p>личное хранилище Telegram</p>
+      </div>
+    </div>
+
+    <button id="pickFolder" class="primary" type="button" data-pick-folder>
+      <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3.8 6.3a2 2 0 0 1 2-2h4.4l2 2h6a2 2 0 0 1 2 2v1.2H3.8V6.3Z" />
+        <path d="M3 10h18l-1.6 7.4a2.2 2.2 0 0 1-2.1 1.8H6.7a2.2 2.2 0 0 1-2.1-1.8L3 10Z" />
+      </svg>
+      <span>добавить в хранилище</span>
+    </button>
+
+    <div id="libraryInfo" class="hint">локальное хранилище экспортов Telegram</div>
+
+    <!-- TODO: advanced sections may return later. Minimal vault UI keeps conversations as the only visible mode. -->
+
+    <div class="chat-tools" aria-label="поиск и сортировка переписок">
+      <label class="search-field chat-search-field" for="chatSearch">
+        <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M10.8 4.5a6.3 6.3 0 1 1 0 12.6 6.3 6.3 0 0 1 0-12.6Zm0 2a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6Z" />
+          <path d="m15.4 15 4.1 4.1-1.4 1.4-4.1-4.1 1.4-1.4Z" />
+        </svg>
+        <input id="chatSearch" placeholder="поиск по перепискам" autocomplete="off" />
+      </label>
+      <select id="chatSort" class="chat-sort" aria-label="сортировка переписок">
+        <option value="newest">новые сначала</option>
+        <option value="oldest">старые сначала</option>
+        <option value="title">по названию</option>
+        <option value="messages">больше сообщений</option>
+        <option value="media">больше медиа</option>
+      </select>
+    </div>
+
+    <div id="chatListTitle" class="chat-list-title">Переписки</div>
+    <div id="chatList" class="chat-list"></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="chatTitle">TeleVault</h2>
+        <p id="chatMeta">personal vault for Telegram exports</p>
+      </div>
+      <div class="version" id="version">v2.5.25</div>
+    </header>
+
+    <section id="vaultSection" class="app-section app-section-vault active" data-section-panel="vault">
+      <section class="media-tabs" id="mediaTabs" aria-label="медиа режим">
+        <button type="button" class="media-tab active" data-media-mode="all">все</button>
+        <button type="button" class="media-tab" data-media-mode="photo">фото</button>
+        <button type="button" class="media-tab" data-media-mode="video">видео</button>
+        <button type="button" class="media-tab" data-media-mode="audio">аудио</button>
+        <button type="button" class="media-tab" data-media-mode="file">файлы</button>
+      </section>
+
+      <section class="filters" id="filters">
+        <label class="search-field" for="searchBox">
+          <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M10.8 4.5a6.3 6.3 0 1 1 0 12.6 6.3 6.3 0 0 1 0-12.6Zm0 2a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6Z" />
+            <path d="m15.4 15 4.1 4.1-1.4 1.4-4.1-4.1 1.4-1.4Z" />
+          </svg>
+          <input id="searchBox" placeholder="поиск в выбранной переписке" autocomplete="off" />
+        </label>
+        <select id="senderFilter"><option value="">все отправители</option></select>
+        <button id="mediaOnly" class="toggle-button" type="button" hidden aria-hidden="true">только медиа: выкл</button>
+        <button id="resetFilters" type="button" hidden>сброс</button>
+      </section>
+
+      <section id="emptyState" class="empty welcome">
+        <div class="welcome-lockup">
+          <div class="welcome-brand">
+            <svg class="welcome-logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+              <path class="brand-logo__shield" d="M24 4 39 10v11c0 10.5-6.2 18.7-15 22-8.8-3.3-15-11.5-15-22V10L24 4Z" />
+              <path class="brand-logo__vault" d="M17.2 22.5c0-4.4 2.9-7.6 6.8-7.6s6.8 3.2 6.8 7.6v10.7H17.2V22.5Zm4.1 0h5.4c0-2.1-1-3.5-2.7-3.5s-2.7 1.4-2.7 3.5Z" />
+              <circle class="brand-logo__lock" cx="24" cy="28" r="2.1" />
+            </svg>
+            <div>
+              <span class="welcome-eyebrow">TeleVault</span>
+              <h3>личное хранилище Telegram</h3>
+            </div>
+          </div>
+          <p class="welcome-lead">Добавь папку экспорта, чтобы открыть переписки и медиа.</p>
+          <p>Экспорт останется локально: чаты, сообщения и файлы будут доступны в одном спокойном рабочем окне.</p>
+          <button id="welcomePickFolder" class="primary welcome-action" type="button" data-pick-folder>
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3.8 6.3a2 2 0 0 1 2-2h4.4l2 2h6a2 2 0 0 1 2 2v1.2H3.8V6.3Z" />
+              <path d="M3 10h18l-1.6 7.4a2.2 2.2 0 0 1-2.1 1.8H6.7a2.2 2.2 0 0 1-2.1-1.8L3 10Z" />
+            </svg>
+            <span>Добавить в хранилище</span>
+          </button>
+          <p class="welcome-note">Выбери папку, где лежит один или несколько result.json из Telegram Desktop export.</p>
+        </div>
+      </section>
+
+      <section id="messages" class="messages"></section>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
