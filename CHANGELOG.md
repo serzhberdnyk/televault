@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.7.7
+
+### Added
+
+* exe packaging plan was added for the upcoming Windows launcher phase
+
+### Improved
+
+* release checklist now documents exe preparation risks and verification steps
+* Windows run documentation now clarifies the current portable flow and future exe goal
+
 ## 2.7.6
 
 ### Added

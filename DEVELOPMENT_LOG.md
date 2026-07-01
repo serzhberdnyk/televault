@@ -38,6 +38,33 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.7 - exe packaging preparation
+
+Changed:
+- added EXE_PACKAGING_PLAN.md to document the future Windows exe launcher phase without implementing exe packaging in this release
+- recommended a launcher-style exe beside existing resources before attempting one-file packaging
+- documented exe packaging risks around frontend/backend paths, folder picker, startup vault, `/media`, Range requests, `/api/search`, browser startup, relative paths, runtime hygiene and user data hygiene
+- updated README.md, README_RUN.md and RELEASE_CHECKLIST.md with the current portable flow and future exe goal
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.7.7
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm it uses `runtime\python\python.exe`
+- confirm `/api/status` returns 2.7.7
+- confirm the UI contains v2.7.7
+- run `build_portable.bat` without manual PATH changes
+- confirm `dist\TeleVault-v2.7.7\` is created
+- confirm `dist\TeleVault-v2.7.7.zip` is created
+- confirm the zip contains top-level `TeleVault-v2.7.7/`
+- confirm the zip contains `runtime/python/python.exe` when bundled runtime exists in the source project
+- confirm EXE_PACKAGING_PLAN.md does not promise a ready exe in 2.7.7
+- confirm README.md and README_RUN.md do not say that exe is ready in 2.7.7
+- run `git status --short` after builder and confirm ignored `dist/` output is not listed
+- run `git diff --check`
+
 ## 2.7.6 - portable zip package
 
 Changed:
