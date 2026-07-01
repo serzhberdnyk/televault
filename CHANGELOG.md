@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.5
+
+### Fixed
+
+* portable build script now finds bundled runtime\python\python.exe without requiring PATH changes
+* portable release dry-run can now be launched more reliably by double-clicking build_portable.bat
+
 ## 2.7.4
 
 ### Fixed

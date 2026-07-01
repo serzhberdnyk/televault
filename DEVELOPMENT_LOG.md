@@ -38,6 +38,29 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.5 - portable builder bundled runtime launcher
+
+Changed:
+- updated `build_portable.bat` so it first uses `runtime\python\python.exe` when present, then falls back to `py`, then `python`
+- made the portable build launcher print which Python runtime it selected
+- made the portable build launcher pause and return a clear error when no Python runtime is available or when the builder fails
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.7.5
+- kept `tools/build_portable.py` copy logic and allowlists unchanged
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm it uses `runtime\python\python.exe`
+- confirm `/api/status` returns 2.7.5
+- confirm the UI contains v2.7.5
+- run `build_portable.bat` without manual PATH changes and confirm `dist\TeleVault-v2.7.5\` is created
+- confirm `dist\TeleVault-v2.7.5\runtime\python\python.exe` exists
+- confirm portable `dist\TeleVault-v2.7.5\run_windows.bat` launches through bundled runtime
+- run `git status --short` after builder and confirm ignored `dist/` output is not listed
+- run `git diff --check`
+
 ## 2.7.4 - bundled runtime import path fix
 
 Changed:
