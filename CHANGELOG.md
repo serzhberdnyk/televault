@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.7.0
+
+### Improved
+
+* release readiness documentation was added for the upcoming Windows packaging phase
+* Windows portable package expectations are now documented
+* current run and verification steps were clarified before exe packaging work begins
+
 ## 2.6.18
 
 ### Improved

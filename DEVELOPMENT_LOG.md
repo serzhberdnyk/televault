@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.7.0 - windows release preparation baseline
+
+Changed:
+- added RELEASE_CHECKLIST.md to document the expected Windows/portable package contents and release checks before packaging work begins
+- documented the future portable folder shape while keeping the current source-tree launch path unchanged
+- clarified README_RUN.md that the current supported launch path is still `run_windows.bat`
+- updated README.md to mark 2.7.x as the Windows-version preparation branch without promising a ready exe
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.7.0
+- kept frontend behavior, backend logic, `/media`, `/api/search`, parser/storage, media classification and media rendering unchanged
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.7.0
+- confirm /api/status returns 2.7.0
+- confirm startup vault autoloads when the saved export path is available
+- confirm media tabs still switch between all/photo/video/audio/sticker/file
+- confirm global sidebar search still works for chats and messages
+- confirm /media still serves available media and keeps existing range/security behavior
+- confirm README.md, README_RUN.md and RELEASE_CHECKLIST.md do not promise a ready exe
+- confirm README.md and README_RUN.md do not bring back manual path input or the old load button
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.18 - release readiness docs cleanup
 
 Changed:
