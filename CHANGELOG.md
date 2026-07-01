@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.7
+
+### Fixed
+
+* cancelling folder selection no longer replaces an opened export with a red “folder not selected” state
+* opened storage status is now more compact and no longer repeats the folder name above the path
+
 ## 2.6.6
 
 ### Improved

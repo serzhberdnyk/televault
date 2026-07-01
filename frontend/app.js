@@ -236,7 +236,7 @@ function setLibraryReady(data) {
   $('libraryInfo').innerHTML = renderLibraryStatus({
     kind: errors.length ? 'warning' : 'ready',
     title: errors.length ? text.storagePartialErrors : text.storageReady,
-    body: root ? folderNameFromPath(root) : text.storageFolderFallback,
+    body: '',
     path: root,
     detail: errors.length ? `${formatNumber(errors.length)} ${text.errors}` : '',
   });
@@ -316,6 +316,22 @@ function formatLibraryError(error) {
     body: text.storageTryAnotherFolder,
     detail: clean,
   };
+}
+
+function isFolderPickerCancelled(data) {
+  if (!data) return false;
+  const status = String(data.status || '').toLowerCase();
+  return data.cancelled === true || data.canceled === true || status === 'cancelled' || status === 'canceled';
+}
+
+function isFolderPickerCancelError(error) {
+  return isFolderPickerCancelled(error?.data) || cleanErrorMessage(error).toLowerCase().includes('папка не выбрана');
+}
+
+function handleFolderPickerCancelled(hadOpenVault) {
+  if (hadOpenVault) return;
+  setLibraryEmpty();
+  renderVaultWelcome({ mode: 'empty' });
 }
 
 function cleanErrorMessage(error) {
@@ -484,13 +500,24 @@ function renderPeopleList() {
 
 async function pickFolder() {
   if (state.isPickingFolder) return;
+  const hadOpenVault = state.vaultLoaded;
   setFolderButtonLoading(true);
   try {
-    setLibraryLoading(text.openingPicker);
-    if (!state.vaultLoaded && !state.selectedChatId) renderVaultWelcome({ mode: 'loading', lead: text.openingPicker });
+    if (!hadOpenVault) {
+      setLibraryLoading(text.openingPicker);
+      if (!state.selectedChatId) renderVaultWelcome({ mode: 'loading', lead: text.openingPicker });
+    }
     const data = await api('/api/pick-folder', { method: 'POST' });
+    if (isFolderPickerCancelled(data)) {
+      handleFolderPickerCancelled(hadOpenVault);
+      return;
+    }
     await afterLibraryLoaded(data);
   } catch (e) {
+    if (isFolderPickerCancelError(e)) {
+      handleFolderPickerCancelled(hadOpenVault);
+      return;
+    }
     setLibraryError(e);
     if (!state.vaultLoaded) renderVaultWelcome({ mode: 'error', error: e });
   } finally {

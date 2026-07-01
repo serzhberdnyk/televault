@@ -38,6 +38,32 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.7 - storage status cancel polish
+
+Changed:
+- removed the repeated export folder name from the opened sidebar storage status, leaving the status title and full path
+- made folder picker cancellation explicit in `/api/pick-folder` with a neutral `cancelled` response
+- kept an already opened export visually stable when folder selection is cancelled
+- kept cancellation without an opened export on the neutral "экспорт не выбран" state instead of an error
+- kept true folder/export loading failures on the existing error path
+- kept folder picker, startup vault autoload, chat list, chat search, chat opening, service notices, media rendering and `/media` behavior unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder, run_windows.bat startup text and current-version README notes
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.7
+- confirm /api/status returns 2.6.7
+- confirm startup vault autoloads when the saved export path is available
+- confirm an opened export shows "экспорт открыт" and the path without a separate folder-name line
+- confirm chat/message/status chips did not return in the opened sidebar storage block
+- cancel folder selection with an opened export and confirm the current path, conversation list and selected chat stay intact
+- cancel folder selection without an opened export and confirm the sidebar remains neutral, not red
+- confirm true invalid-folder/export errors still show the error state
+- confirm the folder picker still works and manual path input plus the old load button did not return
+- confirm the conversation list, conversation search and chat opening still work
+- confirm service notices, photo lightbox, video/audio/stickers/files and single active media playback still work
+- confirm /media 200/206/416/403 and path traversal protection still work
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.6 - sidebar storage status cleanup
 
 Changed:
