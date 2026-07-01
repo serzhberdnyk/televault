@@ -662,6 +662,10 @@ code {
   box-sizing: border-box;
 }
 
+.message--search-result {
+  cursor: pointer;
+}
+
 .message--incoming,
 .message--neutral {
   align-self: flex-start;
@@ -1935,6 +1939,22 @@ code {
 .conversation-message-card:hover {
   border-color: rgba(67, 90, 112, 0.56);
   background: rgba(31, 41, 50, 0.94);
+}
+
+.message--jump-highlight .conversation-message-card,
+.message--jump-highlight .service-notice {
+  border-color: rgba(111, 199, 255, 0.82);
+  background: rgba(42, 171, 238, 0.14);
+  box-shadow:
+    0 0 0 3px rgba(42, 171, 238, 0.18),
+    0 8px 26px rgba(0, 0, 0, 0.26);
+}
+
+.message--jump-highlight .bubble--audio-only,
+.message--jump-highlight .bubble--sticker {
+  border-radius: var(--radius-md);
+  background: rgba(42, 171, 238, 0.12);
+  box-shadow: 0 0 0 3px rgba(42, 171, 238, 0.16);
 }
 
 .message--outgoing .conversation-message-card {

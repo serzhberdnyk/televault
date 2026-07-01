@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.13
+
+### Improved
+
+* search results can now be clicked to jump back to the original message in the conversation
+* jumped messages are briefly highlighted after navigation
+* existing chat search and media rendering behavior was preserved
+
 ## 2.6.12
 
 ### Improved

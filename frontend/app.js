@@ -29,6 +29,9 @@ const state = {
   peopleList: [],
 };
 
+let jumpHighlightTimer = null;
+let pendingMessagesLoad = null;
+
 const $ = (id) => document.getElementById(id);
 
 if ('scrollRestoration' in history) {
@@ -747,16 +750,18 @@ function renderSelectedChat(data, search = '', options = {}) {
   updateChatFilterControls(senderNames);
 
   const messages = filterMessages(data.messages || [], search, $('senderFilter').value);
+  const searchActive = Boolean(search.trim());
   if (state.mediaMode === 'all') {
     $('chatMeta').textContent = `${messages.length} из ${data.total} ${text.messages} · локальное хранилище`;
-    renderMessages(messages, data.chat, data.senders || []);
+    renderMessages(messages, data.chat, data.senders || [], { searchActive });
     logPerformance('render chat', options.perfStartedAt, {
       source: options.perfSource || 'unknown',
       mode: state.mediaMode,
       shown: messages.length,
       total: data.total,
     });
-    if (options.resetScroll) resetMessageScroll();
+    if (options.jumpToMessageId) jumpToMessage(options.jumpToMessageId);
+    else if (options.resetScroll) resetMessageScroll();
     return;
   }
 
@@ -768,7 +773,8 @@ function renderSelectedChat(data, search = '', options = {}) {
     shown: messages.length,
     total: data.total,
   });
-  if (options.resetScroll) resetMessageScroll();
+  if (options.jumpToMessageId) jumpToMessage(options.jumpToMessageId);
+  else if (options.resetScroll) resetMessageScroll();
 }
 
 function resetMessageScroll() {
@@ -778,6 +784,88 @@ function resetMessageScroll() {
     messages.scrollLeft = 0;
   }
   window.scrollTo(0, 0);
+}
+
+function findMessageElementById(messageId) {
+  const id = String(messageId || '');
+  const box = $('messages');
+  if (!id || !box) return null;
+  return Array.from(box.querySelectorAll('[data-message-id]')).find(element => element.dataset.messageId === id) || null;
+}
+
+function jumpToMessage(messageId) {
+  const element = findMessageElementById(messageId);
+  const box = $('messages');
+  if (!element) return;
+  element.classList.remove('message--jump-highlight');
+  void element.offsetWidth;
+  element.classList.add('message--jump-highlight');
+  if (box && box.scrollHeight > box.clientHeight) {
+    const boxRect = box.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const top = box.scrollTop + elementRect.top - boxRect.top - (box.clientHeight / 2) + (elementRect.height / 2);
+    box.scrollTo({ top: Math.max(0, top) });
+  } else {
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+  }
+  if (jumpHighlightTimer) clearTimeout(jumpHighlightTimer);
+  jumpHighlightTimer = setTimeout(() => {
+    element.classList.remove('message--jump-highlight');
+    jumpHighlightTimer = null;
+  }, 1800);
+}
+
+function searchResultClickTarget(event) {
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!target) return null;
+  const result = target.closest('[data-search-result="true"]');
+  return result && $('messages')?.contains(result) ? { target, result } : null;
+}
+
+function isInteractiveMessageTarget(target) {
+  return Boolean(target.closest([
+    'a',
+    'button',
+    'input',
+    'select',
+    'textarea',
+    'label',
+    'audio',
+    'video',
+    '[controls]',
+    '[contenteditable="true"]',
+    '[role="button"]',
+    '[data-media-element]',
+    '[data-photo-index]',
+  ].join(',')));
+}
+
+function clearMessageFiltersForJump() {
+  pendingMessagesLoad?.cancel?.();
+  $('searchBox').value = '';
+  $('senderFilter').value = '';
+  state.mediaOnly = false;
+  state.mediaMode = 'all';
+  closeLightbox();
+  updateChatFilterControls();
+  updateMediaTabs();
+  renderMediaOnlyButton();
+}
+
+function handleSearchResultClick(event) {
+  if (event.defaultPrevented) return;
+  const match = searchResultClickTarget(event);
+  if (!match || isInteractiveMessageTarget(match.target)) return;
+  const messageId = match.result.dataset.messageId;
+  if (!messageId) return;
+  event.preventDefault();
+  clearMessageFiltersForJump();
+  const cached = state.chatCache[state.selectedChatId];
+  if (cached && Array.isArray(cached.messages) && !cached.error) {
+    renderSelectedChat(cached, '', { jumpToMessageId: messageId, perfStartedAt: performance.now(), perfSource: 'cache' });
+    return;
+  }
+  loadMessages({ jumpToMessageId: messageId });
 }
 
 function fillSenders(senders) {
@@ -900,6 +988,19 @@ function messageSearchText(msg) {
     msg.pinned_message_preview,
     msg.pinned_message_id,
   ].map(value => String(value || '').toLowerCase()).join(' ');
+}
+
+function messageDomId(msg) {
+  const value = msg?.id ?? msg?.sourceIndex ?? '';
+  return value === null || value === undefined ? '' : String(value);
+}
+
+function messageArticleAttributes(msg, options = {}) {
+  const id = messageDomId(msg);
+  if (!id) return '';
+  const attrs = [`data-message-id="${escapeAttr(id)}"`];
+  if (options.searchActive) attrs.push('data-search-result="true"');
+  return ` ${attrs.join(' ')}`;
 }
 
 function mediaSearchText(msg) {
@@ -1117,10 +1218,11 @@ function serviceNoticeLabel(msg) {
   return body || text.genericService;
 }
 
-function renderPinnedServiceMessage(msg) {
+function renderPinnedServiceMessage(msg, options = {}) {
   const time = messageTime(msg);
+  const serviceClasses = ['message', 'message--service', options.searchActive ? 'message--search-result' : ''].filter(Boolean).join(' ');
   return `
-    <article class="message message--service" aria-label="${escapeAttr(text.pinnedMessage)}">
+    <article class="${serviceClasses}" aria-label="${escapeAttr(text.pinnedMessage)}"${messageArticleAttributes(msg, options)}>
       <div class="service-notice service-notice--pin">
         <span class="service-notice__text">${escapeHtml(pinnedServiceLabel(msg))}</span>
         ${time ? `<span class="service-notice__time">${escapeHtml(time)}</span>` : ''}
@@ -1129,14 +1231,15 @@ function renderPinnedServiceMessage(msg) {
   `;
 }
 
-function renderServiceMessage(msg) {
+function renderServiceMessage(msg, options = {}) {
   const time = messageTime(msg);
   const label = serviceNoticeLabel(msg);
   const photoUpdate = isPhotoUpdateServiceMessage(msg);
   const noticeClasses = ['service-notice', photoUpdate ? 'service-notice--photo' : ''].filter(Boolean).join(' ');
+  const serviceClasses = ['message', 'message--service', options.searchActive ? 'message--search-result' : ''].filter(Boolean).join(' ');
   const photoPreview = photoUpdate ? renderServicePhotoPreview(msg, label) : '';
   return `
-    <article class="message message--service" aria-label="${escapeAttr(label)}">
+    <article class="${serviceClasses}" aria-label="${escapeAttr(label)}"${messageArticleAttributes(msg, options)}>
       <div class="${noticeClasses}">
         <span class="service-notice__text">${escapeHtml(label)}</span>
         ${photoPreview}
@@ -1156,9 +1259,10 @@ function renderServicePhotoPreview(msg, label) {
   `;
 }
 
-function renderMessages(messages, chat = {}, senders = []) {
+function renderMessages(messages, chat = {}, senders = [], options = {}) {
   const box = $('messages');
   const photoContext = 'vault-current';
+  const searchActive = Boolean(options.searchActive);
   setPhotoContext(photoContext, messages);
   resetAudioMetadataObserver();
   resetVideoMetadataObserver();
@@ -1179,11 +1283,11 @@ function renderMessages(messages, chat = {}, senders = []) {
       previousDayKey = dayKey;
     }
     if (isPinnedServiceMessage(msg)) {
-      html.push(renderPinnedServiceMessage(msg));
+      html.push(renderPinnedServiceMessage(msg, { searchActive }));
       return;
     }
     if (isServiceMessage(msg)) {
-      html.push(renderServiceMessage(msg));
+      html.push(renderServiceMessage(msg, { searchActive }));
       return;
     }
     const stickerMessage = isSticker(msg);
@@ -1197,6 +1301,7 @@ function renderMessages(messages, chat = {}, senders = []) {
       audioOnlyMessage ? 'message--audio-only' : '',
       hasMedia(msg) ? 'message--media' : '',
       messageHasText ? 'message--text' : 'message--no-text',
+      searchActive ? 'message--search-result' : '',
     ].filter(Boolean).join(' ');
     const bubbleClasses = [
       'message-bubble',
@@ -1205,7 +1310,7 @@ function renderMessages(messages, chat = {}, senders = []) {
       audioOnlyMessage ? 'bubble--audio-only' : '',
     ].filter(Boolean).join(' ');
     html.push(`
-      <article class="${messageClasses}">
+      <article class="${messageClasses}"${messageArticleAttributes(msg, { searchActive })}>
       <div class="${bubbleClasses}">
         <div class="meta"><span class="sender">${escapeHtml(messageSender(msg) || text.system)}</span><span>${escapeHtml(messageTime(msg))}</span></div>
         ${messageHasText ? `<div class="text">${escapeHtml(msg.text)}</div>` : ''}
@@ -2404,10 +2509,18 @@ function escapeAttr(value) {
 
 function debounce(fn, delay = 250) {
   let t;
-  return (...args) => {
+  const debounced = (...args) => {
     clearTimeout(t);
-    t = setTimeout(() => fn(...args), delay);
+    t = setTimeout(() => {
+      t = null;
+      fn(...args);
+    }, delay);
   };
+  debounced.cancel = () => {
+    clearTimeout(t);
+    t = null;
+  };
+  return debounced;
 }
 
 function logPerformance(label, startedAt, details = {}) {
@@ -2437,11 +2550,13 @@ function bindControls() {
       if (event.key === 'Enter') loadFolderPath();
     });
   }
+  $('messages').addEventListener('click', handleSearchResultClick);
   $('chatSearch').addEventListener('input', event => {
     state.chatSearchQuery = event.target.value;
     renderChats();
   });
   const debouncedLoadMessages = debounce(loadMessages);
+  pendingMessagesLoad = debouncedLoadMessages;
   $('searchBox').addEventListener('input', () => {
     updateChatFilterControls();
     debouncedLoadMessages();

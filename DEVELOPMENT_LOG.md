@@ -38,6 +38,29 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.13 - click search result to jump
+
+Changed:
+- added stable `data-message-id` attributes to rendered conversation message elements
+- made active in-chat search results clickable in the regular conversation view
+- clicking a search result clears search, sender and media filters, rerenders the full conversation, scrolls to the original message and highlights it briefly
+- ignored clicks from links, buttons, photo triggers and native audio/video controls inside search results
+- kept backend parsing, storage, `/media`, Range handling, media classification and media tab rendering unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.13
+- confirm /api/status returns 2.6.13
+- search inside a selected chat and confirm matching messages appear
+- click a text search result and confirm search clears, the full conversation opens and the original message is centered
+- confirm the jumped message is briefly highlighted
+- click a link inside a search result and confirm it remains a normal link action
+- click native audio/video controls inside a search result and confirm they do not trigger jump
+- confirm audio-only messages still render without an outer bubble
+- confirm sticker and file tabs from 2.6.12 still separate stickers from regular files
+- confirm photo, video, audio, file and sticker media tabs still render normally
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.12 - sticker media tab cleanup
 
 Changed:
