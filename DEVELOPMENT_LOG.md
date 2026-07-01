@@ -38,6 +38,32 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.6.11 - media chrome cleanup
+
+Changed:
+- removed the visible audio filename label from Audio media tab items so sender/time and the native audio player remain the primary content
+- kept the scoped `media-item--audio-compact` layout from 2.6.10 for Audio media tab items
+- changed audio-only sender/time metadata to a transparent compact row shared by incoming and outgoing messages
+- preserved the 2.6.8 audio-only no-outer-bubble layout and kept audio + text messages on the regular bubble path
+- changed sticker fallback rendering to a sticker-first preview/placeholder with only a small secondary original link when available
+- stopped showing technical sticker filenames as the primary animated sticker fallback content
+- kept native audio controls, lazy audio metadata loading and single active regular media playback unchanged
+- left backend parsing, storage format, `/media`, Range handling, URL encoding and security checks unchanged
+- updated APP_VERSION, CHANGELOG.md, frontend version placeholder and run_windows.bat startup text
+
+Manual test:
+- launch with run_windows.bat and confirm the UI shows v2.6.11
+- confirm /api/status returns 2.6.11
+- open the Audio media tab and confirm audio items do not show technical filenames as primary text
+- confirm Audio tab sender/time metadata remains visible and native audio players stay horizontal and responsive
+- confirm file cards in the Files tab still show filenames and open actions
+- confirm incoming and outgoing audio-only messages use the same compact sender/time style
+- confirm audio-only messages still do not have an outer bubble
+- confirm audio + text messages still use the normal message bubble
+- confirm animated `.tgs` stickers use the lighter sticker-first fallback and do not show the technical filename as primary content
+- confirm photo, video and file tabs still render normally
+- confirm browser console warnings/errors are absent or explained
+
 ## 2.6.10 - audio tab compact layout
 
 Changed:

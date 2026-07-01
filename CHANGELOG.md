@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.11
+
+### Improved
+
+* audio items in the Audio tab no longer show technical file names as primary content
+* audio-only sender/time metadata now uses a more consistent compact style
+* animated sticker messages now use a lighter sticker-first presentation instead of a heavy file-card look
+
 ## 2.6.10
 
 ### Improved

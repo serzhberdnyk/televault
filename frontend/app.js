@@ -1397,26 +1397,19 @@ function renderStickerVideo(msg, className = 'sticker-preview') {
 function renderStickerFallback(msg, className = 'sticker-preview') {
   const previewUrl = getStickerPreviewUrl(msg);
   const originalUrl = getStickerOriginalUrl(msg);
-  if (!previewUrl && isMediaMissing(msg)) {
-    return renderMediaFallback(mediaFallbackKind(msg), msg, { className: `sticker-fallback ${className}`, originalUrl });
-  }
-  const title = isMediaMissing(msg)
-    ? mediaFallbackTitle(mediaFallbackKind(msg))
-    : (isTgsSticker(msg) ? text.animatedTelegramSticker : text.telegramSticker);
   const preview = previewUrl
     ? `<img src="${escapeAttr(previewUrl)}" alt="${escapeAttr(mediaName(msg))}" loading="lazy" data-media-element />`
-    : `<span class="sticker-fallback-icon">${icons.file}</span>`;
+    : (msg.sticker_emoji
+      ? `<span class="sticker-fallback-emoji" role="img" aria-label="${escapeAttr(isTgsSticker(msg) ? text.animatedTelegramSticker : text.telegramSticker)}">${escapeHtml(msg.sticker_emoji)}</span>`
+      : `<span class="sticker-fallback-mark" role="img" aria-label="${escapeAttr(isTgsSticker(msg) ? text.animatedTelegramSticker : text.telegramSticker)}"></span>`);
   const missing = isMediaMissing(msg) ? `<span class="sticker-fallback-note">${text.fileMissing}</span>` : '';
   return `
     <div class="sticker-fallback ${escapeAttr(className)}" data-media-container>
       ${preview}
       ${previewUrl ? renderMissingNotice(mediaFallbackKind(msg), msg, { originalUrl, className: 'sticker-error-fallback' }) : ''}
-      <div class="sticker-fallback-info">
-        <strong>${escapeHtml(title)}</strong>
-        <span>${escapeHtml(mediaName(msg))}</span>
-        ${missing}
-        ${originalUrl ? `<a class="sticker-open-link" href="${escapeAttr(originalUrl)}" target="_blank" rel="noreferrer">${text.openOriginal}</a>` : ''}
-      </div>
+      ${previewUrl ? renderStickerEmoji(msg) : ''}
+      ${missing}
+      ${originalUrl ? `<a class="sticker-open-link sticker-open-link--secondary" href="${escapeAttr(originalUrl)}" target="_blank" rel="noreferrer">${text.openOriginal}</a>` : ''}
     </div>
   `;
 }
@@ -1476,7 +1469,7 @@ function renderVideoCard(msg) {
 
 function renderAudioCard(msg) {
   return `
-    ${renderAudioPlayer(msg, { showLabel: true })}
+    ${renderAudioPlayer(msg)}
     ${renderCardMeta(msg)}
     ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
   `;
