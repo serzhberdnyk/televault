@@ -9,6 +9,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import webbrowser
 
@@ -19,12 +20,16 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.8.1"
+APP_VERSION = "2.8.2"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"
 LIBRARY = ExportLibrary()
+
+
+class FolderPickerError(RuntimeError):
+    pass
 
 
 def settings_file() -> Path:
@@ -221,18 +226,70 @@ def resolve_media_request(parsed) -> Path:
     return file_path
 
 
-def choose_folder_dialog() -> str:
+def choose_folder_with_tkinter() -> str:
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
     try:
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
         root.withdraw()
         root.attributes("-topmost", True)
         folder = filedialog.askdirectory(title="выбери папку с telegram export")
-        root.destroy()
         return folder or ""
-    except Exception:
-        return ""
+    finally:
+        try:
+            root.destroy()
+        except Exception:
+            pass
+
+
+def windows_picker_python_executable() -> str:
+    pythonw = Path(sys.executable).with_name("pythonw.exe")
+    if pythonw.is_file():
+        return str(pythonw)
+    return sys.executable
+
+
+def choose_folder_with_windows_helper() -> str:
+    helper = ROOT / "backend" / "windows_folder_picker.py"
+    if not helper.is_file():
+        raise FolderPickerError(f"Windows folder picker helper is missing: {helper}")
+
+    output_path = Path(tempfile.gettempdir()) / f"televault-folder-picker-{os.getpid()}-{threading.get_ident()}.json"
+    try:
+        if output_path.exists():
+            output_path.unlink()
+        result = subprocess.run(
+            [windows_picker_python_executable(), str(helper), str(output_path)],
+            cwd=ROOT,
+        )
+
+        if not output_path.is_file():
+            raise FolderPickerError(f"Windows folder picker did not return a result; exit code {result.returncode}")
+
+        data = json.loads(output_path.read_text(encoding="utf-8"))
+        if data.get("error"):
+            raise FolderPickerError(str(data["error"]))
+        return str(data.get("folder") or "")
+    finally:
+        try:
+            output_path.unlink()
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+
+def choose_folder_dialog() -> str:
+    try:
+        return choose_folder_with_tkinter()
+    except Exception as exc:
+        print(f"folder picker tkinter failed: {type(exc).__name__}: {exc}")
+
+    if os.name == "nt":
+        return choose_folder_with_windows_helper()
+
+    raise FolderPickerError("Folder picker is unavailable on this system.")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -302,7 +359,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/api/pick-folder":
-            folder = choose_folder_dialog()
+            try:
+                folder = choose_folder_dialog()
+            except FolderPickerError as e:
+                json_response(self, {"error": str(e)}, 500)
+                return
             if not folder:
                 json_response(self, {"status": "cancelled", "cancelled": True, "canceled": True})
                 return

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.2
+
+### Fixed
+
+* folder picker now works when TeleVault runs through the bundled Python runtime
+* Windows export folder selection now works from both TeleVault.exe and run_windows.bat
+* folder picker cancel behavior remains stable
+
 ## 2.8.1
 
 ### Improved

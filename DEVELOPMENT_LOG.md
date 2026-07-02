@@ -38,6 +38,34 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.2 - bundled runtime folder picker fix
+
+Changed:
+- added a Windows folder picker fallback through a small `pythonw.exe` helper using native `IFileDialog` via `ctypes`
+- kept `tkinter` as the first picker path when it is available
+- `/api/pick-folder` now returns the existing neutral cancelled response only for real cancel/no selection
+- real picker startup failures now return an error response instead of being silently treated as cancel
+- added `backend/windows_folder_picker.py` to isolate the Windows native dialog from the HTTP request thread
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.8.2
+- kept frontend app logic, `/media`, `/api/search`, parser/storage, media classification and media rendering unchanged
+
+Manual test:
+- run `runtime\python\python.exe -c "import tkinter; print('tk ok')"` and record that bundled tkinter is unavailable if it fails
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.2\TeleVault.exe` is created and included in the zip
+- launch `dist\TeleVault-v2.8.2\run_windows.bat` and confirm the folder picker opens
+- choose a Telegram export folder through `run_windows.bat` and confirm it loads
+- cancel the picker through `run_windows.bat` and confirm the UI stays neutral
+- launch `dist\TeleVault-v2.8.2\TeleVault.exe` and confirm the folder picker opens
+- choose a Telegram export folder through `TeleVault.exe` and confirm it loads
+- cancel the picker through `TeleVault.exe` and confirm the UI stays neutral
+- confirm startup vault/autoload, global search, media tabs and `/api/status` returning 2.8.2
+- run `git status --short` after builder and confirm ignored `dist/` and `logs/` output is not listed
+- run `git diff --check`
+
 ## 2.8.1 - exe launcher UX polish
 
 Changed:
