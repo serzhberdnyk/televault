@@ -38,6 +38,32 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.3 - exe launcher repeated launch handling
+
+Changed:
+- `TeleVault.exe` now checks `http://127.0.0.1:8766/api/status` before preflight and before starting bundled Python
+- if the status endpoint is an existing TeleVault instance, the launcher opens the existing app window and exits without starting another backend
+- if port 8766 is occupied by a non-TeleVault process, the launcher shows a clear MessageBox and does not start a second backend blindly
+- launcher logging now records existing-instance checks, detected reuse, occupied-port cases and browser launch attempts
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.8.3
+- kept frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage, media classification and folder picker behavior unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.3\TeleVault.exe` is created and included in the zip
+- launch `dist\TeleVault-v2.8.3\TeleVault.exe` and confirm `/api/status` returns 2.8.3
+- launch `dist\TeleVault-v2.8.3\TeleVault.exe` again while the server is already running and confirm no second backend starts
+- confirm repeated launch opens an app-like window to the existing server
+- confirm folder picker through `TeleVault.exe` still works
+- confirm `run_windows.bat` still works
+- confirm global search and media tabs still work
+- confirm `dist\TeleVault-v2.8.3.zip` contains `TeleVault.exe`
+- run `git status --short` after builder and confirm ignored `dist/` and `logs/` output is not listed
+- run `git diff --check`
+
 ## 2.8.2 - bundled runtime folder picker fix
 
 Changed:

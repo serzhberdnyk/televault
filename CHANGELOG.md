@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.3
+
+### Improved
+
+* TeleVault.exe now reuses an already running TeleVault instance instead of starting a second backend
+* repeated launcher clicks now open the existing app window more safely
+* launcher error handling was improved for occupied port scenarios
+
 ## 2.8.2
 
 ### Fixed

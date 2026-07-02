@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -20,6 +21,13 @@ internal static class TeleVaultLauncher
     private static readonly string StatusUrl = AppUrl + "api/status";
     private static string logPath = string.Empty;
 
+    private enum ExistingInstanceState
+    {
+        NotRunning,
+        TeleVaultRunning,
+        PortOccupiedByOther,
+    }
+
     [STAThread]
     private static int Main(string[] args)
     {
@@ -31,6 +39,22 @@ internal static class TeleVaultLauncher
             InitializeLogging(appRoot);
             Log("launcher start");
             Log("app root: " + appRoot);
+
+            ExistingInstanceState existingInstance = CheckExistingInstance();
+            if (existingInstance == ExistingInstanceState.TeleVaultRunning)
+            {
+                Log("using already running TeleVault instance");
+                OpenBrowserWindow(AppUrl);
+                Log("launcher finished after reusing existing instance");
+                return 0;
+            }
+
+            if (existingInstance == ExistingInstanceState.PortOccupiedByOther)
+            {
+                Log("launcher stopped because the TeleVault port is occupied by a non-TeleVault process");
+                ShowError(BuildPortOccupiedMessage());
+                return 1;
+            }
 
             string pythonExe = Path.Combine(appRoot, "runtime", "python", "python.exe");
             string appScript = Path.Combine(appRoot, "app.py");
@@ -146,6 +170,56 @@ internal static class TeleVaultLauncher
         return builder.ToString();
     }
 
+    private static ExistingInstanceState CheckExistingInstance()
+    {
+        Log("checking existing instance: " + StatusUrl);
+
+        try
+        {
+            HttpWebRequest request = CreateStatusRequest(1000);
+
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                string body = ReadResponseBody(response);
+                if (response.StatusCode == HttpStatusCode.OK && IsTeleVaultStatusBody(body))
+                {
+                    Log("existing TeleVault detected");
+                    return ExistingInstanceState.TeleVaultRunning;
+                }
+
+                Log("status endpoint responded but was not TeleVault: HTTP " + (int)response.StatusCode);
+                return ExistingInstanceState.PortOccupiedByOther;
+            }
+        }
+        catch (WebException ex)
+        {
+            HttpWebResponse response = ex.Response as HttpWebResponse;
+            if (response != null)
+            {
+                using (response)
+                {
+                    Log("status endpoint returned HTTP " + (int)response.StatusCode + "; treating port as occupied");
+                    return ExistingInstanceState.PortOccupiedByOther;
+                }
+            }
+
+            Log("status endpoint not available: " + ex.Status);
+        }
+        catch (Exception ex)
+        {
+            Log("existing instance check failed: " + ex.GetType().Name + ": " + ex.Message);
+        }
+
+        if (IsLocalPortOccupied())
+        {
+            Log("port is occupied, but no TeleVault status endpoint was detected");
+            return ExistingInstanceState.PortOccupiedByOther;
+        }
+
+        Log("existing TeleVault not detected");
+        return ExistingInstanceState.NotRunning;
+    }
+
     private static bool WaitForServerReady(Process process)
     {
         DateTime deadline = DateTime.UtcNow.AddMilliseconds(ServerStartupTimeoutMs);
@@ -174,23 +248,17 @@ internal static class TeleVaultLauncher
     {
         try
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(StatusUrl);
-            request.Method = "GET";
-            request.Timeout = 1000;
-            request.ReadWriteTimeout = 1000;
+            HttpWebRequest request = CreateStatusRequest(1000);
 
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-            using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
             {
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
                     return false;
                 }
 
-                string body = reader.ReadToEnd();
-                return body.IndexOf("\"TeleVault\"", StringComparison.OrdinalIgnoreCase) >= 0
-                    && (body.IndexOf("\"ready\": true", StringComparison.OrdinalIgnoreCase) >= 0
-                        || body.IndexOf("\"ready\":true", StringComparison.OrdinalIgnoreCase) >= 0);
+                string body = ReadResponseBody(response);
+                return IsTeleVaultReadyStatusBody(body);
             }
         }
         catch
@@ -199,8 +267,101 @@ internal static class TeleVaultLauncher
         }
     }
 
+    private static HttpWebRequest CreateStatusRequest(int timeoutMs)
+    {
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(StatusUrl);
+        request.Method = "GET";
+        request.Timeout = timeoutMs;
+        request.ReadWriteTimeout = timeoutMs;
+        return request;
+    }
+
+    private static string ReadResponseBody(WebResponse response)
+    {
+        Stream stream = response.GetResponseStream();
+        if (stream == null)
+        {
+            return string.Empty;
+        }
+
+        using (stream)
+        using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+        {
+            return reader.ReadToEnd();
+        }
+    }
+
+    private static bool IsTeleVaultStatusBody(string body)
+    {
+        if (string.IsNullOrEmpty(body))
+        {
+            return false;
+        }
+
+        return body.IndexOf("\"name\"", StringComparison.OrdinalIgnoreCase) >= 0
+            && body.IndexOf("\"TeleVault\"", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static bool IsTeleVaultReadyStatusBody(string body)
+    {
+        return IsTeleVaultStatusBody(body)
+            && (body.IndexOf("\"ready\": true", StringComparison.OrdinalIgnoreCase) >= 0
+                || body.IndexOf("\"ready\":true", StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private static bool IsLocalPortOccupied()
+    {
+        TcpClient client = null;
+        IAsyncResult result = null;
+
+        try
+        {
+            client = new TcpClient();
+            result = client.BeginConnect(IPAddress.Loopback, AppPort, null, null);
+            if (!result.AsyncWaitHandle.WaitOne(500))
+            {
+                Log("TCP port check timed out");
+                return false;
+            }
+
+            client.EndConnect(result);
+            Log("TCP port check connected to " + AppPort);
+            return true;
+        }
+        catch (SocketException ex)
+        {
+            Log("TCP port check did not connect: " + ex.SocketErrorCode);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Log("TCP port check failed: " + ex.GetType().Name + ": " + ex.Message);
+            return false;
+        }
+        finally
+        {
+            if (result != null)
+            {
+                try
+                {
+                    result.AsyncWaitHandle.Close();
+                }
+                catch
+                {
+                }
+            }
+
+            if (client != null)
+            {
+                client.Close();
+            }
+        }
+    }
+
     private static void OpenBrowserWindow(string url)
     {
+        Log("opening browser window: " + url);
+
         string edge = FindBrowser(
             "msedge.exe",
             new string[]
@@ -389,6 +550,13 @@ internal static class TeleVaultLauncher
         }
 
         return "Launcher log: " + logPath;
+    }
+
+    private static string BuildPortOccupiedMessage()
+    {
+        return "\u041f\u043e\u0440\u0442 TeleVault \u0437\u0430\u043d\u044f\u0442 \u0434\u0440\u0443\u0433\u0438\u043c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\u043c \u0438\u043b\u0438 \u043f\u043e\u0432\u0440\u0435\u0436\u0434\u0451\u043d\u043d\u044b\u043c \u043f\u0440\u043e\u0446\u0435\u0441\u0441\u043e\u043c."
+            + "\n\nTeleVault did not start a second backend."
+            + "\n\n" + LogLocationText();
     }
 
     private static void ShowError(string message)
