@@ -1,34 +1,34 @@
 # TeleVault: exe packaging plan
 
-TeleVault 2.7.7 does not include a ready exe. This document records the next packaging direction so the project can move from the current portable zip to a Windows exe in a controlled step.
+TeleVault 2.8.0 adds the first Windows `TeleVault.exe` launcher preview. It is a launcher-style exe for the existing portable folder, not an installer and not a one-file package.
 
 ## Goal
 
 The exe phase should make TeleVault easier to start on Windows without changing the current app behavior.
 
-In a future release, the user should get:
+In 2.8.0, the user should get:
 
 - `TeleVault.exe`
 - startup by double-clicking `TeleVault.exe`
 - no need to install or open Python, Git, or a terminal
 
-## Recommended First Approach
+## Current First Approach
 
-Do not start with a one-file exe. The safest first milestone is a launcher-style exe placed next to the existing app resources.
+Do not start with a one-file exe. The 2.8.0 milestone uses a launcher-style exe placed next to the existing app resources.
 
 Expected folder shape:
 
 ```text
 TeleVault/
 - TeleVault.exe
-- app.py or packaged app entry
+- app.py
 - backend/
 - frontend/
-- runtime/python/ or embedded runtime
+- runtime/python/
 - README_RUN.md
 ```
 
-The exe should launch the existing portable flow first. The backend, frontend, and runtime can stay as normal folders beside the launcher.
+The exe launches the existing portable flow through `runtime\python\python.exe app.py`. The backend, frontend, and runtime stay as normal folders beside the launcher.
 
 ## Why Launcher-Style First
 
@@ -41,10 +41,16 @@ Launcher-style exe is recommended before one-file packaging because it is:
 
 This also gives a beginner-friendly release path: first make the existing folder double-clickable through `TeleVault.exe`, then consider deeper packaging.
 
-## Packaging Risks To Check
+## Launcher Risks To Check
 
-Before shipping an exe build, verify that:
+Before shipping the launcher preview, verify that:
 
+- `TeleVault.exe` exists in `dist/TeleVault-v2.8.0/`
+- the zip contains `TeleVault-v2.8.0/TeleVault.exe`
+- the launcher finds `runtime/python/python.exe`, `app.py`, `backend/` and `frontend/` relative to its own folder
+- the launcher does not depend on the current working directory
+- missing required files produce a readable console error
+- `run_windows.bat` still works as a fallback
 - the app finds `frontend/` after packaging
 - the app finds backend modules after packaging
 - the folder picker still works
@@ -57,21 +63,6 @@ Before shipping an exe build, verify that:
 - bundled runtime files do not get committed to git
 - user settings, exports, and caches do not get included in the release package
 
-## Future Milestone
-
-Recommended next milestone:
-
-```text
-v2.8.0 - exe launcher preview
-```
-
-Goal for that future step:
-
-- add a minimal `TeleVault.exe` launcher
-- let the exe start the existing portable flow
-- keep `backend/`, `frontend/`, and `runtime/` beside the launcher
-- do not add an installer immediately
-
 ## Later Options
 
 After the launcher preview is stable, later packaging options can be evaluated:
@@ -81,4 +72,4 @@ After the launcher preview is stable, later packaging options can be evaluated:
 - installer
 - desktop shortcut or Start Menu integration
 
-These are future options, not part of 2.7.7.
+These are future options, not part of 2.8.0.

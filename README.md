@@ -4,9 +4,9 @@ TeleVault - локальный просмотрщик Telegram exports.
 
 Приложение открывает экспортированные папки Telegram Desktop в браузере, показывает переписки и медиа, а данные остаются на компьютере пользователя.
 
-Текущая версия: `2.7.7`.
+Текущая версия: `2.8.0`.
 
-Статус: ветка 2.7.x подготавливает Windows portable/exe packaging. Portable zip уже поддерживается, а exe packaging запланирован следующим этапом. Готовый exe и installer в 2.7.7 не собираются.
+Статус: 2.8.0 добавляет первый Windows `TeleVault.exe` launcher preview для portable-комплекта. Это не installer и не one-file exe: рядом с launcher должны лежать `app.py`, `backend/`, `frontend/` и `runtime/python/`.
 
 ## Возможности
 
@@ -22,21 +22,21 @@ TeleVault - локальный просмотрщик Telegram exports.
 
 ## Быстрый запуск
 
-На Windows обычный запуск - двойной клик по файлу:
+На Windows в portable-папке 2.8.0 обычный запуск - двойной клик по файлу:
 
 ```bat
-run_windows.bat
+TeleVault.exe
 ```
 
-После запуска браузер откроется автоматически. Если этого не произошло, откройте адрес `http://127.0.0.1:8766`.
+`run_windows.bat` остаётся fallback-способом запуска. После запуска браузер откроется автоматически. Если этого не произошло, откройте адрес `http://127.0.0.1:8766`.
 
 Подробная инструкция: [README_RUN.md](README_RUN.md).
 
 ## Документация проекта
 
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - короткая карта файлов проекта
-- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) - чеклист для подготовки и проверки будущего Windows-комплекта
-- [EXE_PACKAGING_PLAN.md](EXE_PACKAGING_PLAN.md) - план будущего launcher-style exe без сборки exe в 2.7.7
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) - чеклист для подготовки и проверки Windows-комплекта
+- [EXE_PACKAGING_PLAN.md](EXE_PACKAGING_PLAN.md) - план launcher-style exe preview и будущих packaging-этапов
 - [BUILD_NOTES.md](BUILD_NOTES.md) - заметки для будущей подготовки Windows exe
 - [BUILD_ASSESSMENT.md](BUILD_ASSESSMENT.md) - assessment текущего runtime, файлов сборки, рисков и packaging candidates
 

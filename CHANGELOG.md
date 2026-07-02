@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.8.0
+
+### Added
+
+* first Windows TeleVault.exe launcher preview for the portable package
+
+### Improved
+
+* release tooling can now build a launcher-style exe next to the existing portable runtime
+* run_windows.bat remains available as a fallback launcher
+
 ## 2.7.7
 
 ### Added

@@ -5,7 +5,7 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.7.7"
+APP_VERSION = "2.8.0"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +20,7 @@ ALLOWLIST_FILES = [
     "README_RUN.md",
     "CHANGELOG.md",
     "RELEASE_CHECKLIST.md",
+    "EXE_PACKAGING_PLAN.md",
     "DEVELOPMENT_LOG.md",
 ]
 

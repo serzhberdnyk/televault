@@ -38,6 +38,36 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.0 - exe launcher preview
+
+Changed:
+- added `tools/launcher/TeleVaultLauncher.cs` as the C# source for the first Windows launcher-style `TeleVault.exe`
+- added `tools/build_exe_launcher.py` and `build_exe_launcher.bat` to build the launcher with `csc.exe` after preparing the existing portable folder
+- updated `tools/build_portable.py` to version 2.8.0 and included `EXE_PACKAGING_PLAN.md` in the portable docs allowlist
+- updated README.md, README_RUN.md, EXE_PACKAGING_PLAN.md and RELEASE_CHECKLIST.md for the 2.8.0 launcher preview
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.8.0
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm it uses `runtime\python\python.exe`
+- confirm `/api/status` returns 2.8.0
+- confirm the UI contains v2.8.0
+- run `build_portable.bat` without manual PATH changes
+- confirm `dist\TeleVault-v2.8.0\` is created
+- confirm `dist\TeleVault-v2.8.0.zip` is created
+- run `build_exe_launcher.bat` without manual PATH changes
+- confirm `dist\TeleVault-v2.8.0\TeleVault.exe` is created
+- confirm the exe is included in `dist\TeleVault-v2.8.0.zip`
+- launch `dist\TeleVault-v2.8.0\TeleVault.exe` and confirm the app starts through bundled runtime
+- launch `dist\TeleVault-v2.8.0\run_windows.bat` and confirm the fallback still works
+- confirm global search and media tabs still work after exe launch
+- run `git status --short` after builder and confirm ignored `dist/` output is not listed
+- run `git diff --check`
+
 ## 2.7.7 - exe packaging preparation
 
 Changed:
