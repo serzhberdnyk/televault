@@ -33,3 +33,19 @@ backups/
 synthetic_exports/
 qa_exports/
 test_exports/
+
+# telegram exports / real user data
+result.json
+messages*.html
+photos/
+video_files/
+voice_messages/
+video_messages/
+round_video_messages/
+stickers/
+files/
+profile_pictures/
+ChatExport_*/
+Telegram Desktop/
+exports/
+telegram_exports/
