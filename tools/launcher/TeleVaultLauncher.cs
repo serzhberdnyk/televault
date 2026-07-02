@@ -5,17 +5,21 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 
 internal static class TeleVaultLauncher
 {
     private const string AppName = "TeleVault";
+    private const string AppVersion = "2.8.4";
     private const int AppPort = 8766;
     private const int ServerStartupTimeoutMs = 30000;
     private const int ServerPollIntervalMs = 400;
     private const string NoAutoBrowserEnv = "TELEVAULT_NO_AUTO_BROWSER";
+    private const int ShowWindowRestore = 9;
 
     private static readonly string AppUrl = "http://127.0.0.1:" + AppPort + "/";
     private static readonly string StatusUrl = AppUrl + "api/status";
@@ -24,9 +28,58 @@ internal static class TeleVaultLauncher
     private enum ExistingInstanceState
     {
         NotRunning,
-        TeleVaultRunning,
+        CurrentVersionTeleVaultRunning,
+        DifferentVersionTeleVaultRunning,
         PortOccupiedByOther,
     }
+
+    private sealed class ExistingInstanceResult
+    {
+        public ExistingInstanceResult(ExistingInstanceState state, string name, string version)
+        {
+            State = state;
+            Name = name ?? string.Empty;
+            Version = version ?? string.Empty;
+        }
+
+        public ExistingInstanceState State { get; private set; }
+        public string Name { get; private set; }
+        public string Version { get; private set; }
+    }
+
+    private sealed class StatusInfo
+    {
+        public string Name = string.Empty;
+        public string Version = string.Empty;
+
+        public bool IsTeleVault
+        {
+            get { return string.Equals(Name, AppName, StringComparison.OrdinalIgnoreCase); }
+        }
+    }
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int GetWindowTextLength(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     [STAThread]
     private static int Main(string[] args)
@@ -40,16 +93,30 @@ internal static class TeleVaultLauncher
             Log("launcher start");
             Log("app root: " + appRoot);
 
-            ExistingInstanceState existingInstance = CheckExistingInstance();
-            if (existingInstance == ExistingInstanceState.TeleVaultRunning)
+            ExistingInstanceResult existingInstance = CheckExistingInstance();
+            if (existingInstance.State == ExistingInstanceState.CurrentVersionTeleVaultRunning)
             {
-                Log("using already running TeleVault instance");
+                Log("using already running TeleVault instance version " + existingInstance.Version);
+                if (TryFocusExistingWindow())
+                {
+                    Log("launcher finished after focusing existing window");
+                    return 0;
+                }
+
+                Log("existing backend found but window missing -> opening browser");
                 OpenBrowserWindow(AppUrl);
                 Log("launcher finished after reusing existing instance");
                 return 0;
             }
 
-            if (existingInstance == ExistingInstanceState.PortOccupiedByOther)
+            if (existingInstance.State == ExistingInstanceState.DifferentVersionTeleVaultRunning)
+            {
+                Log("version mismatch: running=" + SafeLogValue(existingInstance.Version) + ", launcher=" + AppVersion);
+                ShowError(BuildVersionMismatchMessage(existingInstance.Version));
+                return 1;
+            }
+
+            if (existingInstance.State == ExistingInstanceState.PortOccupiedByOther)
             {
                 Log("launcher stopped because the TeleVault port is occupied by a non-TeleVault process");
                 ShowError(BuildPortOccupiedMessage());
@@ -84,6 +151,7 @@ internal static class TeleVaultLauncher
             startInfo.EnvironmentVariables[NoAutoBrowserEnv] = "1";
 
             Log("runtime python.exe: found");
+            Log("new backend start");
             Log("starting python process");
             process = Process.Start(startInfo);
             if (process == null)
@@ -170,7 +238,7 @@ internal static class TeleVaultLauncher
         return builder.ToString();
     }
 
-    private static ExistingInstanceState CheckExistingInstance()
+    private static ExistingInstanceResult CheckExistingInstance()
     {
         Log("checking existing instance: " + StatusUrl);
 
@@ -181,14 +249,26 @@ internal static class TeleVaultLauncher
             using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
                 string body = ReadResponseBody(response);
-                if (response.StatusCode == HttpStatusCode.OK && IsTeleVaultStatusBody(body))
+                if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    Log("existing TeleVault detected");
-                    return ExistingInstanceState.TeleVaultRunning;
+                    StatusInfo status = ParseStatusBody(body);
+                    Log("existing status response: name=" + SafeLogValue(status.Name) + ", version=" + SafeLogValue(status.Version));
+
+                    if (status.IsTeleVault)
+                    {
+                        if (string.Equals(status.Version, AppVersion, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Log("existing TeleVault detected with current version");
+                            return new ExistingInstanceResult(ExistingInstanceState.CurrentVersionTeleVaultRunning, status.Name, status.Version);
+                        }
+
+                        Log("existing TeleVault detected with different version");
+                        return new ExistingInstanceResult(ExistingInstanceState.DifferentVersionTeleVaultRunning, status.Name, status.Version);
+                    }
                 }
 
                 Log("status endpoint responded but was not TeleVault: HTTP " + (int)response.StatusCode);
-                return ExistingInstanceState.PortOccupiedByOther;
+                return new ExistingInstanceResult(ExistingInstanceState.PortOccupiedByOther, string.Empty, string.Empty);
             }
         }
         catch (WebException ex)
@@ -199,7 +279,7 @@ internal static class TeleVaultLauncher
                 using (response)
                 {
                     Log("status endpoint returned HTTP " + (int)response.StatusCode + "; treating port as occupied");
-                    return ExistingInstanceState.PortOccupiedByOther;
+                    return new ExistingInstanceResult(ExistingInstanceState.PortOccupiedByOther, string.Empty, string.Empty);
                 }
             }
 
@@ -213,11 +293,11 @@ internal static class TeleVaultLauncher
         if (IsLocalPortOccupied())
         {
             Log("port is occupied, but no TeleVault status endpoint was detected");
-            return ExistingInstanceState.PortOccupiedByOther;
+            return new ExistingInstanceResult(ExistingInstanceState.PortOccupiedByOther, string.Empty, string.Empty);
         }
 
         Log("existing TeleVault not detected");
-        return ExistingInstanceState.NotRunning;
+        return new ExistingInstanceResult(ExistingInstanceState.NotRunning, string.Empty, string.Empty);
     }
 
     private static bool WaitForServerReady(Process process)
@@ -293,20 +373,36 @@ internal static class TeleVaultLauncher
 
     private static bool IsTeleVaultStatusBody(string body)
     {
-        if (string.IsNullOrEmpty(body))
-        {
-            return false;
-        }
-
-        return body.IndexOf("\"name\"", StringComparison.OrdinalIgnoreCase) >= 0
-            && body.IndexOf("\"TeleVault\"", StringComparison.OrdinalIgnoreCase) >= 0;
+        return ParseStatusBody(body).IsTeleVault;
     }
 
     private static bool IsTeleVaultReadyStatusBody(string body)
     {
-        return IsTeleVaultStatusBody(body)
+        StatusInfo status = ParseStatusBody(body);
+        return status.IsTeleVault
+            && string.Equals(status.Version, AppVersion, StringComparison.OrdinalIgnoreCase)
             && (body.IndexOf("\"ready\": true", StringComparison.OrdinalIgnoreCase) >= 0
                 || body.IndexOf("\"ready\":true", StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private static StatusInfo ParseStatusBody(string body)
+    {
+        StatusInfo status = new StatusInfo();
+        if (string.IsNullOrEmpty(body))
+        {
+            return status;
+        }
+
+        status.Name = ExtractJsonStringField(body, "name");
+        status.Version = ExtractJsonStringField(body, "version");
+        return status;
+    }
+
+    private static string ExtractJsonStringField(string body, string fieldName)
+    {
+        string pattern = "\\\"" + Regex.Escape(fieldName) + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"";
+        Match match = Regex.Match(body, pattern, RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value : string.Empty;
     }
 
     private static bool IsLocalPortOccupied()
@@ -407,6 +503,103 @@ internal static class TeleVaultLauncher
             Log("default browser fallback failed: " + ex.Message);
             ShowError("TeleVault is running, but the launcher could not open a browser window.\n\nOpen this address manually:\n" + url + "\n\n" + LogLocationText());
         }
+    }
+
+    private static bool TryFocusExistingWindow()
+    {
+        IntPtr window = FindExistingTeleVaultWindow();
+        if (window == IntPtr.Zero)
+        {
+            Log("existing TeleVault window not found");
+            return false;
+        }
+
+        try
+        {
+            ShowWindow(window, ShowWindowRestore);
+            bool foreground = SetForegroundWindow(window);
+            Log("existing window found/focused" + (foreground ? string.Empty : " (foreground request returned false)"));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log("existing window focus failed: " + ex.GetType().Name + ": " + ex.Message);
+            return true;
+        }
+    }
+
+    private static IntPtr FindExistingTeleVaultWindow()
+    {
+        IntPtr found = IntPtr.Zero;
+
+        EnumWindows(delegate(IntPtr hWnd, IntPtr lParam)
+        {
+            if (!IsWindowVisible(hWnd))
+            {
+                return true;
+            }
+
+            string title = GetWindowTitle(hWnd);
+            if (title.IndexOf(AppName, StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return true;
+            }
+
+            string processName = GetWindowProcessName(hWnd);
+            if (!IsAllowedBrowserProcess(processName))
+            {
+                Log("TeleVault-titled window ignored because process is not Edge/Chrome: " + SafeLogValue(processName));
+                return true;
+            }
+
+            found = hWnd;
+            Log("existing TeleVault window found in process: " + SafeLogValue(processName));
+            return false;
+        }, IntPtr.Zero);
+
+        return found;
+    }
+
+    private static string GetWindowTitle(IntPtr hWnd)
+    {
+        int length = GetWindowTextLength(hWnd);
+        if (length <= 0)
+        {
+            return string.Empty;
+        }
+
+        StringBuilder builder = new StringBuilder(length + 1);
+        GetWindowText(hWnd, builder, builder.Capacity);
+        return builder.ToString();
+    }
+
+    private static string GetWindowProcessName(IntPtr hWnd)
+    {
+        try
+        {
+            uint processId;
+            GetWindowThreadProcessId(hWnd, out processId);
+            if (processId == 0)
+            {
+                return string.Empty;
+            }
+
+            using (Process process = Process.GetProcessById((int)processId))
+            {
+                return process.ProcessName ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("could not read window process name: " + ex.GetType().Name);
+            return string.Empty;
+        }
+    }
+
+    private static bool IsAllowedBrowserProcess(string processName)
+    {
+        return string.Equals(processName, "msedge", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(processName, "chrome", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool StartAppModeBrowser(string browserPath, string url, string browserName)
@@ -554,9 +747,31 @@ internal static class TeleVaultLauncher
 
     private static string BuildPortOccupiedMessage()
     {
-        return "\u041f\u043e\u0440\u0442 TeleVault \u0437\u0430\u043d\u044f\u0442 \u0434\u0440\u0443\u0433\u0438\u043c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\u043c \u0438\u043b\u0438 \u043f\u043e\u0432\u0440\u0435\u0436\u0434\u0451\u043d\u043d\u044b\u043c \u043f\u0440\u043e\u0446\u0435\u0441\u0441\u043e\u043c."
+        return "\u043f\u043e\u0440\u0442 8766 \u0437\u0430\u043d\u044f\u0442 \u0434\u0440\u0443\u0433\u0438\u043c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\u043c"
             + "\n\nTeleVault did not start a second backend."
             + "\n\n" + LogLocationText();
+    }
+
+    private static string BuildVersionMismatchMessage(string version)
+    {
+        string displayVersion = string.IsNullOrWhiteSpace(version) ? "unknown" : version;
+        return "\u0443\u0436\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u0430 \u0434\u0440\u0443\u0433\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f TeleVault: "
+            + displayVersion
+            + ". \u0437\u0430\u043a\u0440\u043e\u0439\u0442\u0435 \u0435\u0451 \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u043f\u0443\u0441\u043a\u043e\u043c "
+            + AppVersion
+            + "."
+            + "\n\nTeleVault did not start a second backend."
+            + "\n\n" + LogLocationText();
+    }
+
+    private static string SafeLogValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "(missing)";
+        }
+
+        return value.Replace("\r", " ").Replace("\n", " ");
     }
 
     private static void ShowError(string message)

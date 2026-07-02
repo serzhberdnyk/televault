@@ -38,6 +38,34 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.4 - exe launcher instance/window guard
+
+Changed:
+- `TeleVault.exe` now treats `/api/status` as current only when `name` is `TeleVault` and `version` is `2.8.4`
+- if another TeleVault version is already on port 8766, the launcher shows a version mismatch MessageBox and exits without opening the old instance or starting another backend
+- if the current 2.8.4 backend is already running, the launcher first tries to focus an existing Edge/Chrome app window titled `TeleVault`
+- if the current backend is alive but no app window is found, the launcher opens one new app-like browser window to the existing backend
+- occupied-port handling still refuses to start a backend over a non-TeleVault process and does not kill external processes
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.8.4
+- kept frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage, media classification and folder picker behavior unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.4\TeleVault.exe` is created and included in the zip
+- launch `dist\TeleVault-v2.8.4\TeleVault.exe` and confirm `/api/status` returns 2.8.4
+- launch `dist\TeleVault-v2.8.4\TeleVault.exe` again while its window is open and confirm no second backend or app window starts
+- close the browser app window while leaving the backend alive, then launch `TeleVault.exe` again and confirm it opens one app window to the existing backend
+- with another TeleVault version on port 8766, confirm the launcher shows the version mismatch MessageBox and does not reuse it
+- with a non-TeleVault process on port 8766, confirm the launcher shows the occupied-port MessageBox and does not start a backend
+- confirm folder picker through `TeleVault.exe` still works
+- confirm `run_windows.bat` still works
+- confirm global search and media tabs still work
+- run `git status --short` after builder and confirm ignored `dist/` and `logs/` output is not listed
+- run `git diff --check`
+
 ## 2.8.3 - exe launcher repeated launch handling
 
 Changed:

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.4
+
+### Fixed
+
+* TeleVault.exe now refuses to reuse an already running TeleVault backend from a different version
+* repeated TeleVault.exe launches now focus the existing app window when possible instead of opening another window
+* occupied-port handling was made safer for launcher startup
+
 ## 2.8.3
 
 ### Improved
