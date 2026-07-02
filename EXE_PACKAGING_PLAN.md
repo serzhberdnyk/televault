@@ -1,12 +1,12 @@
 # TeleVault: exe packaging plan
 
-TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.8.5 polishes that launcher UX: clearer user-facing errors, cleaner launcher logging, optional icon support, no visible console window, app-like browser window when Edge/Chrome is available, and `run_windows.bat` remains the debug/fallback launcher.
+TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.8.8 adds the first dedicated app icon branding while keeping the launcher-style portable package. `run_windows.bat` remains the debug/fallback launcher.
 
 ## Goal
 
 The exe phase should make TeleVault easier to start on Windows without changing the current app behavior.
 
-In 2.8.5, the user should get:
+In 2.8.8, the user should get:
 
 - `TeleVault.exe`
 - startup by double-clicking `TeleVault.exe`
@@ -14,7 +14,7 @@ In 2.8.5, the user should get:
 - an app-like browser window when Microsoft Edge or Google Chrome is available
 - normal default-browser fallback when app-mode is not available
 - clearer MessageBox errors with technical details in `logs/launcher.log`
-- optional `assets/TeleVault.ico` support during launcher compilation
+- `TeleVault.exe` compiled with the dedicated `assets/TeleVault.ico` icon through `/win32icon`
 - no need to install or open Python, Git, or a terminal
 
 ## Current First Approach
@@ -29,6 +29,7 @@ TeleVault/
 - app.py
 - backend/
 - frontend/
+- assets/
 - runtime/python/
 - README_RUN.md
 ```
@@ -50,8 +51,8 @@ This also gives a beginner-friendly release path: first make the existing folder
 
 Before shipping the launcher preview, verify that:
 
-- `TeleVault.exe` exists in `dist/TeleVault-v2.8.5/`
-- the zip contains `TeleVault-v2.8.5/TeleVault.exe`
+- `TeleVault.exe` exists in `dist/TeleVault-v2.8.8/`
+- the zip contains `TeleVault-v2.8.8/TeleVault.exe`
 - the launcher finds `runtime/python/python.exe`, `app.py`, `backend/` and `frontend/` relative to its own folder
 - the launcher does not depend on the current working directory
 - missing required files produce a readable MessageBox error
@@ -76,10 +77,9 @@ Before shipping the launcher preview, verify that:
 
 After the launcher preview is stable, later packaging options can be evaluated:
 
-- final branded icon
 - single-folder PyInstaller build
 - one-file exe
 - installer
 - desktop shortcut or Start Menu integration
 
-These are future options, not part of 2.8.5.
+Installer and one-file exe remain future options, not part of 2.8.8.

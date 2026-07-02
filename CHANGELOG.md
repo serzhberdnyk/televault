@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.8.8
+
+### Added
+
+* TeleVault.exe now includes a dedicated TeleVault application icon
+
+### Improved
+
+* release branding assets were prepared for the Windows launcher package
+
 ## 2.8.7
 
 ### Fixed

@@ -68,8 +68,8 @@ def compile_launcher(csc: Path) -> int:
         icon_arg = f"/win32icon:{ICON_PATH}"
     else:
         print()
-        print("INFO: custom launcher icon not found: assets/TeleVault.ico")
-        print("INFO: TeleVault.exe will be built with the default Windows executable icon.")
+        print("WARNING: custom launcher icon not found: assets/TeleVault.ico")
+        print("WARNING: TeleVault.exe will be built with the default Windows executable icon.")
 
     command = [
         str(csc),
@@ -89,6 +89,7 @@ def compile_launcher(csc: Path) -> int:
     print(f"launcher output: {LAUNCHER_EXE}")
     if icon_arg is not None:
         print(f"launcher icon: {ICON_PATH}")
+        print(f"launcher icon argument: {icon_arg}")
 
     result = subprocess.run(command, cwd=ROOT)
     if result.returncode != 0:

@@ -38,6 +38,39 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.8 - app icon and exe branding
+
+Changed:
+- added `tools/generate_icon.py`, a Python standard-library icon generator with no Pillow, ImageMagick, Inkscape or other new dependencies
+- generated `assets\TeleVault.ico` with 16x16, 32x32, 48x48 and 256x256 icon entries
+- generated `frontend\favicon.ico` from the same icon bytes and added a safe `<link rel="icon" href="/favicon.ico">` in `frontend\index.html`
+- kept the icon original to TeleVault: dark vault/private archive styling, cyan/blue accent, safe-door shape and letter T; no Telegram logo or third-party brand mark
+- updated `tools\build_exe_launcher.py` logging so icon builds show the `/win32icon` argument and missing icon fallback is reported as a warning
+- updated `tools\build_portable.py` so `assets/` is included in the portable folder and zip
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, README.md, README_RUN.md, RELEASE_CHECKLIST.md and CHANGELOG.md to 2.8.8
+- documented `assets\TeleVault.ico`, icon regeneration, and future packaging boundaries in assets/docs
+- kept folder picker foreground fix, window state persistence, single-instance/focus behavior, frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `runtime\python\python.exe -m py_compile tools/generate_icon.py`
+- run `node --check frontend/app.js`
+- run `runtime\python\python.exe tools\generate_icon.py` and confirm it creates `assets\TeleVault.ico` and `frontend\favicon.ico`
+- confirm `assets\TeleVault.ico` contains 16x16, 32x32, 48x48 and 256x256 entries
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.8\TeleVault.exe` is created and included in the zip
+- confirm the build log shows `launcher icon argument: /win32icon:...assets\TeleVault.ico`
+- confirm `dist\TeleVault-v2.8.8.zip` contains `TeleVault.exe`, `assets/TeleVault.ico` and `frontend/favicon.ico`
+- launch `dist\TeleVault-v2.8.8\TeleVault.exe` and confirm `/api/status` returns 2.8.8
+- launch `TeleVault.exe` again while its window is open and confirm the existing window is focused without opening a second app window
+- confirm folder picker through `TeleVault.exe` still opens above the app window
+- resize and move the app window, close it, launch again and confirm size/position are restored
+- confirm `run_windows.bat` still works
+- confirm `dist\TeleVault-v2.8.8.zip` does not contain `user_data/` or `logs/`
+- run `git status --short` after builder and confirm ignored `dist/`, `logs/` and `user_data/` output is not listed
+- run `git diff --check`
+
 ## 2.8.7 - launcher window state persistence fix
 
 Changed:
