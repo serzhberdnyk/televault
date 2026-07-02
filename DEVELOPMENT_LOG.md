@@ -38,6 +38,35 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.7 - launcher window state persistence fix
+
+Changed:
+- diagnosed the 2.8.6 launcher state issue: bounds were only saved after the app window disappeared or backend exited, and the existing-backend/no-window branch opened a browser window then exited without a monitor
+- launcher now keeps a hidden monitor alive for Edge/Chrome app-mode windows and saves the first valid bounds immediately, then saves changed bounds with a small throttle
+- when the app window closes, launcher saves the last valid bounds; if it started the backend itself, it stops only that owned Python process
+- if an existing backend is alive but no app window is found, launcher opens one app-mode window with saved bounds and monitors only the window without stopping the external backend
+- minimized windows are no longer treated as closed and minimized bounds are not saved as normal window bounds
+- Chromium app-mode args are logged and passed as `--app=http://127.0.0.1:8766/`, `--window-size=WIDTH,HEIGHT` and `--window-position=X,Y`
+- launcher logs the state file path, missing/existing state file, loaded bounds, saved bounds, fallback reasons and found app-window hwnd/title/process
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, README_RUN.md, RELEASE_CHECKLIST.md and CHANGELOG.md to 2.8.7
+- kept folder picker foreground fix, frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.7\TeleVault.exe` is created and included in the zip
+- launch `dist\TeleVault-v2.8.7\TeleVault.exe` and confirm `/api/status` returns 2.8.7
+- resize and move the app window, close it, launch again and confirm the size and position are restored
+- confirm `user_data\launcher_window.json` is created in the app root and contains current bounds
+- launch `TeleVault.exe` again while its window is open and confirm the existing window is focused without resizing
+- confirm folder picker through `TeleVault.exe` still opens above the app window and cancel stays neutral
+- confirm `run_windows.bat` still works
+- confirm `dist\TeleVault-v2.8.7.zip` contains `TeleVault.exe` and does not contain `user_data/` or `logs/`
+- run `git status --short` after builder and confirm ignored `dist/`, `logs/` and `user_data/` output is not listed
+- run `git diff --check`
+
 ## 2.8.6 - launcher window UX fixes
 
 Changed:

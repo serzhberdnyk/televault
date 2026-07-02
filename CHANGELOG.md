@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.7
+
+### Fixed
+
+* TeleVault.exe now reliably restores the last app window size and position
+* launcher window state saving was made more robust for Edge/Chrome app-mode windows
+
 ## 2.8.6
 
 ### Fixed

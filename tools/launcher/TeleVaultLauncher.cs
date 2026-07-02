@@ -14,18 +14,21 @@ using System.Windows.Forms;
 internal static class TeleVaultLauncher
 {
     private const string AppName = "TeleVault";
-    private const string AppVersion = "2.8.6";
+    private const string AppVersion = "2.8.7";
     private const int AppPort = 8766;
     private const int ServerStartupTimeoutMs = 30000;
     private const int ServerPollIntervalMs = 400;
     private const int WindowMonitorIntervalMs = 500;
     private const int WindowOpenWaitTimeoutMs = 8000;
+    private const int WindowMissingCloseGraceMs = 1500;
+    private const int WindowStateSaveThrottleMs = 1000;
     private const string NoAutoBrowserEnv = "TELEVAULT_NO_AUTO_BROWSER";
     private const string WindowStateDirectoryName = "user_data";
     private const string WindowStateFileName = "launcher_window.json";
     private const int MinWindowWidth = 900;
     private const int MinWindowHeight = 600;
     private const int ShowWindowMaximized = 3;
+    private const int ShowWindowMinimized = 2;
     private const int ShowWindowShow = 5;
     private const int ShowWindowRestore = 9;
     private const int SystemMetricXVirtualScreen = 76;
@@ -125,6 +128,9 @@ internal static class TeleVaultLauncher
     private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -135,6 +141,9 @@ internal static class TeleVaultLauncher
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
 
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
@@ -164,8 +173,7 @@ internal static class TeleVaultLauncher
 
                 Log("existing backend found but window missing -> opening browser");
                 OpenBrowserWindow(AppUrl, LoadWindowState());
-                Log("launcher finished after reusing existing instance");
-                return 0;
+                return MonitorExternalWindow();
             }
 
             if (existingInstance.State == ExistingInstanceState.DifferentVersionTeleVaultRunning)
@@ -560,27 +568,64 @@ internal static class TeleVaultLauncher
 
     private static int MonitorStartedProcess(Process process)
     {
+        Log("launcher monitor started for owned backend");
         LauncherWindowState lastWindowState = null;
-        bool hadWindow = false;
-        bool savedAfterClose = false;
+        LauncherWindowState lastSavedState = null;
+        bool sawWindow = false;
+        bool loggedMissingWindowTimeout = false;
+        DateTime firstWindowDeadline = DateTime.UtcNow.AddMilliseconds(WindowOpenWaitTimeoutMs);
+        DateTime missingWindowSince = DateTime.MinValue;
+        DateTime lastSaveUtc = DateTime.MinValue;
 
         while (!process.WaitForExit(WindowMonitorIntervalMs))
         {
             LauncherWindowState currentState;
-            IntPtr window = FindExistingTeleVaultWindow(false);
-            if (window != IntPtr.Zero && TryCaptureWindowState(window, out currentState))
+            IntPtr window = FindExistingTeleVaultWindow(!sawWindow);
+            if (window != IntPtr.Zero)
             {
-                lastWindowState = currentState;
-                hadWindow = true;
-                savedAfterClose = false;
+                if (!sawWindow)
+                {
+                    Log("launcher monitor attached to app window");
+                }
+
+                sawWindow = true;
+                missingWindowSince = DateTime.MinValue;
+                if (TryCaptureWindowState(window, out currentState))
+                {
+                    lastWindowState = currentState;
+                    SaveWindowStateIfNeeded(currentState, ref lastSavedState, ref lastSaveUtc, false);
+                }
+
                 continue;
             }
 
-            if (hadWindow && lastWindowState != null && !savedAfterClose)
+            if (!sawWindow)
             {
-                SaveWindowState(lastWindowState);
-                savedAfterClose = true;
-                hadWindow = false;
+                if (!loggedMissingWindowTimeout && DateTime.UtcNow >= firstWindowDeadline)
+                {
+                    Log("launcher monitor did not find an app window before timeout; continuing backend monitor");
+                    loggedMissingWindowTimeout = true;
+                }
+
+                continue;
+            }
+
+            if (missingWindowSince == DateTime.MinValue)
+            {
+                missingWindowSince = DateTime.UtcNow;
+            }
+
+            if ((DateTime.UtcNow - missingWindowSince).TotalMilliseconds >= WindowMissingCloseGraceMs)
+            {
+                if (lastWindowState != null)
+                {
+                    SaveWindowStateIfNeeded(lastWindowState, ref lastSavedState, ref lastSaveUtc, true);
+                }
+
+                Log("app window closed; stopping owned backend");
+                StopStartedProcessAfterWindowClosed(process);
+                Log("launcher finished after app window closed");
+                return 0;
             }
         }
 
@@ -588,27 +633,150 @@ internal static class TeleVaultLauncher
         IntPtr finalWindow = FindExistingTeleVaultWindow(false);
         if (finalWindow != IntPtr.Zero && TryCaptureWindowState(finalWindow, out finalState))
         {
-            SaveWindowState(finalState);
+            SaveWindowStateIfNeeded(finalState, ref lastSavedState, ref lastSaveUtc, true);
         }
-        else if (hadWindow && lastWindowState != null && !savedAfterClose)
+        else if (lastWindowState != null)
         {
-            SaveWindowState(lastWindowState);
+            SaveWindowStateIfNeeded(lastWindowState, ref lastSavedState, ref lastSaveUtc, true);
         }
 
         Log("python process exited with code " + process.ExitCode);
         return process.ExitCode;
     }
 
+    private static int MonitorExternalWindow()
+    {
+        Log("launcher monitor started for existing backend window");
+        LauncherWindowState lastWindowState = null;
+        LauncherWindowState lastSavedState = null;
+        bool sawWindow = false;
+        bool loggedMissingWindowTimeout = false;
+        DateTime firstWindowDeadline = DateTime.UtcNow.AddMilliseconds(WindowOpenWaitTimeoutMs);
+        DateTime missingWindowSince = DateTime.MinValue;
+        DateTime lastSaveUtc = DateTime.MinValue;
+
+        while (true)
+        {
+            LauncherWindowState currentState;
+            IntPtr window = FindExistingTeleVaultWindow(!sawWindow);
+            if (window != IntPtr.Zero)
+            {
+                if (!sawWindow)
+                {
+                    Log("launcher monitor attached to existing-backend app window");
+                }
+
+                sawWindow = true;
+                missingWindowSince = DateTime.MinValue;
+                if (TryCaptureWindowState(window, out currentState))
+                {
+                    lastWindowState = currentState;
+                    SaveWindowStateIfNeeded(currentState, ref lastSavedState, ref lastSaveUtc, false);
+                }
+            }
+            else if (!sawWindow)
+            {
+                if (!loggedMissingWindowTimeout && DateTime.UtcNow >= firstWindowDeadline)
+                {
+                    Log("launcher monitor did not find an app window before timeout; exiting existing-backend monitor");
+                    return 0;
+                }
+            }
+            else
+            {
+                if (missingWindowSince == DateTime.MinValue)
+                {
+                    missingWindowSince = DateTime.UtcNow;
+                }
+
+                if ((DateTime.UtcNow - missingWindowSince).TotalMilliseconds >= WindowMissingCloseGraceMs)
+                {
+                    if (lastWindowState != null)
+                    {
+                        SaveWindowStateIfNeeded(lastWindowState, ref lastSavedState, ref lastSaveUtc, true);
+                    }
+
+                    Log("existing-backend app window closed; launcher monitor exiting without stopping backend");
+                    return 0;
+                }
+            }
+
+            Thread.Sleep(WindowMonitorIntervalMs);
+        }
+    }
+
+    private static void SaveWindowStateIfNeeded(
+        LauncherWindowState state,
+        ref LauncherWindowState lastSavedState,
+        ref DateTime lastSaveUtc,
+        bool force)
+    {
+        if (state == null)
+        {
+            return;
+        }
+
+        if (!force
+            && lastSavedState != null
+            && AreWindowStatesEqual(state, lastSavedState))
+        {
+            return;
+        }
+
+        if (!force
+            && lastSavedState != null
+            && (DateTime.UtcNow - lastSaveUtc).TotalMilliseconds < WindowStateSaveThrottleMs)
+        {
+            return;
+        }
+
+        SaveWindowState(state);
+        lastSavedState = CopyWindowState(state);
+        lastSaveUtc = DateTime.UtcNow;
+    }
+
+    private static LauncherWindowState CopyWindowState(LauncherWindowState state)
+    {
+        if (state == null)
+        {
+            return null;
+        }
+
+        LauncherWindowState copy = new LauncherWindowState();
+        copy.X = state.X;
+        copy.Y = state.Y;
+        copy.Width = state.Width;
+        copy.Height = state.Height;
+        copy.Maximized = state.Maximized;
+        return copy;
+    }
+
+    private static bool AreWindowStatesEqual(LauncherWindowState left, LauncherWindowState right)
+    {
+        if (left == null || right == null)
+        {
+            return false;
+        }
+
+        return left.X == right.X
+            && left.Y == right.Y
+            && left.Width == right.Width
+            && left.Height == right.Height
+            && left.Maximized == right.Maximized;
+    }
+
     private static LauncherWindowState LoadWindowState()
     {
+        Log("window state path: " + SafeLogValue(windowStatePath));
         if (string.IsNullOrEmpty(windowStatePath) || !File.Exists(windowStatePath))
         {
-            Log("no window state");
+            Log("window state file missing");
             return null;
         }
 
         try
         {
+            Log("window state file exists");
             string body = File.ReadAllText(windowStatePath, Encoding.UTF8);
             LauncherWindowState state = new LauncherWindowState();
             state.Width = ExtractJsonIntField(body, "width", 0);
@@ -617,9 +785,10 @@ internal static class TeleVaultLauncher
             state.Y = ExtractJsonIntField(body, "y", 0);
             state.Maximized = ExtractJsonBoolField(body, "maximized", false);
 
-            if (!IsValidWindowState(state))
+            string invalidReason = GetInvalidWindowStateReason(state);
+            if (!string.IsNullOrEmpty(invalidReason))
             {
-                Log("invalid window state fallback");
+                Log("invalid window state fallback: " + invalidReason);
                 return null;
             }
 
@@ -640,9 +809,10 @@ internal static class TeleVaultLauncher
             return;
         }
 
-        if (!IsValidWindowState(state))
+        string invalidReason = GetInvalidWindowStateReason(state);
+        if (!string.IsNullOrEmpty(invalidReason))
         {
-            Log("invalid current window state not saved: " + FormatWindowState(state));
+            Log("invalid current window state not saved: " + invalidReason + ", " + FormatWindowState(state));
             return;
         }
 
@@ -682,10 +852,20 @@ internal static class TeleVaultLauncher
         RECT rect;
         bool maximized = false;
 
+        if (IsIconic(window))
+        {
+            return false;
+        }
+
         WINDOWPLACEMENT placement = new WINDOWPLACEMENT();
         placement.Length = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
         if (GetWindowPlacement(window, ref placement))
         {
+            if (placement.ShowCmd == ShowWindowMinimized)
+            {
+                return false;
+            }
+
             rect = placement.NormalPosition;
             maximized = placement.ShowCmd == ShowWindowMaximized;
             if (!IsUsableRect(rect) && !GetWindowRect(window, out rect))
@@ -724,9 +904,14 @@ internal static class TeleVaultLauncher
 
     private static bool IsValidWindowState(LauncherWindowState state)
     {
+        return string.IsNullOrEmpty(GetInvalidWindowStateReason(state));
+    }
+
+    private static string GetInvalidWindowStateReason(LauncherWindowState state)
+    {
         if (state == null || state.Width < MinWindowWidth || state.Height < MinWindowHeight)
         {
-            return false;
+            return "bounds are smaller than " + MinWindowWidth + "x" + MinWindowHeight;
         }
 
         int virtualX = GetSystemMetrics(SystemMetricXVirtualScreen);
@@ -735,7 +920,7 @@ internal static class TeleVaultLauncher
         int virtualHeight = GetSystemMetrics(SystemMetricCyVirtualScreen);
         if (virtualWidth <= 0 || virtualHeight <= 0)
         {
-            return true;
+            return string.Empty;
         }
 
         long windowRight = (long)state.X + state.Width;
@@ -743,10 +928,17 @@ internal static class TeleVaultLauncher
         long virtualRight = (long)virtualX + virtualWidth;
         long virtualBottom = (long)virtualY + virtualHeight;
 
-        return state.X < virtualRight
+        bool intersectsVirtualScreen = state.X < virtualRight
             && windowRight > virtualX
             && state.Y < virtualBottom
             && windowBottom > virtualY;
+
+        if (!intersectsVirtualScreen)
+        {
+            return "bounds are outside the virtual screen";
+        }
+
+        return string.Empty;
     }
 
     private static string BuildWindowStateJson(LauncherWindowState state)
@@ -889,7 +1081,12 @@ internal static class TeleVaultLauncher
             found = hWnd;
             if (logDetails)
             {
-                Log("existing TeleVault window found in process: " + SafeLogValue(processName));
+                Log("existing TeleVault window found: hwnd=0x"
+                    + hWnd.ToInt64().ToString("X")
+                    + ", title="
+                    + SafeLogValue(title)
+                    + ", process="
+                    + SafeLogValue(processName));
             }
             return false;
         }, IntPtr.Zero);
@@ -949,6 +1146,7 @@ internal static class TeleVaultLauncher
             startInfo.WorkingDirectory = Path.GetDirectoryName(browserPath);
             startInfo.UseShellExecute = false;
             startInfo.CreateNoWindow = true;
+            Log(browserName + " app-mode launch args: " + startInfo.Arguments);
             Process browserProcess = Process.Start(startInfo);
             if (browserProcess == null)
             {
@@ -958,7 +1156,7 @@ internal static class TeleVaultLauncher
 
             browserProcess.Dispose();
             Log("browser app-mode opened: " + browserName);
-            TryRestoreMaximizedWindow(windowState);
+            TryApplyWindowState(windowState);
             return true;
         }
         catch (Exception ex)
@@ -972,7 +1170,7 @@ internal static class TeleVaultLauncher
     {
         StringBuilder builder = new StringBuilder();
         builder.Append("--app=");
-        builder.Append(QuoteArgument(url));
+        builder.Append(url);
 
         if (windowState != null)
         {
@@ -989,9 +1187,9 @@ internal static class TeleVaultLauncher
         return builder.ToString();
     }
 
-    private static void TryRestoreMaximizedWindow(LauncherWindowState windowState)
+    private static void TryApplyWindowState(LauncherWindowState windowState)
     {
-        if (windowState == null || !windowState.Maximized)
+        if (windowState == null)
         {
             return;
         }
@@ -999,18 +1197,27 @@ internal static class TeleVaultLauncher
         IntPtr window = WaitForTeleVaultWindow(WindowOpenWaitTimeoutMs);
         if (window == IntPtr.Zero)
         {
-            Log("maximized window state not restored because the app window was not found");
+            Log("window state not applied because the app window was not found");
             return;
         }
 
         try
         {
-            ShowWindow(window, ShowWindowMaximized);
-            Log("maximized window state restored");
+            ShowWindow(window, ShowWindowRestore);
+            bool moved = MoveWindow(window, windowState.X, windowState.Y, windowState.Width, windowState.Height, true);
+            Log("applied window state with MoveWindow: "
+                + FormatWindowState(windowState)
+                + (moved ? string.Empty : " (MoveWindow returned false)"));
+
+            if (windowState.Maximized)
+            {
+                ShowWindow(window, ShowWindowMaximized);
+                Log("maximized window state restored");
+            }
         }
         catch (Exception ex)
         {
-            Log("maximized window state restore failed: " + ex.GetType().Name + ": " + ex.Message);
+            Log("window state apply failed: " + ex.GetType().Name + ": " + ex.Message);
         }
     }
 
@@ -1100,6 +1307,33 @@ internal static class TeleVaultLauncher
         }
     }
 
+    private static void StopStartedProcessAfterWindowClosed(Process process)
+    {
+        if (process == null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!process.HasExited)
+            {
+                Log("stopping owned python process after app window close");
+                process.Kill();
+                process.WaitForExit(3000);
+            }
+
+            if (process.HasExited)
+            {
+                Log("owned python process exited with code " + process.ExitCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("stopping owned python process after app window close failed: " + ex.GetType().Name + ": " + ex.Message);
+        }
+    }
+
     private static string QuoteArgument(string value)
     {
         return "\"" + value.Replace("\"", "\\\"") + "\"";
@@ -1124,6 +1358,7 @@ internal static class TeleVaultLauncher
         try
         {
             windowStatePath = Path.Combine(appRoot, WindowStateDirectoryName, WindowStateFileName);
+            Log("window state initialized: " + windowStatePath);
         }
         catch
         {
