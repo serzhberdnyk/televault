@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.5
+
+### Improved
+
+* TeleVault.exe launcher messages were polished for clearer user-facing errors
+* launcher logging was refined for easier troubleshooting
+* optional TeleVault.exe icon support was prepared for future branding work
+
 ## 2.8.4
 
 ### Fixed

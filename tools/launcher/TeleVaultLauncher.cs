@@ -14,7 +14,7 @@ using System.Windows.Forms;
 internal static class TeleVaultLauncher
 {
     private const string AppName = "TeleVault";
-    private const string AppVersion = "2.8.4";
+    private const string AppVersion = "2.8.5";
     private const int AppPort = 8766;
     private const int ServerStartupTimeoutMs = 30000;
     private const int ServerPollIntervalMs = 400;
@@ -96,10 +96,10 @@ internal static class TeleVaultLauncher
             ExistingInstanceResult existingInstance = CheckExistingInstance();
             if (existingInstance.State == ExistingInstanceState.CurrentVersionTeleVaultRunning)
             {
-                Log("using already running TeleVault instance version " + existingInstance.Version);
+                Log("existing instance check: current TeleVault version already running");
                 if (TryFocusExistingWindow())
                 {
-                    Log("launcher finished after focusing existing window");
+                    Log("launcher finished: existing window focused");
                     return 0;
                 }
 
@@ -136,7 +136,7 @@ internal static class TeleVaultLauncher
 
             if (missing.Count > 0)
             {
-                string message = BuildMissingFilesMessage(appRoot, missing);
+                string message = BuildMissingFilesMessage(missing);
                 Log("preflight failed: " + string.Join(", ", missing.ToArray()));
                 ShowError(message);
                 return 1;
@@ -157,7 +157,7 @@ internal static class TeleVaultLauncher
             if (process == null)
             {
                 Log("python process start returned null");
-                ShowError("TeleVault could not start the bundled Python process.");
+                ShowError(BuildPythonStartFailedMessage());
                 return 1;
             }
 
@@ -165,7 +165,7 @@ internal static class TeleVaultLauncher
             if (!WaitForServerReady(process))
             {
                 StopStartedProcess(process);
-                ShowError("TeleVault started Python, but the local server did not become ready at " + StatusUrl + ".\n\n" + LogLocationText());
+                ShowError(BuildServerTimeoutMessage());
                 return 1;
             }
 
@@ -182,7 +182,7 @@ internal static class TeleVaultLauncher
         {
             Log("launcher failed: " + ex.GetType().Name + ": " + ex.Message);
             StopStartedProcess(process);
-            ShowError("TeleVault launcher failed.\n\n" + ex.Message + "\n\n" + LogLocationText());
+            ShowError(BuildUnexpectedErrorMessage());
             return 1;
         }
     }
@@ -218,24 +218,46 @@ internal static class TeleVaultLauncher
         }
     }
 
-    private static string BuildMissingFilesMessage(string appRoot, List<string> missing)
+    private static string BuildMissingFilesMessage(List<string> missing)
     {
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("TeleVault cannot start because required files are missing.");
-        builder.AppendLine();
-        builder.AppendLine("Application root:");
-        builder.AppendLine(appRoot);
+        builder.AppendLine("TeleVault cannot start because this folder is missing required application files.");
         builder.AppendLine();
         builder.AppendLine("Missing:");
         foreach (string item in missing)
         {
-            builder.AppendLine("- " + item);
+            builder.AppendLine("- " + FriendlyMissingItemName(item));
         }
         builder.AppendLine();
-        builder.AppendLine("Keep TeleVault.exe next to app.py, backend, frontend and runtime\\python.");
+        builder.AppendLine("Extract the TeleVault zip again and start TeleVault.exe from the extracted TeleVault folder.");
         builder.AppendLine();
         builder.Append(LogLocationText());
         return builder.ToString();
+    }
+
+    private static string FriendlyMissingItemName(string item)
+    {
+        if (string.Equals(item, "runtime\\python\\python.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return "bundled Python runtime (runtime\\python\\python.exe)";
+        }
+
+        if (string.Equals(item, "app.py", StringComparison.OrdinalIgnoreCase))
+        {
+            return "application file (app.py)";
+        }
+
+        if (string.Equals(item, "backend\\", StringComparison.OrdinalIgnoreCase))
+        {
+            return "backend folder (backend\\)";
+        }
+
+        if (string.Equals(item, "frontend\\", StringComparison.OrdinalIgnoreCase))
+        {
+            return "frontend folder (frontend\\)";
+        }
+
+        return item;
     }
 
     private static ExistingInstanceResult CheckExistingInstance()
@@ -252,7 +274,7 @@ internal static class TeleVaultLauncher
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     StatusInfo status = ParseStatusBody(body);
-                    Log("existing status response: name=" + SafeLogValue(status.Name) + ", version=" + SafeLogValue(status.Version));
+                    Log("existing instance check: status name=" + SafeLogValue(status.Name) + ", version=" + SafeLogValue(status.Version));
 
                     if (status.IsTeleVault)
                     {
@@ -267,7 +289,7 @@ internal static class TeleVaultLauncher
                     }
                 }
 
-                Log("status endpoint responded but was not TeleVault: HTTP " + (int)response.StatusCode);
+                Log("existing instance check: port occupied by non-TeleVault status endpoint, HTTP " + (int)response.StatusCode);
                 return new ExistingInstanceResult(ExistingInstanceState.PortOccupiedByOther, string.Empty, string.Empty);
             }
         }
@@ -278,12 +300,12 @@ internal static class TeleVaultLauncher
             {
                 using (response)
                 {
-                    Log("status endpoint returned HTTP " + (int)response.StatusCode + "; treating port as occupied");
+                    Log("existing instance check: status endpoint returned HTTP " + (int)response.StatusCode + "; treating port as occupied");
                     return new ExistingInstanceResult(ExistingInstanceState.PortOccupiedByOther, string.Empty, string.Empty);
                 }
             }
 
-            Log("status endpoint not available: " + ex.Status);
+            Log("existing instance check: status endpoint not available, " + ex.Status);
         }
         catch (Exception ex)
         {
@@ -292,11 +314,11 @@ internal static class TeleVaultLauncher
 
         if (IsLocalPortOccupied())
         {
-            Log("port is occupied, but no TeleVault status endpoint was detected");
+            Log("existing instance check: port occupied by another program");
             return new ExistingInstanceResult(ExistingInstanceState.PortOccupiedByOther, string.Empty, string.Empty);
         }
 
-        Log("existing TeleVault not detected");
+        Log("existing instance check: no TeleVault detected");
         return new ExistingInstanceResult(ExistingInstanceState.NotRunning, string.Empty, string.Empty);
     }
 
@@ -313,14 +335,14 @@ internal static class TeleVaultLauncher
 
             if (IsServerReady())
             {
-                Log("server ready: " + StatusUrl);
+                Log("server ready: status endpoint confirmed");
                 return true;
             }
 
             Thread.Sleep(ServerPollIntervalMs);
         }
 
-        Log("server ready timeout: " + StatusUrl);
+        Log("server timeout: status endpoint did not become ready");
         return false;
     }
 
@@ -518,7 +540,7 @@ internal static class TeleVaultLauncher
         {
             ShowWindow(window, ShowWindowRestore);
             bool foreground = SetForegroundWindow(window);
-            Log("existing window found/focused" + (foreground ? string.Empty : " (foreground request returned false)"));
+            Log("window focused: existing TeleVault app window" + (foreground ? string.Empty : " (foreground request returned false)"));
             return true;
         }
         catch (Exception ex)
@@ -620,7 +642,7 @@ internal static class TeleVaultLauncher
             }
 
             browserProcess.Dispose();
-            Log("app-mode browser launched: " + browserName);
+            Log("browser app-mode opened: " + browserName);
             return true;
         }
         catch (Exception ex)
@@ -747,20 +769,41 @@ internal static class TeleVaultLauncher
 
     private static string BuildPortOccupiedMessage()
     {
-        return "\u043f\u043e\u0440\u0442 8766 \u0437\u0430\u043d\u044f\u0442 \u0434\u0440\u0443\u0433\u0438\u043c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\u043c"
-            + "\n\nTeleVault did not start a second backend."
+        return "TeleVault cannot start because port 8766 is already used by another program."
+            + "\n\nClose the other program or restart Windows, then open TeleVault.exe again."
             + "\n\n" + LogLocationText();
     }
 
     private static string BuildVersionMismatchMessage(string version)
     {
         string displayVersion = string.IsNullOrWhiteSpace(version) ? "unknown" : version;
-        return "\u0443\u0436\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u0430 \u0434\u0440\u0443\u0433\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f TeleVault: "
+        return "Another TeleVault version is already running: "
             + displayVersion
-            + ". \u0437\u0430\u043a\u0440\u043e\u0439\u0442\u0435 \u0435\u0451 \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u043f\u0443\u0441\u043a\u043e\u043c "
+            + "."
+            + "\n\nClose the running TeleVault window before starting TeleVault "
             + AppVersion
             + "."
-            + "\n\nTeleVault did not start a second backend."
+            + "\n\n" + LogLocationText();
+    }
+
+    private static string BuildPythonStartFailedMessage()
+    {
+        return "TeleVault could not start its bundled Python runtime."
+            + "\n\nExtract the TeleVault zip again and start TeleVault.exe from the extracted TeleVault folder."
+            + "\n\n" + LogLocationText();
+    }
+
+    private static string BuildServerTimeoutMessage()
+    {
+        return "TeleVault started, but the local server did not become ready in time."
+            + "\n\nClose TeleVault windows and try again. If it still fails, check the launcher log."
+            + "\n\n" + LogLocationText();
+    }
+
+    private static string BuildUnexpectedErrorMessage()
+    {
+        return "TeleVault could not start because the launcher hit an unexpected error."
+            + "\n\nClose TeleVault and try again. Technical details were written to the launcher log."
             + "\n\n" + LogLocationText();
     }
 

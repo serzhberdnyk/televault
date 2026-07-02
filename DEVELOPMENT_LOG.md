@@ -38,6 +38,34 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.5 - exe launcher branding polish
+
+Changed:
+- polished `TeleVault.exe` MessageBox errors so missing runtime/app files, occupied ports, version mismatch and startup timeout are easier to understand
+- refined launcher log event names for existing-instance checks, version mismatch, window focus, Python startup, server ready/timeout, browser app-mode opening and errors
+- kept technical details in `logs\launcher.log` instead of exposing them in the main user-facing error text
+- prepared optional Windows icon support: if `assets\TeleVault.ico` exists, `tools\build_exe_launcher.py` passes it to `csc.exe` through `/win32icon`; otherwise the build continues with an info message
+- added `assets\README.md` to document where a future final `TeleVault.ico` should be placed
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.8.5
+- kept frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage, media classification, folder picker behavior and single-instance/window focus behavior unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.5\TeleVault.exe` is created and included in the zip
+- confirm the build does not fail when `assets\TeleVault.ico` is absent and prints that the default executable icon is used
+- launch `dist\TeleVault-v2.8.5\TeleVault.exe` and confirm `/api/status` returns 2.8.5
+- confirm `TeleVault.exe` starts without a visible console window
+- launch `dist\TeleVault-v2.8.5\TeleVault.exe` again while its window is open and confirm the existing window is focused instead of opening a second app window
+- confirm folder picker through `TeleVault.exe` still works
+- confirm `run_windows.bat` still works
+- confirm `dist\TeleVault-v2.8.5.zip` contains `TeleVault.exe`
+- confirm `logs\launcher.log` is not included in the zip
+- run `git status --short` after builder and confirm ignored `dist/` and `logs/` output is not listed
+- run `git diff --check`
+
 ## 2.8.4 - exe launcher instance/window guard
 
 Changed:

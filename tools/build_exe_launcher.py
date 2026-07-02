@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LAUNCHER_SOURCE = ROOT / "tools" / "launcher" / "TeleVaultLauncher.cs"
 LAUNCHER_EXE = build_portable.PACKAGE_ROOT / "TeleVault.exe"
 ZIP_LAUNCHER_ENTRY = f"{build_portable.PACKAGE_NAME}/TeleVault.exe"
+ICON_PATH = ROOT / "assets" / "TeleVault.ico"
 
 CSC_FALLBACK_PATHS = [
     Path(r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"),
@@ -62,6 +63,14 @@ def compile_launcher(csc: Path) -> int:
         print(f"ERROR: launcher source is missing: {LAUNCHER_SOURCE}")
         return 1
 
+    icon_arg = None
+    if ICON_PATH.is_file():
+        icon_arg = f"/win32icon:{ICON_PATH}"
+    else:
+        print()
+        print("INFO: custom launcher icon not found: assets/TeleVault.ico")
+        print("INFO: TeleVault.exe will be built with the default Windows executable icon.")
+
     command = [
         str(csc),
         "/nologo",
@@ -71,11 +80,15 @@ def compile_launcher(csc: Path) -> int:
         f"/out:{LAUNCHER_EXE}",
         str(LAUNCHER_SOURCE),
     ]
+    if icon_arg is not None:
+        command.insert(-1, icon_arg)
 
     print()
     print(f"compiling launcher with: {csc}")
     print(f"launcher source: {LAUNCHER_SOURCE}")
     print(f"launcher output: {LAUNCHER_EXE}")
+    if icon_arg is not None:
+        print(f"launcher icon: {ICON_PATH}")
 
     result = subprocess.run(command, cwd=ROOT)
     if result.returncode != 0:
