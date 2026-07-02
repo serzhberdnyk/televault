@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ctypes import wintypes
+from datetime import datetime
 from pathlib import Path
 import ctypes
 import json
@@ -8,7 +9,13 @@ import sys
 import uuid
 
 
+APP_NAME = "TeleVault"
 TITLE = "выбери папку с telegram export"
+ALLOWED_OWNER_PROCESSES = {"msedge", "msedge.exe", "chrome", "chrome.exe"}
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+SHOW_WINDOW_SHOW = 5
+SHOW_WINDOW_RESTORE = 9
+ENUM_WINDOWS_PROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
 
 class FolderPickerError(RuntimeError):
@@ -58,6 +65,159 @@ def release_com_object(com_ptr: ctypes.c_void_p) -> None:
         return
     release = com_method(com_ptr, 2, wintypes.ULONG)
     release(com_ptr)
+
+
+def log_launcher(message: str) -> None:
+    try:
+        root = Path(__file__).resolve().parents[1]
+        logs_dir = root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        line = f"{datetime.now():%Y-%m-%d %H:%M:%S} folder picker: {message}\n"
+        with (logs_dir / "launcher.log").open("a", encoding="utf-8") as handle:
+            handle.write(line)
+    except Exception:
+        pass
+
+
+def safe_log_value(value: str) -> str:
+    value = str(value or "").replace("\r", " ").replace("\n", " ").strip()
+    return value or "(missing)"
+
+
+def hwnd_to_int(hwnd) -> int:
+    try:
+        return int(hwnd or 0)
+    except TypeError:
+        return int(getattr(hwnd, "value", 0) or 0)
+
+
+def configure_window_api(user32, kernel32) -> None:
+    user32.EnumWindows.argtypes = [ENUM_WINDOWS_PROC, wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.IsIconic.argtypes = [wintypes.HWND]
+    user32.IsIconic.restype = wintypes.BOOL
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.SetForegroundWindow.restype = wintypes.BOOL
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    if hasattr(kernel32, "QueryFullProcessImageNameW"):
+        kernel32.QueryFullProcessImageNameW.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            wintypes.LPWSTR,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+        kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+
+
+def get_window_title(user32, hwnd) -> str:
+    length = user32.GetWindowTextLengthW(hwnd)
+    if length <= 0:
+        return ""
+    buffer = ctypes.create_unicode_buffer(length + 1)
+    user32.GetWindowTextW(hwnd, buffer, len(buffer))
+    return buffer.value
+
+
+def get_window_process_name(user32, kernel32, hwnd) -> str:
+    process_id = wintypes.DWORD()
+    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+    if not process_id.value:
+        return ""
+
+    handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
+    if not handle:
+        return ""
+
+    try:
+        if not hasattr(kernel32, "QueryFullProcessImageNameW"):
+            return ""
+        buffer = ctypes.create_unicode_buffer(32768)
+        size = wintypes.DWORD(len(buffer))
+        if not kernel32.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+            return ""
+        return Path(buffer.value).name
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def is_owner_process_allowed(process_name: str) -> bool:
+    if not process_name:
+        return True
+    return process_name.lower() in ALLOWED_OWNER_PROCESSES
+
+
+def find_televault_owner_hwnd() -> int:
+    try:
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        configure_window_api(user32, kernel32)
+        found: list[tuple[int, str]] = []
+
+        @ENUM_WINDOWS_PROC
+        def enum_window(hwnd, _lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+
+            title = get_window_title(user32, hwnd)
+            if APP_NAME.lower() not in title.lower():
+                return True
+
+            process_name = get_window_process_name(user32, kernel32, hwnd)
+            if not is_owner_process_allowed(process_name):
+                return True
+
+            found.append((hwnd_to_int(hwnd), process_name))
+            return False
+
+        user32.EnumWindows(enum_window, 0)
+        if found:
+            hwnd, process_name = found[0]
+            log_launcher(f"owner hwnd found: 0x{hwnd:X}, process={safe_log_value(process_name)}")
+            return hwnd
+
+        log_launcher("owner hwnd not found")
+        return 0
+    except Exception as exc:
+        log_launcher(f"owner hwnd lookup failed: {type(exc).__name__}")
+        return 0
+
+
+def bring_window_to_foreground(hwnd: int) -> None:
+    if not hwnd:
+        return
+    try:
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.IsIconic.argtypes = [wintypes.HWND]
+        user32.IsIconic.restype = wintypes.BOOL
+        user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+        user32.SetForegroundWindow.restype = wintypes.BOOL
+        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.ShowWindow.restype = wintypes.BOOL
+
+        owner = wintypes.HWND(hwnd)
+        show_command = SHOW_WINDOW_RESTORE if user32.IsIconic(owner) else SHOW_WINDOW_SHOW
+        user32.ShowWindow(owner, show_command)
+        foreground = user32.SetForegroundWindow(owner)
+        log_launcher(
+            f"owner foreground requested: 0x{hwnd:X}"
+            + ("" if foreground else " (foreground request returned false)")
+        )
+    except Exception as exc:
+        log_launcher(f"owner foreground request failed: {type(exc).__name__}")
 
 
 def pick_folder(title: str = TITLE) -> str:
@@ -123,7 +283,10 @@ def pick_folder(title: str = TITLE) -> str:
         check_hresult(set_options(dialog, options), "IFileDialog.SetOptions")
         check_hresult(set_title(dialog, title), "IFileDialog.SetTitle")
 
-        hr = show(dialog, None)
+        owner_hwnd = find_televault_owner_hwnd()
+        bring_window_to_foreground(owner_hwnd)
+
+        hr = show(dialog, wintypes.HWND(owner_hwnd) if owner_hwnd else None)
         if hresult_code(hr) == hresult_cancelled:
             return ""
         check_hresult(hr, "IFileDialog.Show")

@@ -14,16 +14,29 @@ using System.Windows.Forms;
 internal static class TeleVaultLauncher
 {
     private const string AppName = "TeleVault";
-    private const string AppVersion = "2.8.5";
+    private const string AppVersion = "2.8.6";
     private const int AppPort = 8766;
     private const int ServerStartupTimeoutMs = 30000;
     private const int ServerPollIntervalMs = 400;
+    private const int WindowMonitorIntervalMs = 500;
+    private const int WindowOpenWaitTimeoutMs = 8000;
     private const string NoAutoBrowserEnv = "TELEVAULT_NO_AUTO_BROWSER";
+    private const string WindowStateDirectoryName = "user_data";
+    private const string WindowStateFileName = "launcher_window.json";
+    private const int MinWindowWidth = 900;
+    private const int MinWindowHeight = 600;
+    private const int ShowWindowMaximized = 3;
+    private const int ShowWindowShow = 5;
     private const int ShowWindowRestore = 9;
+    private const int SystemMetricXVirtualScreen = 76;
+    private const int SystemMetricYVirtualScreen = 77;
+    private const int SystemMetricCxVirtualScreen = 78;
+    private const int SystemMetricCyVirtualScreen = 79;
 
     private static readonly string AppUrl = "http://127.0.0.1:" + AppPort + "/";
     private static readonly string StatusUrl = AppUrl + "api/status";
     private static string logPath = string.Empty;
+    private static string windowStatePath = string.Empty;
 
     private enum ExistingInstanceState
     {
@@ -58,6 +71,42 @@ internal static class TeleVaultLauncher
         }
     }
 
+    private sealed class LauncherWindowState
+    {
+        public int X;
+        public int Y;
+        public int Width;
+        public int Height;
+        public bool Maximized;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPLACEMENT
+    {
+        public int Length;
+        public int Flags;
+        public int ShowCmd;
+        public POINT MinPosition;
+        public POINT MaxPosition;
+        public RECT NormalPosition;
+    }
+
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
@@ -81,6 +130,15 @@ internal static class TeleVaultLauncher
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
+
     [STAThread]
     private static int Main(string[] args)
     {
@@ -90,6 +148,7 @@ internal static class TeleVaultLauncher
         {
             string appRoot = GetAppRoot();
             InitializeLogging(appRoot);
+            InitializeWindowState(appRoot);
             Log("launcher start");
             Log("app root: " + appRoot);
 
@@ -104,7 +163,7 @@ internal static class TeleVaultLauncher
                 }
 
                 Log("existing backend found but window missing -> opening browser");
-                OpenBrowserWindow(AppUrl);
+                OpenBrowserWindow(AppUrl, LoadWindowState());
                 Log("launcher finished after reusing existing instance");
                 return 0;
             }
@@ -169,13 +228,11 @@ internal static class TeleVaultLauncher
                 return 1;
             }
 
-            OpenBrowserWindow(AppUrl);
+            OpenBrowserWindow(AppUrl, LoadWindowState());
 
             using (process)
             {
-                process.WaitForExit();
-                Log("python process exited with code " + process.ExitCode);
-                return process.ExitCode;
+                return MonitorStartedProcess(process);
             }
         }
         catch (Exception ex)
@@ -427,6 +484,31 @@ internal static class TeleVaultLauncher
         return match.Success ? match.Groups[1].Value : string.Empty;
     }
 
+    private static int ExtractJsonIntField(string body, string fieldName, int fallback)
+    {
+        string pattern = "\\\"" + Regex.Escape(fieldName) + "\\\"\\s*:\\s*(-?\\d+)";
+        Match match = Regex.Match(body, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            return fallback;
+        }
+
+        int value;
+        return int.TryParse(match.Groups[1].Value, out value) ? value : fallback;
+    }
+
+    private static bool ExtractJsonBoolField(string body, string fieldName, bool fallback)
+    {
+        string pattern = "\\\"" + Regex.Escape(fieldName) + "\\\"\\s*:\\s*(true|false)";
+        Match match = Regex.Match(body, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            return fallback;
+        }
+
+        return string.Equals(match.Groups[1].Value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsLocalPortOccupied()
     {
         TcpClient client = null;
@@ -476,7 +558,229 @@ internal static class TeleVaultLauncher
         }
     }
 
-    private static void OpenBrowserWindow(string url)
+    private static int MonitorStartedProcess(Process process)
+    {
+        LauncherWindowState lastWindowState = null;
+        bool hadWindow = false;
+        bool savedAfterClose = false;
+
+        while (!process.WaitForExit(WindowMonitorIntervalMs))
+        {
+            LauncherWindowState currentState;
+            IntPtr window = FindExistingTeleVaultWindow(false);
+            if (window != IntPtr.Zero && TryCaptureWindowState(window, out currentState))
+            {
+                lastWindowState = currentState;
+                hadWindow = true;
+                savedAfterClose = false;
+                continue;
+            }
+
+            if (hadWindow && lastWindowState != null && !savedAfterClose)
+            {
+                SaveWindowState(lastWindowState);
+                savedAfterClose = true;
+                hadWindow = false;
+            }
+        }
+
+        LauncherWindowState finalState;
+        IntPtr finalWindow = FindExistingTeleVaultWindow(false);
+        if (finalWindow != IntPtr.Zero && TryCaptureWindowState(finalWindow, out finalState))
+        {
+            SaveWindowState(finalState);
+        }
+        else if (hadWindow && lastWindowState != null && !savedAfterClose)
+        {
+            SaveWindowState(lastWindowState);
+        }
+
+        Log("python process exited with code " + process.ExitCode);
+        return process.ExitCode;
+    }
+
+    private static LauncherWindowState LoadWindowState()
+    {
+        if (string.IsNullOrEmpty(windowStatePath) || !File.Exists(windowStatePath))
+        {
+            Log("no window state");
+            return null;
+        }
+
+        try
+        {
+            string body = File.ReadAllText(windowStatePath, Encoding.UTF8);
+            LauncherWindowState state = new LauncherWindowState();
+            state.Width = ExtractJsonIntField(body, "width", 0);
+            state.Height = ExtractJsonIntField(body, "height", 0);
+            state.X = ExtractJsonIntField(body, "x", 0);
+            state.Y = ExtractJsonIntField(body, "y", 0);
+            state.Maximized = ExtractJsonBoolField(body, "maximized", false);
+
+            if (!IsValidWindowState(state))
+            {
+                Log("invalid window state fallback");
+                return null;
+            }
+
+            Log("loaded window state: " + FormatWindowState(state));
+            return state;
+        }
+        catch (Exception ex)
+        {
+            Log("invalid window state fallback: " + ex.GetType().Name + ": " + ex.Message);
+            return null;
+        }
+    }
+
+    private static void SaveWindowState(LauncherWindowState state)
+    {
+        if (state == null)
+        {
+            return;
+        }
+
+        if (!IsValidWindowState(state))
+        {
+            Log("invalid current window state not saved: " + FormatWindowState(state));
+            return;
+        }
+
+        if (string.IsNullOrEmpty(windowStatePath))
+        {
+            Log("window state path is not available");
+            return;
+        }
+
+        try
+        {
+            string directory = Path.GetDirectoryName(windowStatePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            string tempPath = windowStatePath + ".tmp";
+            File.WriteAllText(tempPath, BuildWindowStateJson(state), Encoding.UTF8);
+            if (File.Exists(windowStatePath))
+            {
+                File.Delete(windowStatePath);
+            }
+
+            File.Move(tempPath, windowStatePath);
+            Log("saved window state: " + FormatWindowState(state));
+        }
+        catch (Exception ex)
+        {
+            Log("window state save failed: " + ex.GetType().Name + ": " + ex.Message);
+        }
+    }
+
+    private static bool TryCaptureWindowState(IntPtr window, out LauncherWindowState state)
+    {
+        state = null;
+        RECT rect;
+        bool maximized = false;
+
+        WINDOWPLACEMENT placement = new WINDOWPLACEMENT();
+        placement.Length = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
+        if (GetWindowPlacement(window, ref placement))
+        {
+            rect = placement.NormalPosition;
+            maximized = placement.ShowCmd == ShowWindowMaximized;
+            if (!IsUsableRect(rect) && !GetWindowRect(window, out rect))
+            {
+                return false;
+            }
+        }
+        else if (!GetWindowRect(window, out rect))
+        {
+            return false;
+        }
+
+        state = new LauncherWindowState();
+        state.X = rect.Left;
+        state.Y = rect.Top;
+        state.Width = RectWidth(rect);
+        state.Height = RectHeight(rect);
+        state.Maximized = maximized;
+        return IsValidWindowState(state);
+    }
+
+    private static bool IsUsableRect(RECT rect)
+    {
+        return RectWidth(rect) > 0 && RectHeight(rect) > 0;
+    }
+
+    private static int RectWidth(RECT rect)
+    {
+        return rect.Right - rect.Left;
+    }
+
+    private static int RectHeight(RECT rect)
+    {
+        return rect.Bottom - rect.Top;
+    }
+
+    private static bool IsValidWindowState(LauncherWindowState state)
+    {
+        if (state == null || state.Width < MinWindowWidth || state.Height < MinWindowHeight)
+        {
+            return false;
+        }
+
+        int virtualX = GetSystemMetrics(SystemMetricXVirtualScreen);
+        int virtualY = GetSystemMetrics(SystemMetricYVirtualScreen);
+        int virtualWidth = GetSystemMetrics(SystemMetricCxVirtualScreen);
+        int virtualHeight = GetSystemMetrics(SystemMetricCyVirtualScreen);
+        if (virtualWidth <= 0 || virtualHeight <= 0)
+        {
+            return true;
+        }
+
+        long windowRight = (long)state.X + state.Width;
+        long windowBottom = (long)state.Y + state.Height;
+        long virtualRight = (long)virtualX + virtualWidth;
+        long virtualBottom = (long)virtualY + virtualHeight;
+
+        return state.X < virtualRight
+            && windowRight > virtualX
+            && state.Y < virtualBottom
+            && windowBottom > virtualY;
+    }
+
+    private static string BuildWindowStateJson(LauncherWindowState state)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("{");
+        builder.AppendLine("  \"width\": " + state.Width + ",");
+        builder.AppendLine("  \"height\": " + state.Height + ",");
+        builder.AppendLine("  \"x\": " + state.X + ",");
+        builder.AppendLine("  \"y\": " + state.Y + ",");
+        builder.AppendLine("  \"maximized\": " + (state.Maximized ? "true" : "false"));
+        builder.AppendLine("}");
+        return builder.ToString();
+    }
+
+    private static string FormatWindowState(LauncherWindowState state)
+    {
+        if (state == null)
+        {
+            return "(missing)";
+        }
+
+        return state.Width
+            + "x"
+            + state.Height
+            + "+"
+            + state.X
+            + "+"
+            + state.Y
+            + ", maximized="
+            + (state.Maximized ? "true" : "false");
+    }
+
+    private static void OpenBrowserWindow(string url, LauncherWindowState windowState)
     {
         Log("opening browser window: " + url);
 
@@ -489,7 +793,7 @@ internal static class TeleVaultLauncher
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Edge", "Application", "msedge.exe"),
             });
 
-        if (!string.IsNullOrEmpty(edge) && StartAppModeBrowser(edge, url, "Edge"))
+        if (!string.IsNullOrEmpty(edge) && StartAppModeBrowser(edge, url, "Edge", windowState))
         {
             return;
         }
@@ -503,7 +807,7 @@ internal static class TeleVaultLauncher
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Google", "Chrome", "Application", "chrome.exe"),
             });
 
-        if (!string.IsNullOrEmpty(chrome) && StartAppModeBrowser(chrome, url, "Chrome"))
+        if (!string.IsNullOrEmpty(chrome) && StartAppModeBrowser(chrome, url, "Chrome", windowState))
         {
             return;
         }
@@ -552,6 +856,11 @@ internal static class TeleVaultLauncher
 
     private static IntPtr FindExistingTeleVaultWindow()
     {
+        return FindExistingTeleVaultWindow(true);
+    }
+
+    private static IntPtr FindExistingTeleVaultWindow(bool logDetails)
+    {
         IntPtr found = IntPtr.Zero;
 
         EnumWindows(delegate(IntPtr hWnd, IntPtr lParam)
@@ -570,12 +879,18 @@ internal static class TeleVaultLauncher
             string processName = GetWindowProcessName(hWnd);
             if (!IsAllowedBrowserProcess(processName))
             {
-                Log("TeleVault-titled window ignored because process is not Edge/Chrome: " + SafeLogValue(processName));
+                if (logDetails)
+                {
+                    Log("TeleVault-titled window ignored because process is not Edge/Chrome: " + SafeLogValue(processName));
+                }
                 return true;
             }
 
             found = hWnd;
-            Log("existing TeleVault window found in process: " + SafeLogValue(processName));
+            if (logDetails)
+            {
+                Log("existing TeleVault window found in process: " + SafeLogValue(processName));
+            }
             return false;
         }, IntPtr.Zero);
 
@@ -624,13 +939,13 @@ internal static class TeleVaultLauncher
             || string.Equals(processName, "chrome", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool StartAppModeBrowser(string browserPath, string url, string browserName)
+    private static bool StartAppModeBrowser(string browserPath, string url, string browserName, LauncherWindowState windowState)
     {
         try
         {
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.FileName = browserPath;
-            startInfo.Arguments = "--app=" + QuoteArgument(url);
+            startInfo.Arguments = BuildBrowserArguments(url, windowState);
             startInfo.WorkingDirectory = Path.GetDirectoryName(browserPath);
             startInfo.UseShellExecute = false;
             startInfo.CreateNoWindow = true;
@@ -643,6 +958,7 @@ internal static class TeleVaultLauncher
 
             browserProcess.Dispose();
             Log("browser app-mode opened: " + browserName);
+            TryRestoreMaximizedWindow(windowState);
             return true;
         }
         catch (Exception ex)
@@ -650,6 +966,69 @@ internal static class TeleVaultLauncher
             Log(browserName + " app-mode launch failed: " + ex.Message);
             return false;
         }
+    }
+
+    private static string BuildBrowserArguments(string url, LauncherWindowState windowState)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.Append("--app=");
+        builder.Append(QuoteArgument(url));
+
+        if (windowState != null)
+        {
+            builder.Append(" --window-size=");
+            builder.Append(windowState.Width);
+            builder.Append(",");
+            builder.Append(windowState.Height);
+            builder.Append(" --window-position=");
+            builder.Append(windowState.X);
+            builder.Append(",");
+            builder.Append(windowState.Y);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void TryRestoreMaximizedWindow(LauncherWindowState windowState)
+    {
+        if (windowState == null || !windowState.Maximized)
+        {
+            return;
+        }
+
+        IntPtr window = WaitForTeleVaultWindow(WindowOpenWaitTimeoutMs);
+        if (window == IntPtr.Zero)
+        {
+            Log("maximized window state not restored because the app window was not found");
+            return;
+        }
+
+        try
+        {
+            ShowWindow(window, ShowWindowMaximized);
+            Log("maximized window state restored");
+        }
+        catch (Exception ex)
+        {
+            Log("maximized window state restore failed: " + ex.GetType().Name + ": " + ex.Message);
+        }
+    }
+
+    private static IntPtr WaitForTeleVaultWindow(int timeoutMs)
+    {
+        DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < deadline)
+        {
+            IntPtr window = FindExistingTeleVaultWindow(false);
+            if (window != IntPtr.Zero)
+            {
+                return window;
+            }
+
+            Thread.Sleep(200);
+        }
+
+        return IntPtr.Zero;
     }
 
     private static string FindBrowser(string executableName, string[] candidatePaths)
@@ -737,6 +1116,18 @@ internal static class TeleVaultLauncher
         catch
         {
             logPath = string.Empty;
+        }
+    }
+
+    private static void InitializeWindowState(string appRoot)
+    {
+        try
+        {
+            windowStatePath = Path.Combine(appRoot, WindowStateDirectoryName, WindowStateFileName);
+        }
+        catch
+        {
+            windowStatePath = string.Empty;
         }
     }
 

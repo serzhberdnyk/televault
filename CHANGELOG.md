@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.8.6
+
+### Fixed
+
+* Windows folder picker now opens in front of the TeleVault app window
+
+### Improved
+
+* TeleVault.exe now remembers the last app window size and position between launches
+
 ## 2.8.5
 
 ### Improved

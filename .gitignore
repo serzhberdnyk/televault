@@ -23,6 +23,7 @@ Thumbs.db
 *.bak
 
 settings.json
+user_data/
 tmp/
 temp/
 cache/

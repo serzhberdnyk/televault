@@ -5,7 +5,7 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.8.5"
+APP_VERSION = "2.8.6"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +44,7 @@ SKIP_DIR_NAMES = {
     ".ruff_cache",
     "tmp",
     "temp",
+    "user_data",
     "backup",
     "backups",
     "synthetic_exports",
@@ -203,8 +204,8 @@ def build() -> int:
 
     print()
     print("not copied by design:")
-    print("- .git/, __pycache__/, .venv/, venv/, node_modules/, dist/, build/")
-    print("- *.pyc, *.log, settings.json, local export folders, screenshots/cache/dev artifacts")
+    print("- .git/, __pycache__/, .venv/, venv/, node_modules/, dist/, build/, user_data/")
+    print("- *.pyc, *.log, settings.json, launcher window state, local export folders, screenshots/cache/dev artifacts")
 
     print()
     print("package summary:")

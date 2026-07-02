@@ -38,6 +38,35 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.6 - launcher window UX fixes
+
+Changed:
+- Windows folder picker helper now finds the visible TeleVault Edge/Chrome app window, requests foreground, and passes that HWND as the owner to `IFileDialog.Show`
+- `/api/pick-folder` uses the native Windows helper directly on Windows instead of trying tkinter first
+- `TeleVault.exe` stores the last app window size, position and maximized state in `user_data\launcher_window.json`
+- launcher startup applies saved bounds through Chromium `--window-size` and `--window-position` only when opening a new app window
+- repeated launcher clicks still focus an existing app window without forcing its size or opening a second window
+- added validation for too-small or off-screen saved bounds and logs fallback decisions to `logs\launcher.log`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, README_RUN.md, RELEASE_CHECKLIST.md and CHANGELOG.md to 2.8.6
+- kept frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.6\TeleVault.exe` is created and included in the zip
+- launch `dist\TeleVault-v2.8.6\TeleVault.exe` and confirm `/api/status` returns 2.8.6
+- open folder picker through `TeleVault.exe` and confirm it appears above the TeleVault app window
+- cancel folder picker and confirm the UI remains in a neutral non-error state
+- resize and move the app window, close it, launch again and confirm the size/position is restored or safely falls back if off-screen
+- launch `TeleVault.exe` again while its window is open and confirm the existing window is focused instead of opening a second app window
+- confirm `run_windows.bat` still works
+- confirm global search and media tabs still work
+- confirm `user_data\launcher_window.json`, `logs\launcher.log` and local state are not included in the zip
+- run `git status --short` after builder and confirm ignored `dist/`, `logs/` and `user_data/` output is not listed
+- run `git diff --check`
+
 ## 2.8.5 - exe launcher branding polish
 
 Changed:

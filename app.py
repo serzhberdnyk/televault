@@ -20,7 +20,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.8.5"
+APP_VERSION = "2.8.6"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -281,13 +281,13 @@ def choose_folder_with_windows_helper() -> str:
 
 
 def choose_folder_dialog() -> str:
+    if os.name == "nt":
+        return choose_folder_with_windows_helper()
+
     try:
         return choose_folder_with_tkinter()
     except Exception as exc:
         print(f"folder picker tkinter failed: {type(exc).__name__}: {exc}")
-
-    if os.name == "nt":
-        return choose_folder_with_windows_helper()
 
     raise FolderPickerError("Folder picker is unavailable on this system.")
 
