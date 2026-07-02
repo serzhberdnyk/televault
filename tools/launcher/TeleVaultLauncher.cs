@@ -14,7 +14,7 @@ using System.Windows.Forms;
 internal static class TeleVaultLauncher
 {
     private const string AppName = "TeleVault";
-    private const string AppVersion = "2.8.7";
+    private const string AppVersion = "2.8.9";
     private const int AppPort = 8766;
     private const int ServerStartupTimeoutMs = 30000;
     private const int ServerPollIntervalMs = 400;
@@ -159,6 +159,7 @@ internal static class TeleVaultLauncher
             InitializeLogging(appRoot);
             InitializeWindowState(appRoot);
             Log("launcher start");
+            Log("launcher version: " + AppVersion);
             Log("app root: " + appRoot);
 
             ExistingInstanceResult existingInstance = CheckExistingInstance();

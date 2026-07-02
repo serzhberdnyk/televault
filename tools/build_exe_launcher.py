@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import importlib.util
+import re
 import shutil
 import subprocess
 import zipfile
@@ -21,10 +22,15 @@ build_portable = load_build_portable()
 
 
 ROOT = Path(__file__).resolve().parents[1]
+APP_SOURCE = ROOT / "app.py"
 LAUNCHER_SOURCE = ROOT / "tools" / "launcher" / "TeleVaultLauncher.cs"
 LAUNCHER_EXE = build_portable.PACKAGE_ROOT / "TeleVault.exe"
 ZIP_LAUNCHER_ENTRY = f"{build_portable.PACKAGE_NAME}/TeleVault.exe"
 ICON_PATH = ROOT / "assets" / "TeleVault.ico"
+APP_VERSION_PATTERN = re.compile(r'^APP_VERSION\s*=\s*"([^"]+)"', re.MULTILINE)
+LAUNCHER_VERSION_PATTERN = re.compile(
+    r'private\s+const\s+string\s+AppVersion\s*=\s*"([^"]+)"\s*;'
+)
 
 CSC_FALLBACK_PATHS = [
     Path(r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"),
@@ -56,6 +62,43 @@ def print_csc_blocker(checked: list[Path]) -> None:
     print("Checked paths:")
     for path in checked:
         print(f"- {path}")
+
+
+def read_version(path: Path, pattern: re.Pattern[str], label: str) -> str:
+    if not path.is_file():
+        raise FileNotFoundError(f"{label} source is missing: {path}")
+    text = path.read_text(encoding="utf-8")
+    match = pattern.search(text)
+    if not match:
+        raise RuntimeError(f"could not find {label} version in {path}")
+    return match.group(1)
+
+
+def verify_version_sync() -> bool:
+    package_version = build_portable.APP_VERSION
+    app_version = read_version(APP_SOURCE, APP_VERSION_PATTERN, "app")
+    launcher_version = read_version(LAUNCHER_SOURCE, LAUNCHER_VERSION_PATTERN, "launcher")
+
+    print("version sync check:")
+    print(f"- package version: {package_version}")
+    print(f"- app.py APP_VERSION: {app_version}")
+    print(f"- launcher AppVersion: {launcher_version}")
+
+    mismatches = []
+    if app_version != package_version:
+        mismatches.append(f"app.py APP_VERSION is {app_version}, expected {package_version}")
+    if launcher_version != package_version:
+        mismatches.append(f"launcher AppVersion is {launcher_version}, expected {package_version}")
+
+    if not mismatches:
+        return True
+
+    print()
+    print("ERROR: version mismatch between package, backend and launcher.")
+    for mismatch in mismatches:
+        print(f"- {mismatch}")
+    print("Update app.py, tools/build_portable.py and tools/launcher/TeleVaultLauncher.cs together.")
+    return False
 
 
 def compile_launcher(csc: Path) -> int:
@@ -113,6 +156,9 @@ def build() -> int:
     print("TeleVault exe launcher build")
     print(f"version: {build_portable.APP_VERSION}")
     print(f"project root: {ROOT}")
+    print()
+    if not verify_version_sync():
+        return 1
     print()
     print("step 1: building portable folder and base zip")
 

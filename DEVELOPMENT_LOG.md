@@ -38,6 +38,35 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.9 - launcher version sync check
+
+Changed:
+- fixed the launcher version mismatch introduced before 2.8.8: `tools\launcher\TeleVaultLauncher.cs` still had `AppVersion = "2.8.7"`, so a freshly built 2.8.8 `TeleVault.exe` compared an already-running 2.8.8 backend against 2.8.7
+- updated `AppVersion` in `TeleVaultLauncher.cs` to 2.8.9
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, README.md, README_RUN.md, RELEASE_CHECKLIST.md and CHANGELOG.md to 2.8.9
+- added a build-time version sync check in `tools\build_exe_launcher.py`: package version, `app.py APP_VERSION` and launcher `AppVersion` must match before the portable folder or exe is built
+- launcher log now writes `launcher version: 2.8.9` at startup for easier diagnosis
+- kept TeleVault icon support from 2.8.8, folder picker foreground fix, window state persistence, single-instance/focus behavior, frontend app logic, backend business logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py backend/windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.9\TeleVault.exe` is created and included in the zip
+- confirm the build log prints `version sync check` with package, app.py and launcher all at 2.8.9
+- confirm the build log still shows `launcher icon argument: /win32icon:...assets\TeleVault.ico`
+- launch `dist\TeleVault-v2.8.9\TeleVault.exe` and confirm `/api/status` returns 2.8.9
+- launch `TeleVault.exe` again while its window is open and confirm it focuses the existing window without a version mismatch MessageBox
+- confirm launcher log does not mention starting or expecting 2.8.7/2.8.8 for the current exe
+- confirm a genuinely older TeleVault backend on port 8766 still triggers the version mismatch guard
+- confirm folder picker through `TeleVault.exe` still opens above the app window
+- resize and move the app window, close it, launch again and confirm size/position are restored
+- confirm `run_windows.bat` still works
+- confirm `dist\TeleVault-v2.8.9.zip` contains `TeleVault.exe` and does not contain `user_data/` or `logs/`
+- run `git status --short` after builder and confirm ignored `dist/`, `logs/` and `user_data/` output is not listed
+- run `git diff --check`
+
 ## 2.8.8 - app icon and exe branding
 
 Changed:

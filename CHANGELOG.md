@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.9
+
+### Fixed
+
+* TeleVault.exe launcher version check now stays synchronized with the packaged app version
+* launcher no longer reports the previous version when starting the latest portable package
+
 ## 2.8.8
 
 ### Added
