@@ -19,7 +19,8 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.8.0"
+APP_VERSION = "2.8.1"
+NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"
@@ -344,7 +345,8 @@ def main() -> None:
     print(f"{APP_NAME} {APP_VERSION}")
     print(f"open: {url}")
     print("press ctrl+c to stop")
-    threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    if os.environ.get(NO_AUTO_BROWSER_ENV) != "1":
+        threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

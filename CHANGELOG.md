@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.1
+
+### Improved
+
+* TeleVault.exe launcher now starts without a visible console window
+* TeleVault.exe now opens the app in an app-like browser window when available
+* run_windows.bat remains available as a debug/fallback launcher
+
 ## 2.8.0
 
 ### Added

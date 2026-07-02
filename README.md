@@ -4,9 +4,9 @@ TeleVault - локальный просмотрщик Telegram exports.
 
 Приложение открывает экспортированные папки Telegram Desktop в браузере, показывает переписки и медиа, а данные остаются на компьютере пользователя.
 
-Текущая версия: `2.8.0`.
+Текущая версия: `2.8.1`.
 
-Статус: 2.8.0 добавляет первый Windows `TeleVault.exe` launcher preview для portable-комплекта. Это не installer и не one-file exe: рядом с launcher должны лежать `app.py`, `backend/`, `frontend/` и `runtime/python/`.
+Статус: 2.8.1 полирует Windows `TeleVault.exe` launcher UX для portable-комплекта: запуск без видимой консоли, app-like окно Edge/Chrome при наличии и `run_windows.bat` как fallback/debug. Это не installer и не one-file exe: рядом с launcher должны лежать `app.py`, `backend/`, `frontend/` и `runtime/python/`.
 
 ## Возможности
 
@@ -22,13 +22,13 @@ TeleVault - локальный просмотрщик Telegram exports.
 
 ## Быстрый запуск
 
-На Windows в portable-папке 2.8.0 обычный запуск - двойной клик по файлу:
+На Windows в portable-папке 2.8.1 обычный запуск - двойной клик по файлу:
 
 ```bat
 TeleVault.exe
 ```
 
-`run_windows.bat` остаётся fallback-способом запуска. После запуска браузер откроется автоматически. Если этого не произошло, откройте адрес `http://127.0.0.1:8766`.
+`run_windows.bat` остаётся fallback/debug-способом запуска. Через `TeleVault.exe` приложение откроется в app-like окне Edge/Chrome, если доступно; иначе откроется обычный browser fallback.
 
 Подробная инструкция: [README_RUN.md](README_RUN.md).
 

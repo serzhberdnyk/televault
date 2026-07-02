@@ -65,7 +65,9 @@ def compile_launcher(csc: Path) -> int:
     command = [
         str(csc),
         "/nologo",
-        "/target:exe",
+        "/target:winexe",
+        "/reference:System.dll",
+        "/reference:System.Windows.Forms.dll",
         f"/out:{LAUNCHER_EXE}",
         str(LAUNCHER_SOURCE),
     ]

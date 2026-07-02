@@ -38,6 +38,33 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.8.1 - exe launcher UX polish
+
+Changed:
+- rebuilt the launcher flow as a no-console Windows app with MessageBox preflight errors
+- launcher now starts bundled `runtime\python\python.exe` with `CreateNoWindow=true` and `TELEVAULT_NO_AUTO_BROWSER=1`
+- launcher waits for `/api/status` on the existing local port before opening the UI
+- launcher opens Edge/Chrome with `--app=` when available, otherwise falls back to the default browser with a visible notice
+- added technical launcher startup logging to `logs\launcher.log`
+- updated `tools/build_exe_launcher.py` to compile with `/target:winexe` and Windows Forms references
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and CHANGELOG.md to 2.8.1
+- kept frontend app logic, backend logic, `/media`, `/api/search`, parser/storage and media classification unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py`
+- run `runtime\python\python.exe -m py_compile tools/build_exe_launcher.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.8.1
+- run `build_portable.bat` and confirm `dist\TeleVault-v2.8.1\` and `dist\TeleVault-v2.8.1.zip` are created
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.8.1\TeleVault.exe` is created and included in the zip
+- launch `dist\TeleVault-v2.8.1\TeleVault.exe` and confirm there is no visible console window
+- confirm exe launch opens one app-like Edge/Chrome window or default-browser fallback
+- confirm `dist\TeleVault-v2.8.1\run_windows.bat` still works
+- confirm global search and media tabs still work after exe launch
+- run `git status --short` after builder and confirm ignored `dist/` and `logs/` output is not listed
+- run `git diff --check`
+
 ## 2.8.0 - exe launcher preview
 
 Changed:
