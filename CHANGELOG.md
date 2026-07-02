@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.0
+
+### Improved
+
+* first-run screen now presents TeleVault as a local offline archive for important Telegram conversations
+* empty states were polished for no selected chat, no messages, no search results and missing media/files
+* key UI wording now favors archive, conversation, local and offline language over technical export/viewer wording
+* README and README_RUN were refreshed for product positioning and simpler Windows startup guidance
+
 ## 2.8.9
 
 ### Fixed

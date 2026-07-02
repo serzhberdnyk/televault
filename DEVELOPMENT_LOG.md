@@ -1,6 +1,6 @@
 # TeleVault development log
 
-TeleVault — minimal personal vault for Telegram exports.
+TeleVault — local offline archive for Telegram conversations.
 
 Current focus:
 - stable opening of Telegram exports
@@ -37,6 +37,28 @@ After every future patch:
 - update CHANGELOG.md
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
+
+## 2.9.0 - product wording and first-run polish
+
+Changed:
+- updated first-run screen copy so TeleVault is presented as a local offline archive for important Telegram conversations
+- changed primary archive actions toward `добавить экспорт` while keeping folder selection behavior unchanged
+- polished empty states for no selected chat, no messages, no search results and missing media/files
+- reduced technical UI wording around viewer/export/json in user-facing states, while keeping folder export terminology where it describes the real Telegram Desktop action
+- updated README.md and README_RUN.md for product positioning and simple Windows startup guidance
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `AppVersion` and CHANGELOG.md to 2.9.0
+- kept backend routes, parser, storage logic, media endpoint, playback logic, search logic, import/open export logic and security checks unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend/parser.py backend/library.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.0
+- confirm the first-run screen is understandable without a selected export
+- open a saved chat and confirm messages still render
+- run sidebar/in-chat search and confirm results still open the expected chat/message
+- confirm photo, video, audio and file rendering still work
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.9.0\TeleVault.exe` and `dist\TeleVault-v2.9.0.zip` are created
+- run `git diff --check`
 
 ## 2.8.9 - launcher version sync check
 

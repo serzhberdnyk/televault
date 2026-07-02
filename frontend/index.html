@@ -17,7 +17,7 @@
       </svg>
       <div>
         <h1>TeleVault</h1>
-        <p>личное хранилище Telegram</p>
+        <p>локальный архив Telegram-переписок</p>
       </div>
     </div>
 
@@ -26,10 +26,10 @@
         <path d="M3.8 6.3a2 2 0 0 1 2-2h4.4l2 2h6a2 2 0 0 1 2 2v1.2H3.8V6.3Z" />
         <path d="M3 10h18l-1.6 7.4a2.2 2.2 0 0 1-2.1 1.8H6.7a2.2 2.2 0 0 1-2.1-1.8L3 10Z" />
       </svg>
-      <span>выбрать папку экспорта</span>
+      <span>добавить экспорт</span>
     </button>
 
-    <div id="libraryInfo" class="hint">локальное хранилище экспортов Telegram</div>
+    <div id="libraryInfo" class="hint">локальный оффлайн-архив переписок</div>
 
     <!-- TODO: advanced sections may return later. Minimal vault UI keeps conversations as the only visible mode. -->
 
@@ -51,9 +51,9 @@
     <header class="topbar">
       <div>
         <h2 id="chatTitle">TeleVault</h2>
-        <p id="chatMeta">personal vault for Telegram exports</p>
+        <p id="chatMeta">локальный оффлайн-архив Telegram-переписок</p>
       </div>
-      <div class="version" id="version">v2.8.9</div>
+      <div class="version" id="version">v2.9.0</div>
     </header>
 
     <section id="vaultSection" class="app-section app-section-vault active" data-section-panel="vault">
@@ -89,19 +89,19 @@
             </svg>
             <div>
               <span class="welcome-eyebrow">TeleVault</span>
-              <h3>личное хранилище Telegram</h3>
+              <h3>локальный архив Telegram-переписок</h3>
             </div>
           </div>
-          <p class="welcome-lead">Добавь папку экспорта, чтобы открыть переписки и медиа.</p>
-          <p>Экспорт останется локально: чаты, сообщения и файлы будут доступны в одном спокойном рабочем окне.</p>
+          <p class="welcome-lead">Сохрани важные переписки на этом компьютере и открывай их оффлайн.</p>
+          <p>Добавь папку экспорта Telegram: TeleVault соберёт переписки, медиа и файлы в один локальный архив.</p>
           <button id="welcomePickFolder" class="primary welcome-action" type="button" data-pick-folder>
             <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M3.8 6.3a2 2 0 0 1 2-2h4.4l2 2h6a2 2 0 0 1 2 2v1.2H3.8V6.3Z" />
               <path d="M3 10h18l-1.6 7.4a2.2 2.2 0 0 1-2.1 1.8H6.7a2.2 2.2 0 0 1-2.1-1.8L3 10Z" />
             </svg>
-            <span>выбрать папку экспорта</span>
+            <span>добавить экспорт</span>
           </button>
-          <p class="welcome-note">Выбери папку, где лежит один или несколько result.json из Telegram Desktop export.</p>
+          <p class="welcome-note">Данные не отправляются наружу; всё работает с выбранной папкой на диске.</p>
         </div>
       </section>
 

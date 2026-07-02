@@ -95,12 +95,12 @@ const icons = {
 const text = {
   telegramSticker: 'стикер Telegram',
   animatedTelegramSticker: 'анимированный стикер Telegram',
-  chooseFolder: 'выбрать папку экспорта',
+  chooseFolder: 'добавить экспорт',
   choosingFolder: 'ожидание выбора...',
-  openingPicker: 'открываю системное окно выбора папки...',
-  checkingStartupVault: 'проверяем последнюю папку экспорта...',
-  pasteFolderFirst: 'сначала вставь путь к папке экспорта',
-  indexingVault: 'индексирую экспорт...',
+  openingPicker: 'открываю выбор папки...',
+  checkingStartupVault: 'проверяем последний локальный архив...',
+  pasteFolderFirst: 'сначала укажи папку архива',
+  indexingVault: 'собираю локальный архив...',
   chatsFound: 'найдено чатов',
   errors: 'ошибок',
   messages: 'сообщений',
@@ -118,13 +118,13 @@ const text = {
   pinnedMessageFallback: 'сообщение',
   genericService: 'системное событие Telegram',
   requestFailed: 'не удалось выполнить запрос',
-  fileMissing: 'файл не найден',
-  imageUnavailable: 'изображение недоступно',
-  videoUnavailable: 'видео недоступно',
-  audioUnavailable: 'аудио недоступно',
-  fileUnavailable: 'файл недоступен',
-  stickerUnavailable: 'стикер недоступен',
-  animatedStickerUnavailable: 'анимированный стикер недоступен',
+  fileMissing: 'файл не найден в архиве',
+  imageUnavailable: 'фото не найдено в архиве',
+  videoUnavailable: 'видео не найдено в архиве',
+  audioUnavailable: 'аудио не найдено в архиве',
+  fileUnavailable: 'файл не найден в архиве',
+  stickerUnavailable: 'стикер не найден в архиве',
+  animatedStickerUnavailable: 'анимированный стикер не найден в архиве',
   open: 'открыть',
   close: 'закрыть',
   previous: 'назад',
@@ -133,36 +133,36 @@ const text = {
   unknownType: 'тип неизвестен',
   backToTimeline: 'назад к Timeline',
   backToPeople: 'назад к людям',
-  addFirstExport: 'выбери первый экспорт',
+  addFirstExport: 'добавь первый архив',
   conversationsNotFound: 'переписки не найдены',
-  conversationsEmptyBody: 'добавь экспорт, чтобы увидеть сохранённые переписки',
-  chatSearchNothingFound: 'ничего не найдено',
-  chatSearchNothingFoundBody: 'попробуй изменить запрос',
-  globalSearchTitle: 'Сообщения',
+  conversationsEmptyBody: 'добавь экспорт, чтобы собрать локальный архив переписок',
+  chatSearchNothingFound: 'нет результатов поиска',
+  chatSearchNothingFoundBody: 'в локальном архиве нет совпадений по этому запросу',
+  globalSearchTitle: 'Найденные сообщения',
   globalSearchLoading: 'ищу...',
   globalSearchFailed: 'поиск временно недоступен',
   globalSearchFailedBody: '',
   globalSearchLimitHint: 'показаны первые {limit} результатов, уточни запрос',
-  chatMessagesNotFound: 'сообщений не найдено',
-  chatMessagesNotFoundBody: 'попробуй другой запрос',
-  chatFilterNothingFoundBody: 'попробуй изменить фильтр',
-  mediaFilterNothingFoundBody: 'попробуй изменить фильтр или вкладку',
-  noChatMessages: 'сообщений нет',
-  noChatMessagesBody: 'в этом чате пока нечего показать',
-  savedVaultMissing: 'сохранённая папка экспорта не найдена',
+  chatMessagesNotFound: 'нет результатов поиска',
+  chatMessagesNotFoundBody: 'в этой переписке нет совпадений',
+  chatFilterNothingFoundBody: 'попробуй другой фильтр',
+  mediaFilterNothingFoundBody: 'в этой переписке нет таких вложений',
+  noChatMessages: 'переписка пуста',
+  noChatMessagesBody: 'в архиве для этой переписки пока нет сообщений',
+  savedVaultMissing: 'локальный архив не найден',
   savedVaultMissingBody: 'Последняя папка недоступна. Выбери папку экспорта Telegram ещё раз.',
-  storageReady: 'экспорт открыт',
-  storageLoading: 'открываем экспорт...',
-  storageNotSelected: 'экспорт не выбран',
-  storageNotSelectedBody: 'Добавь папку экспорта Telegram, чтобы увидеть переписки.',
-  storageNoChatsBody: 'В выбранной папке не найдены подходящие чаты Telegram export.',
-  storageLoadFailed: 'не удалось открыть экспорт',
+  storageReady: 'архив открыт',
+  storageLoading: 'открываем локальный архив...',
+  storageNotSelected: 'архив не выбран',
+  storageNotSelectedBody: 'Сохрани важные Telegram-переписки локально: добавь папку экспорта, и TeleVault откроет их оффлайн.',
+  storageNoChatsBody: 'В этой папке не нашлось переписок из Telegram. Выбери папку экспорта или общую папку с экспортами.',
+  storageLoadFailed: 'не удалось открыть архив',
   storageLoadFailedBody: 'Проверь, что выбрана папка экспорта Telegram.',
   storageTryAnotherFolder: 'Попробуй выбрать другую папку экспорта.',
-  storagePartialErrors: 'часть файлов не загрузилась',
-  storageFolderFallback: 'папка экспорта',
+  storagePartialErrors: 'часть переписок не загрузилась',
+  storageFolderFallback: 'папка архива',
   chooseConversationTitle: 'Выбери переписку слева',
-  chooseConversationBody: 'Экспорт загружен. Открой любую переписку, чтобы читать сообщения и медиа.',
+  chooseConversationBody: 'Архив открыт. Открой переписку, чтобы читать сообщения и смотреть медиа.',
   mediaLabels: {
     all: 'все',
     photo: 'фото',
@@ -174,23 +174,23 @@ const text = {
   mediaEmptyStates: {
     photo: {
       title: 'фото не найдены',
-      body: 'в этой переписке нет фото',
+      body: 'в этой переписке нет сохранённых фото',
     },
     video: {
       title: 'видео не найдены',
-      body: 'в этой переписке нет видео',
+      body: 'в этой переписке нет сохранённых видео',
     },
     audio: {
       title: 'аудио не найдено',
-      body: 'в этой переписке нет аудио',
+      body: 'в этой переписке нет сохранённого аудио',
     },
     sticker: {
       title: 'стикеры не найдены',
-      body: 'в этой переписке нет стикеров',
+      body: 'в этой переписке нет сохранённых стикеров',
     },
     file: {
       title: 'файлы не найдены',
-      body: 'в этой переписке нет файлов',
+      body: 'в этой переписке нет сохранённых файлов',
     },
   },
 };
@@ -309,7 +309,7 @@ function formatLibraryError(error) {
   if (lower.includes('папка не выбрана')) {
     return {
       title: 'папка не выбрана',
-      body: 'Выбор папки отменён. Текущий экспорт не изменился.',
+      body: 'Выбор папки отменён. Текущий архив не изменился.',
       detail: '',
     };
   }
@@ -322,16 +322,16 @@ function formatLibraryError(error) {
   }
   if (lower.includes('result.json')) {
     return {
-      title: 'result.json не найден',
-      body: 'Выбери папку Telegram export или папку, внутри которой есть экспорт с result.json.',
-      detail: clean,
+      title: 'папка экспорта не найдена',
+      body: 'Выбери папку, которую создал Telegram Desktop при экспорте, или общую папку с несколькими экспортами.',
+      detail: '',
     };
   }
   if (lower.includes('не удалось прочитать') || lower.includes('ни один экспорт')) {
     return {
-      title: 'экспорт не прочитан',
-      body: 'Структура Telegram export не распознана или файлы повреждены.',
-      detail: clean,
+      title: 'архив не прочитан',
+      body: 'TeleVault не распознал структуру папки или часть файлов повреждена.',
+      detail: '',
     };
   }
   return {
@@ -834,7 +834,7 @@ function renderVaultWelcome(options = {}) {
   const mode = options.mode || (hasLoadedConversations ? 'ready' : state.vaultLoadError ? 'error' : 'empty');
   $('chatTitle').textContent = 'TeleVault';
   if (hasLoadedConversations) {
-    $('chatMeta').textContent = `${state.chats.length} ${pluralRu(state.chats.length, 'переписка', 'переписки', 'переписок')} в экспорте`;
+    $('chatMeta').textContent = `${state.chats.length} ${pluralRu(state.chats.length, 'переписка', 'переписки', 'переписок')} в локальном архиве`;
   } else if (mode === 'loading') {
     $('chatMeta').textContent = text.storageLoading;
   } else if (mode === 'error') {
@@ -860,8 +860,8 @@ function renderVaultWelcome(options = {}) {
   } else if (mode === 'loading') {
     title.textContent = text.storageLoading;
     lead.textContent = options.lead || text.checkingStartupVault;
-    body.textContent = 'Если последнее хранилище доступно, TeleVault откроет его автоматически.';
-    note.textContent = 'Сложный прогресс не показываем: дождись завершения загрузки.';
+    body.textContent = 'Если последняя папка доступна, TeleVault откроет архив автоматически.';
+    note.textContent = 'Данные остаются на этом компьютере.';
     body.hidden = false;
     action.hidden = true;
     note.hidden = false;
@@ -875,10 +875,10 @@ function renderVaultWelcome(options = {}) {
     action.hidden = false;
     note.hidden = false;
   } else {
-    title.textContent = text.storageNotSelected;
-    lead.textContent = text.storageNotSelectedBody;
-    body.textContent = 'Экспорт останется локально: чаты, сообщения и файлы будут доступны в одном рабочем окне.';
-    note.textContent = 'Выбери папку, где лежит один или несколько result.json из Telegram Desktop export.';
+    title.textContent = 'Локальный архив Telegram-переписок';
+    lead.textContent = 'Сохрани важные переписки на этом компьютере и открывай их оффлайн.';
+    body.textContent = 'Добавь папку экспорта Telegram: TeleVault соберёт переписки, медиа и файлы в один локальный архив.';
+    note.textContent = 'Данные не отправляются наружу; всё работает с выбранной папкой на диске.';
     body.hidden = false;
     action.hidden = false;
     note.hidden = false;
@@ -2261,7 +2261,7 @@ function renderEmpty() {
   return `<div class="empty in-messages">${renderEmptyState(text.noChatMessages, text.noChatMessagesBody, { className: 'empty-state--messages' })}</div>`;
 }
 
-function renderSectionEmpty(title = text.addFirstExport, body = 'Выбери папку с экспортами Telegram, чтобы наполнить локальное хранилище.') {
+function renderSectionEmpty(title = text.addFirstExport, body = 'Добавь папку экспорта Telegram, чтобы собрать локальный архив переписок.') {
   return `
     <div class="section-empty">
       <h3>${escapeHtml(title)}</h3>
