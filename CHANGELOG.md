@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.1
+
+### Fixed
+
+* TeleVault now starts normally when the saved export folder was deleted, renamed or became unavailable
+* startup restore now shows a clear missing export state with a button to choose the export folder again
+* the missing export state can remove only the unavailable saved path without clearing the rest of user data
+* saved export paths are written to per-user app data instead of falling back to a project-local settings file
+
 ## 2.9.0
 
 ### Improved

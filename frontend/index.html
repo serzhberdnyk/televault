@@ -53,7 +53,7 @@
         <h2 id="chatTitle">TeleVault</h2>
         <p id="chatMeta">локальный оффлайн-архив Telegram-переписок</p>
       </div>
-      <div class="version" id="version">v2.9.0</div>
+      <div class="version" id="version">v2.9.1</div>
     </header>
 
     <section id="vaultSection" class="app-section app-section-vault active" data-section-panel="vault">
@@ -100,6 +100,9 @@
               <path d="M3 10h18l-1.6 7.4a2.2 2.2 0 0 1-2.1 1.8H6.7a2.2 2.2 0 0 1-2.1-1.8L3 10Z" />
             </svg>
             <span>добавить экспорт</span>
+          </button>
+          <button id="forgetMissingExport" class="secondary welcome-action welcome-action--secondary" type="button" data-forget-missing-export hidden>
+            <span>удалить недоступный экспорт из библиотеки</span>
           </button>
           <p class="welcome-note">Данные не отправляются наружу; всё работает с выбранной папкой на диске.</p>
         </div>

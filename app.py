@@ -20,7 +20,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.0"
+APP_VERSION = "2.9.1"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -32,11 +32,18 @@ class FolderPickerError(RuntimeError):
     pass
 
 
-def settings_file() -> Path:
+def app_data_dir() -> Path:
     appdata = os.environ.get("APPDATA")
     if appdata:
-        return Path(appdata).expanduser() / APP_NAME / "settings.json"
-    return ROOT / "settings.json"
+        return Path(appdata).expanduser() / APP_NAME
+    xdg_config = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config:
+        return Path(xdg_config).expanduser() / APP_NAME
+    return Path.home().expanduser() / ".config" / APP_NAME
+
+
+def settings_file() -> Path:
+    return app_data_dir() / "settings.json"
 
 
 def read_settings() -> dict:
@@ -73,23 +80,43 @@ def load_folder_and_remember(folder: str) -> dict:
     return result
 
 
+def missing_saved_vault_response(folder: str, error: str = "") -> dict:
+    return {
+        "loaded": False,
+        "missing": True,
+        "unavailable": True,
+        "reason": "missing",
+        "lastVaultPath": folder,
+        "error": error or "папка экспорта больше недоступна",
+        "message": "выберите папку заново",
+    }
+
+
+def forget_saved_vault_path() -> dict:
+    settings = read_settings()
+    removed_path = str(settings.pop("lastVaultPath", "") or "")
+    if removed_path:
+        write_settings(settings)
+    return {"ok": True, "removed": bool(removed_path), "lastVaultPath": removed_path}
+
+
 def load_saved_vault() -> dict:
     folder = str(read_settings().get("lastVaultPath") or "").strip()
     if not folder:
         return {"loaded": False}
-    path = Path(folder).expanduser()
-    if not path.exists() or not path.is_dir():
-        return {
-            "loaded": False,
-            "missing": True,
-            "lastVaultPath": folder,
-            "error": "сохранённое хранилище не найдено",
-        }
+    try:
+        path = Path(folder).expanduser()
+        if not path.exists() or not path.is_dir():
+            return missing_saved_vault_response(folder)
+    except OSError as e:
+        return missing_saved_vault_response(folder, str(e))
     try:
         result = LIBRARY.load_folder(str(path))
         result["loaded"] = True
         result["lastVaultPath"] = str(path.resolve())
         return result
+    except OSError as e:
+        return missing_saved_vault_response(folder, str(e))
     except Exception as e:
         return {"loaded": False, "lastVaultPath": folder, "error": str(e)}
 
@@ -382,6 +409,13 @@ class Handler(BaseHTTPRequestHandler):
                 json_response(self, result)
             except Exception as e:
                 json_response(self, {"error": str(e)}, 400)
+            return
+
+        if parsed.path == "/api/forget-missing-vault":
+            try:
+                json_response(self, forget_saved_vault_path())
+            except Exception as e:
+                json_response(self, {"error": str(e)}, 500)
             return
 
         json_response(self, {"error": "not found"}, 404)

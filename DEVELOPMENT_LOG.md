@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.1 - missing saved export startup recovery
+
+Changed:
+- made startup restore treat a deleted, renamed or unavailable saved export folder as a recoverable missing state instead of a startup failure
+- added a small `/api/forget-missing-vault` action that removes only the saved `lastVaultPath` from per-user settings after explicit user action
+- moved the non-Windows settings fallback out of the project folder and into per-user config data so selected export paths are not written into source or packaged files
+- added a dedicated frontend missing export state with “папка экспорта больше недоступна”, “выберите папку заново”, a choose-folder action and a secondary action to remove the unavailable saved path
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `AppVersion`, README.md, README_RUN.md and CHANGELOG.md to 2.9.1
+- kept parser logic, media endpoint security, playback logic, search logic and regular message rendering unchanged
+
+Manual test:
+- run fixed-string grep for local user-specific absolute paths and confirm there are no matches
+- run fixed-string grep for the local workspace path and confirm there are no matches
+- run `node --check frontend/app.js`
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.1
+- launch with a clean APPDATA and confirm the first-run screen is shown
+- load an export, close TeleVault, reopen it and confirm the export autoloads
+- load an export, close TeleVault, rename or delete that export folder, reopen it and confirm TeleVault starts with the missing export state
+- choose a new export folder from the missing state and confirm the archive loads normally
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.9.1\TeleVault.exe` and `dist\TeleVault-v2.9.1.zip` are created
+- scan `dist\TeleVault-v2.9.1` and `dist\TeleVault-v2.9.1.zip` for local user names and workspace paths
+- run `git diff --check`
+
 ## 2.9.0 - product wording and first-run polish
 
 Changed:

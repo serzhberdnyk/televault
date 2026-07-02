@@ -7,6 +7,8 @@ const state = {
   vaultErrors: [],
   vaultLoadError: '',
   vaultLoadDetail: '',
+  vaultMissing: false,
+  missingVaultPath: '',
   selectedChatId: null,
   mediaOnly: false,
   lightboxPhotos: [],
@@ -90,12 +92,19 @@ const icons = {
       <path d="M7 7l10 10M17 7 7 17" />
     </svg>
   `,
+  trash: `
+    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M8 8h2v10H8V8Zm6 0h2v10h-2V8Z" />
+      <path d="M5 5h14v2H5V5Zm4-3h6l1 2H8l1-2Zm-2 6h10l-.8 12H7.8L7 8Z" />
+    </svg>
+  `,
 };
 
 const text = {
   telegramSticker: 'стикер Telegram',
   animatedTelegramSticker: 'анимированный стикер Telegram',
   chooseFolder: 'добавить экспорт',
+  chooseExportFolder: 'выбрать папку экспорта',
   choosingFolder: 'ожидание выбора...',
   openingPicker: 'открываю выбор папки...',
   checkingStartupVault: 'проверяем последний локальный архив...',
@@ -149,8 +158,12 @@ const text = {
   mediaFilterNothingFoundBody: 'в этой переписке нет таких вложений',
   noChatMessages: 'переписка пуста',
   noChatMessagesBody: 'в архиве для этой переписки пока нет сообщений',
-  savedVaultMissing: 'локальный архив не найден',
-  savedVaultMissingBody: 'Последняя папка недоступна. Выбери папку экспорта Telegram ещё раз.',
+  savedVaultMissing: 'папка экспорта больше недоступна',
+  savedVaultMissingBody: 'выберите папку заново',
+  savedVaultMissingDetail: 'Последний выбранный экспорт удален, переименован или сейчас недоступен.',
+  forgetUnavailableExport: 'удалить недоступный экспорт из библиотеки',
+  forgettingUnavailableExport: 'удаляем...',
+  forgotUnavailableExport: 'недоступный экспорт удален из библиотеки',
   storageReady: 'архив открыт',
   storageLoading: 'открываем локальный архив...',
   storageNotSelected: 'архив не выбран',
@@ -224,12 +237,42 @@ function setLibraryMessage(message, kind = 'note', detail = '') {
 }
 
 function setLibraryEmpty() {
+  state.chats = [];
   state.vaultLoaded = false;
   state.vaultRoot = '';
   state.vaultErrors = [];
   state.vaultLoadError = '';
   state.vaultLoadDetail = '';
+  state.vaultMissing = false;
+  state.missingVaultPath = '';
+  state.selectedChatId = null;
+  state.chatCache = {};
+  state.allMessages = [];
   setLibraryMessage(text.storageNotSelected, 'empty', text.storageNotSelectedBody);
+}
+
+function setLibraryMissing(details = {}) {
+  const missingPath = details.lastVaultPath || details.root || state.missingVaultPath || '';
+  state.chats = [];
+  state.vaultLoaded = false;
+  state.vaultRoot = missingPath;
+  state.vaultErrors = [];
+  state.vaultLoadError = text.savedVaultMissing;
+  state.vaultLoadDetail = text.savedVaultMissingBody;
+  state.vaultMissing = true;
+  state.missingVaultPath = missingPath;
+  state.selectedChatId = null;
+  state.chatCache = {};
+  state.allMessages = [];
+  resetGlobalMessageSearch();
+  $('libraryInfo').className = 'hint library-info library-info--warning';
+  $('libraryInfo').innerHTML = renderLibraryStatus({
+    kind: 'warning',
+    title: text.savedVaultMissing,
+    body: text.savedVaultMissingBody,
+    detail: text.savedVaultMissingDetail,
+    path: missingPath,
+  });
 }
 
 function setLibraryLoading(message = text.storageLoading, details = {}) {
@@ -255,6 +298,8 @@ function setLibraryReady(data) {
   state.vaultErrors = errors;
   state.vaultLoadError = '';
   state.vaultLoadDetail = '';
+  state.vaultMissing = false;
+  state.missingVaultPath = '';
   $('libraryInfo').className = `hint library-info library-info--${errors.length ? 'warning' : 'ready'}`;
   $('libraryInfo').innerHTML = renderLibraryStatus({
     kind: errors.length ? 'warning' : 'ready',
@@ -270,6 +315,8 @@ function setLibraryError(error, details = {}) {
   state.vaultLoadError = friendly.title;
   state.vaultLoadDetail = friendly.body;
   state.vaultRoot = details.root || details.lastVaultPath || state.vaultRoot || '';
+  state.vaultMissing = false;
+  state.missingVaultPath = '';
   $('libraryInfo').className = 'hint library-info library-info--error';
   $('libraryInfo').innerHTML = renderLibraryStatus({
     kind: 'error',
@@ -389,6 +436,14 @@ function setFolderButtonLoading(isLoading) {
   });
 }
 
+function setForgetMissingButtonLoading(isLoading) {
+  const button = $('forgetMissingExport');
+  if (!button) return;
+  button.disabled = isLoading;
+  button.setAttribute('aria-busy', String(isLoading));
+  button.innerHTML = `${icons.trash}<span>${isLoading ? text.forgettingUnavailableExport : text.forgetUnavailableExport}</span>`;
+}
+
 function updateMediaTabs() {
   document.querySelectorAll('[data-media-mode]').forEach(button => {
     const isActive = button.dataset.mediaMode === state.mediaMode;
@@ -434,9 +489,15 @@ function renderChats() {
   $('chatListTitle').textContent = hasSearch ? 'Результаты поиска' : 'Переписки';
   box.innerHTML = '';
   if (!hasSearch && !chats.length) {
+    const emptyTitle = state.vaultMissing
+      ? text.savedVaultMissing
+      : state.vaultLoaded ? text.conversationsNotFound : text.storageNotSelected;
+    const emptyBody = state.vaultMissing
+      ? text.savedVaultMissingBody
+      : state.vaultLoaded ? text.storageNoChatsBody : text.storageNotSelectedBody;
     box.innerHTML = renderEmptyState(
-      state.vaultLoaded ? text.conversationsNotFound : text.storageNotSelected,
-      state.vaultLoaded ? text.storageNoChatsBody : text.storageNotSelectedBody,
+      emptyTitle,
+      emptyBody,
       { className: 'empty-state--sidebar' }
     );
     return;
@@ -682,6 +743,26 @@ async function pickFolder() {
   }
 }
 
+async function forgetMissingExport() {
+  if (!state.vaultMissing) return;
+  setForgetMissingButtonLoading(true);
+  try {
+    await api('/api/forget-missing-vault', { method: 'POST' });
+    setLibraryEmpty();
+    setLibraryMessage(text.forgotUnavailableExport, 'empty', text.storageNotSelectedBody);
+    renderConversationList();
+    renderVaultWelcome({ mode: 'empty' });
+  } catch (e) {
+    const missingPath = state.missingVaultPath || state.vaultRoot;
+    setLibraryMissing({ lastVaultPath: missingPath });
+    setLibraryMessage(text.savedVaultMissing, 'warning', cleanErrorMessage(e));
+    renderConversationList();
+    renderVaultWelcome({ mode: 'missing' });
+  } finally {
+    setForgetMissingButtonLoading(false);
+  }
+}
+
 async function loadFolderPath() {
   try {
     const field = $('folderPath');
@@ -705,6 +786,8 @@ async function afterLibraryLoaded(data) {
   state.vaultErrors = Array.isArray(data.errors) ? data.errors : [];
   state.vaultLoadError = '';
   state.vaultLoadDetail = '';
+  state.vaultMissing = false;
+  state.missingVaultPath = '';
   state.selectedChatId = null;
   state.mediaOnly = false;
   state.mediaMode = 'all';
@@ -831,12 +914,14 @@ async function loadMessages(options = {}) {
 
 function renderVaultWelcome(options = {}) {
   const hasLoadedConversations = state.vaultLoaded && state.chats.length > 0;
-  const mode = options.mode || (hasLoadedConversations ? 'ready' : state.vaultLoadError ? 'error' : 'empty');
+  const mode = options.mode || (hasLoadedConversations ? 'ready' : state.vaultMissing ? 'missing' : state.vaultLoadError ? 'error' : 'empty');
   $('chatTitle').textContent = 'TeleVault';
   if (hasLoadedConversations) {
     $('chatMeta').textContent = `${state.chats.length} ${pluralRu(state.chats.length, 'переписка', 'переписки', 'переписок')} в локальном архиве`;
   } else if (mode === 'loading') {
     $('chatMeta').textContent = text.storageLoading;
+  } else if (mode === 'missing') {
+    $('chatMeta').textContent = text.savedVaultMissing;
   } else if (mode === 'error') {
     $('chatMeta').textContent = text.storageLoadFailed;
   } else {
@@ -850,13 +935,21 @@ function renderVaultWelcome(options = {}) {
   const lead = emptyState.querySelector('.welcome-lead');
   const body = emptyState.querySelector('.welcome-lockup > p:not(.welcome-lead):not(.welcome-note)');
   const action = emptyState.querySelector('#welcomePickFolder');
+  const actionLabel = action ? action.querySelector('span') : null;
+  const forgetAction = emptyState.querySelector('#forgetMissingExport');
   const note = emptyState.querySelector('.welcome-note');
+  if (forgetAction) {
+    forgetAction.hidden = true;
+    setForgetMissingButtonLoading(false);
+  }
+  if (actionLabel) actionLabel.textContent = text.chooseFolder;
   if (hasLoadedConversations) {
     title.textContent = text.chooseConversationTitle;
     lead.textContent = text.chooseConversationBody;
     body.hidden = true;
     action.hidden = true;
     note.hidden = true;
+    if (forgetAction) forgetAction.hidden = true;
   } else if (mode === 'loading') {
     title.textContent = text.storageLoading;
     lead.textContent = options.lead || text.checkingStartupVault;
@@ -865,6 +958,16 @@ function renderVaultWelcome(options = {}) {
     body.hidden = false;
     action.hidden = true;
     note.hidden = false;
+  } else if (mode === 'missing') {
+    title.textContent = text.savedVaultMissing;
+    lead.textContent = text.savedVaultMissingBody;
+    body.textContent = text.savedVaultMissingDetail;
+    note.textContent = state.missingVaultPath || text.storageTryAnotherFolder;
+    if (actionLabel) actionLabel.textContent = text.chooseExportFolder;
+    body.hidden = false;
+    action.hidden = false;
+    note.hidden = false;
+    if (forgetAction) forgetAction.hidden = false;
   } else if (mode === 'error') {
     const friendly = formatLibraryError(options.error || state.vaultLoadError || text.storageLoadFailed);
     title.textContent = friendly.title;
@@ -2828,6 +2931,12 @@ function bindControls() {
   document.addEventListener('keydown', handleLightboxKeydown);
   document.addEventListener('play', handleRegularMediaPlay, true);
   document.addEventListener('click', event => {
+    const forgetTrigger = event.target.closest('[data-forget-missing-export]');
+    if (forgetTrigger) {
+      event.preventDefault();
+      forgetMissingExport();
+      return;
+    }
     const pickTrigger = event.target.closest('[data-pick-folder]');
     if (pickTrigger) {
       event.preventDefault();
@@ -2900,9 +3009,10 @@ async function init() {
     const savedVault = await api('/api/startup-vault');
     if (savedVault.loaded) {
       await afterLibraryLoaded(savedVault);
-    } else if (savedVault.missing) {
-      setLibraryError(savedVault.error || text.savedVaultMissing, savedVault);
-      renderVaultWelcome({ mode: 'error', error: savedVault.error || text.savedVaultMissing });
+    } else if (savedVault.missing || savedVault.unavailable || savedVault.reason === 'missing') {
+      setLibraryMissing(savedVault);
+      renderConversationList();
+      renderVaultWelcome({ mode: 'missing' });
     } else if (savedVault.error) {
       setLibraryError(savedVault.error, savedVault);
       renderVaultWelcome({ mode: 'error', error: savedVault.error });

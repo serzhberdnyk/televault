@@ -194,6 +194,18 @@ select:focus-visible {
   color: #e4f8ff;
 }
 
+.secondary {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted-strong);
+}
+
+.secondary:hover {
+  border-color: rgba(255, 119, 132, 0.28);
+  background: rgba(255, 119, 132, 0.08);
+  color: #ffd6dc;
+}
+
 .button-icon,
 .meta-icon,
 .field-icon {
@@ -1952,6 +1964,10 @@ code {
   margin: 14px 0 0;
   padding-left: 16px;
   padding-right: 16px;
+}
+
+.welcome-action--secondary {
+  margin-top: 4px;
 }
 
 .welcome-note {

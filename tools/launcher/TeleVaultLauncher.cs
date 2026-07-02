@@ -14,7 +14,7 @@ using System.Windows.Forms;
 internal static class TeleVaultLauncher
 {
     private const string AppName = "TeleVault";
-    private const string AppVersion = "2.9.0";
+    private const string AppVersion = "2.9.1";
     private const int AppPort = 8766;
     private const int ServerStartupTimeoutMs = 30000;
     private const int ServerPollIntervalMs = 400;
