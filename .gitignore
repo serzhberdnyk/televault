@@ -9,6 +9,7 @@ node_modules/
 dist/
 build/
 runtime/python/
+runtime/python38-win7/
 
 .pytest_cache/
 .mypy_cache/

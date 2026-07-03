@@ -2,11 +2,11 @@
 
 TeleVault - локальный оффлайн-архив Telegram-переписок. Он открывает экспорт Telegram Desktop на вашем компьютере, показывает переписки и медиа в удобном окне и не отправляет данные наружу.
 
-Текущая версия: `2.9.2`.
+Текущая версия: `2.9.3`.
 
 ## Обычный запуск
 
-1. Откройте папку `TeleVault-v2.9.2` в Проводнике Windows.
+1. Откройте папку `TeleVault-v2.9.3` в Проводнике Windows.
 2. Дважды нажмите `TeleVault.exe`.
 3. Дождитесь окна TeleVault.
 4. Нажмите `добавить экспорт`.
@@ -30,7 +30,7 @@ http://127.0.0.1:8766
 Если `TeleVault.exe` показывает ошибку, проверьте файл `logs\launcher.log` рядом с приложением. Также убедитесь, что папка была полностью распакована из zip. Для portable-комплекта рядом с `TeleVault.exe` должны лежать:
 
 ```text
-TeleVault-v2.9.2/
+TeleVault-v2.9.3/
 - TeleVault.exe
 - app.py
 - assets/
@@ -41,9 +41,9 @@ TeleVault-v2.9.2/
 - run_windows.bat
 ```
 
-Примечание: старые версии v2.9.0/v2.9.1 могли показывать ошибку `.NET Framework: v4.0.30319` на некоторых Windows 7 системах. В v2.9.2 launcher заменён на native Windows launcher, поэтому `TeleVault.exe` больше не требует .NET Framework только для старта.
+Если рядом с exe нельзя создать лог, launcher пишет диагностику в `%LOCALAPPDATA%\TeleVault\logs\launcher.log`.
 
-Windows 7 SP1: best effort. Для работы TeleVault всё ещё нужен рабочий современный браузер.
+Windows 7 SP1 x64: legacy / best effort только через отдельную сборку `TeleVault-v2.9.3-win7-legacy-x64.zip`. Основная Windows 10/11 сборка не поддерживает Windows 7. Не скачивайте `api-ms-win-core-path-l1-1-0.dll` отдельно.
 
 ## Как выбрать архив
 
@@ -81,8 +81,23 @@ build_exe_launcher.bat
 Результат:
 
 ```text
-dist\TeleVault-v2.9.2\
-dist\TeleVault-v2.9.2.zip
+dist\TeleVault-v2.9.3\
+dist\TeleVault-v2.9.3.zip
 ```
 
 `build_exe_launcher.bat` перед сборкой проверяет, что package version, `app.py APP_VERSION`, frontend placeholder, `run_windows.bat` startup text и launcher `kAppVersion` совпадают.
+
+Собрать отдельный Windows 7 legacy runtime и package:
+
+```bat
+build_win7_legacy_package.bat
+```
+
+Результат:
+
+```text
+dist\TeleVault-v2.9.3-win7-legacy-x64\
+dist\TeleVault-v2.9.3-win7-legacy-x64.zip
+```
+
+Win7 legacy package prepared; requires validation on Windows 7 SP1 x64.

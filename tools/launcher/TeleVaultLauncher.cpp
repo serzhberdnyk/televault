@@ -35,10 +35,13 @@
 namespace {
 
 constexpr wchar_t kAppName[] = L"TeleVault";
-constexpr wchar_t kAppVersion[] = L"2.9.2";
+constexpr wchar_t kAppVersion[] = L"2.9.3";
 constexpr wchar_t kNoAutoBrowserEnv[] = L"TELEVAULT_NO_AUTO_BROWSER";
 constexpr wchar_t kWindowStateDirectoryName[] = L"user_data";
 constexpr wchar_t kWindowStateFileName[] = L"launcher_window.json";
+constexpr wchar_t kMainRuntimeRelative[] = L"runtime\\python\\pythonw.exe";
+constexpr wchar_t kLegacyRuntimeRelative[] = L"runtime\\python38-win7\\pythonw.exe";
+constexpr wchar_t kLegacyRuntimeMarkerRelative[] = L"runtime\\win7-legacy.txt";
 constexpr int kAppPort = 8766;
 constexpr int kServerStartupTimeoutMs = 30000;
 constexpr int kServerPollIntervalMs = 400;
@@ -86,6 +89,13 @@ struct LauncherWindowState {
     int width = 0;
     int height = 0;
     bool maximized = false;
+};
+
+struct RuntimeSelection {
+    std::wstring relativePath;
+    std::wstring absolutePath;
+    bool exists = false;
+    bool legacy = false;
 };
 
 struct WindowSearchContext {
@@ -159,6 +169,45 @@ bool EnsureDirectory(const std::wstring& path) {
         return true;
     }
     return GetLastError() == ERROR_ALREADY_EXISTS;
+}
+
+bool EnsureDirectoryTree(const std::wstring& path) {
+    if (path.empty() || DirectoryExists(path)) {
+        return true;
+    }
+    const std::wstring parent = DirectoryName(path);
+    if (!parent.empty() && parent != path && !DirectoryExists(parent)) {
+        if (!EnsureDirectoryTree(parent)) {
+            return false;
+        }
+    }
+    return EnsureDirectory(path);
+}
+
+std::wstring ReadEnvironmentValue(const std::wstring& name) {
+    const DWORD required = GetEnvironmentVariableW(name.c_str(), nullptr, 0);
+    if (required == 0) {
+        return L"";
+    }
+    std::vector<wchar_t> buffer(required);
+    GetEnvironmentVariableW(name.c_str(), buffer.data(), required);
+    return std::wstring(buffer.data());
+}
+
+bool CanAppendToFile(const std::wstring& path) {
+    HANDLE file = CreateFileW(
+        path.c_str(),
+        FILE_APPEND_DATA,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr);
+    if (file == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    CloseHandle(file);
+    return true;
 }
 
 std::string WideToUtf8(const std::wstring& value) {
@@ -295,8 +344,19 @@ std::wstring GetAppRoot() {
 
 void InitializeLogging(const std::wstring& appRoot) {
     const std::wstring logsDir = JoinPath(appRoot, L"logs");
-    if (EnsureDirectory(logsDir)) {
-        g_logPath = JoinPath(logsDir, L"launcher.log");
+    const std::wstring localLogPath = JoinPath(logsDir, L"launcher.log");
+    if (EnsureDirectory(logsDir) && CanAppendToFile(localLogPath)) {
+        g_logPath = localLogPath;
+        return;
+    }
+
+    const std::wstring localAppData = ReadEnvironmentValue(L"LOCALAPPDATA");
+    if (!localAppData.empty()) {
+        const std::wstring fallbackDir = JoinPath(JoinPath(localAppData, L"TeleVault"), L"logs");
+        const std::wstring fallbackLogPath = JoinPath(fallbackDir, L"launcher.log");
+        if (EnsureDirectoryTree(fallbackDir) && CanAppendToFile(fallbackLogPath)) {
+            g_logPath = fallbackLogPath;
+        }
     }
 }
 
@@ -1220,9 +1280,41 @@ void AddMissingDirectory(std::vector<std::wstring>* missing, const std::wstring&
     }
 }
 
+std::wstring GetArchitectureText() {
+    SYSTEM_INFO info{};
+    GetNativeSystemInfo(&info);
+    switch (info.wProcessorArchitecture) {
+    case PROCESSOR_ARCHITECTURE_AMD64:
+        return L"x64";
+    case PROCESSOR_ARCHITECTURE_INTEL:
+        return L"x86";
+    case PROCESSOR_ARCHITECTURE_ARM64:
+        return L"arm64";
+    default:
+        return L"unknown";
+    }
+}
+
+RuntimeSelection SelectPythonRuntime(const std::wstring& appRoot) {
+    const std::wstring legacyPath = JoinPath(appRoot, kLegacyRuntimeRelative);
+    const std::wstring mainPath = JoinPath(appRoot, kMainRuntimeRelative);
+    const std::wstring markerPath = JoinPath(appRoot, kLegacyRuntimeMarkerRelative);
+    const bool legacyMarkerExists = FileExists(markerPath);
+    const bool legacyRuntimeExists = FileExists(legacyPath);
+    const bool mainRuntimeExists = FileExists(mainPath);
+
+    if (legacyMarkerExists || (!mainRuntimeExists && legacyRuntimeExists)) {
+        return {kLegacyRuntimeRelative, legacyPath, legacyRuntimeExists, true};
+    }
+    return {kMainRuntimeRelative, mainPath, mainRuntimeExists, false};
+}
+
 std::wstring FriendlyMissingItemName(const std::wstring& item) {
     if (EqualsNoCase(item, L"runtime\\python\\pythonw.exe")) {
         return L"bundled Python runtime (runtime\\python\\pythonw.exe)";
+    }
+    if (EqualsNoCase(item, L"runtime\\python38-win7\\pythonw.exe")) {
+        return L"Windows 7 legacy Python runtime (runtime\\python38-win7\\pythonw.exe)";
     }
     if (EqualsNoCase(item, L"app.py")) {
         return L"application file (app.py)";
@@ -1244,6 +1336,18 @@ std::wstring BuildMissingFilesMessage(const std::vector<std::wstring>& missing) 
     message += L"\nExtract the TeleVault zip again and start TeleVault.exe from the extracted TeleVault folder.\n\n";
     message += LogLocationText();
     return message;
+}
+
+std::wstring BuildLegacyRuntimeMissingMessage() {
+    return L"TeleVault \u043d\u0435 \u043c\u043e\u0436\u0435\u0442 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u0441\u044f: "
+        L"\u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d legacy runtime \u0434\u043b\u044f Windows 7."
+        L"\n\n\u0414\u043b\u044f Windows 7 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 "
+        L"\u0441\u043f\u0435\u0446\u0438\u0430\u043b\u044c\u043d\u0443\u044e \u0441\u0431\u043e\u0440\u043a\u0443:"
+        L"\nTeleVault win7 legacy x64."
+        L"\n\n\u041d\u0435 \u0441\u043a\u0430\u0447\u0438\u0432\u0430\u0439\u0442\u0435 api-ms-win-core-path-l1-1-0.dll "
+        L"\u043e\u0442\u0434\u0435\u043b\u044c\u043d\u043e - \u044d\u0442\u043e \u043d\u0435\u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e."
+        L"\n\n"
+        + LogLocationText();
 }
 
 std::wstring BuildPortOccupiedMessage() {
@@ -1284,9 +1388,8 @@ std::wstring BuildUnexpectedErrorMessage() {
         + LogLocationText();
 }
 
-bool StartPythonBackend(const std::wstring& appRoot, PROCESS_INFORMATION* process) {
-    const std::wstring pythonExe = JoinPath(JoinPath(appRoot, L"runtime\\python"), L"pythonw.exe");
-    const std::wstring commandLine = QuoteArgument(pythonExe) + L" " + QuoteArgument(L"app.py");
+bool StartPythonBackend(const std::wstring& appRoot, const RuntimeSelection& runtime, PROCESS_INFORMATION* process) {
+    const std::wstring commandLine = QuoteArgument(runtime.absolutePath) + L" " + QuoteArgument(L"app.py");
     std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
     mutableCommandLine.push_back(L'\0');
 
@@ -1294,12 +1397,14 @@ bool StartPythonBackend(const std::wstring& appRoot, PROCESS_INFORMATION* proces
     startup.cb = sizeof(startup);
 
     SetEnvironmentVariableW(kNoAutoBrowserEnv, L"1");
-    Log(L"runtime pythonw.exe: found");
+    Log(L"selected runtime path: " + runtime.relativePath);
+    Log(runtime.exists ? L"selected pythonw.exe: found" : L"selected pythonw.exe: missing");
+    Log(L"launch command: " + runtime.relativePath + L" app.py");
     Log(L"new backend start");
     Log(L"starting pythonw process");
 
     const BOOL created = CreateProcessW(
-        pythonExe.c_str(),
+        runtime.absolutePath.c_str(),
         mutableCommandLine.data(),
         nullptr,
         nullptr,
@@ -1328,6 +1433,7 @@ int RunLauncher() {
 
     Log(L"launcher start");
     Log(L"launcher version: " + std::wstring(kAppVersion));
+    Log(L"detected architecture: " + GetArchitectureText());
     Log(L"app root: " + appRoot);
 
     if (!SetCurrentDirectoryW(appRoot.c_str())) {
@@ -1364,23 +1470,32 @@ int RunLauncher() {
         return 1;
     }
 
-    const std::wstring pythonExe = JoinPath(JoinPath(appRoot, L"runtime\\python"), L"pythonw.exe");
+    const RuntimeSelection runtime = SelectPythonRuntime(appRoot);
     const std::wstring appScript = JoinPath(appRoot, L"app.py");
     const std::wstring backendDir = JoinPath(appRoot, L"backend");
     const std::wstring frontendDir = JoinPath(appRoot, L"frontend");
 
+    Log(L"selected runtime path: " + runtime.relativePath);
+    Log(runtime.exists ? L"selected pythonw.exe: found" : L"selected pythonw.exe: missing");
+
     std::vector<std::wstring> missing;
-    AddMissingFile(&missing, L"runtime\\python\\pythonw.exe", pythonExe);
+    if (!runtime.exists) {
+        missing.push_back(runtime.relativePath);
+    }
     AddMissingFile(&missing, L"app.py", appScript);
     AddMissingDirectory(&missing, L"backend\\", backendDir);
     AddMissingDirectory(&missing, L"frontend\\", frontendDir);
     if (!missing.empty()) {
         Log(L"preflight failed");
+        if (!runtime.exists && runtime.legacy) {
+            ShowError(BuildLegacyRuntimeMissingMessage());
+            return 1;
+        }
         ShowError(BuildMissingFilesMessage(missing));
         return 1;
     }
 
-    if (!StartPythonBackend(appRoot, &process)) {
+    if (!StartPythonBackend(appRoot, runtime, &process)) {
         ShowError(BuildPythonStartFailedMessage());
         return 1;
     }

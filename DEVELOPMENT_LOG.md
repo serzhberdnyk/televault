@@ -38,6 +38,33 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.3 - Windows 7 legacy runtime package
+
+Changed:
+- added `requirements-win7.txt` for the separate Windows 7 legacy build profile; it is intentionally empty of external dependencies because TeleVault currently uses the Python standard library only
+- added `tools\build_win7_legacy_runtime.ps1` to prepare official Python 3.8.10 embeddable x64 under `runtime\python38-win7`
+- added `tools\build_win7_legacy_package.py` and `build_win7_legacy_package.bat` to produce `TeleVault-v2.9.3-win7-legacy-x64.zip`
+- updated the native launcher to select `runtime\python38-win7\pythonw.exe` only for a generated Win7 legacy package marker, while the main package keeps `runtime\python\pythonw.exe`
+- expanded launcher diagnostics with TeleVault version, detected architecture, selected runtime path, pythonw existence and sanitized launch command
+- launcher logging now falls back to `%LOCALAPPDATA%\TeleVault\logs\launcher.log` if the app folder is not writable
+- added `README_WIN7.md` and updated Windows compatibility documentation without claiming full Windows 7 support
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion`, README.md, README_RUN.md and CHANGELOG.md to 2.9.3
+- kept parser logic, media endpoint, frontend behavior, search logic, storage format and the main Windows 10/11 runtime unchanged
+
+Manual test:
+- run `python -m py_compile app.py backend\parser.py backend\library.py backend\windows_folder_picker.py`
+- run `python -m py_compile tools\build_portable.py tools\build_exe_launcher.py tools\build_win7_legacy_package.py`
+- run `node --check frontend/app.js`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.9.3\TeleVault.exe` and `dist\TeleVault-v2.9.3.zip` are created
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.3
+- run `py -3.8 -m py_compile app.py backend\*.py` when Python 3.8 is available
+- run `build_win7_legacy_package.bat` and confirm `dist\TeleVault-v2.9.3-win7-legacy-x64.zip` contains `runtime\python38-win7\pythonw.exe`
+- validate the legacy package on Windows 7 SP1 x64 before calling it supported
+- run `git diff --check`
+
+Local verification note:
+- legacy package prepared; requires validation on Windows 7 SP1 x64
+
 ## 2.9.2 - native Windows launcher
 
 Changed:

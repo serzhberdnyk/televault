@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.3
+
+### Added
+
+* Added a separate Windows 7 legacy runtime build profile.
+* Added Python 3.8-compatible dependency pins for the Win7 legacy build.
+* Added clearer launcher diagnostics for legacy runtime issues.
+
+### Changed
+
+* Main Windows 10/11 build keeps the current Python runtime.
+
 ## 2.9.2
 
 ### Changed

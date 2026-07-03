@@ -1,12 +1,12 @@
 # TeleVault: exe packaging plan
 
-TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.9.2 replaces the .NET Framework launcher with a native Windows launcher while keeping the launcher-style portable package. `run_windows.bat` remains the debug/fallback launcher.
+TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.9.2 replaced the .NET Framework launcher with a native Windows launcher while keeping the launcher-style portable package. TeleVault 2.9.3 keeps that main package and adds a separate Windows 7 legacy package profile. `run_windows.bat` remains the debug/fallback launcher.
 
 ## Goal
 
 The exe phase should make TeleVault easier to start on Windows without changing the current app behavior.
 
-In 2.9.2, the user should get:
+In 2.9.3, the main Windows 10/11 package should provide:
 
 - `TeleVault.exe`
 - startup by double-clicking `TeleVault.exe`
@@ -52,8 +52,8 @@ This also gives a beginner-friendly release path: first make the existing folder
 
 Before shipping the launcher preview, verify that:
 
-- `TeleVault.exe` exists in `dist/TeleVault-v2.9.2/`
-- the zip contains `TeleVault-v2.9.2/TeleVault.exe`
+- `TeleVault.exe` exists in `dist/TeleVault-v2.9.3/`
+- the zip contains `TeleVault-v2.9.3/TeleVault.exe`
 - the launcher finds `runtime/python/pythonw.exe`, `app.py`, `backend/` and `frontend/` relative to its own folder
 - the launcher does not depend on the current working directory
 - missing required files produce a readable MessageBox error
@@ -83,4 +83,4 @@ After the launcher preview is stable, later packaging options can be evaluated:
 - installer
 - desktop shortcut or Start Menu integration
 
-Installer and one-file exe remain future options, not part of 2.9.2.
+Installer and one-file exe remain future options, not part of 2.9.3.
