@@ -1,8 +1,8 @@
 # TeleVault: release checklist
 
-TeleVault 2.8.9 - patch-релиз для синхронизации Windows `TeleVault.exe` launcher version check. Это не installer и не one-file exe: launcher лежит рядом с `app.py`, `assets/`, `backend/`, `frontend/` и `runtime/python/` и запускает существующий portable flow.
+TeleVault 2.9.2 - patch-релиз для замены .NET Framework launcher на native Windows launcher. Это не installer и не one-file exe: launcher лежит рядом с `app.py`, `assets/`, `backend/`, `frontend/` и `runtime/python/` и запускает существующий portable flow.
 
-В 2.8.9 нельзя менять frontend app logic, backend logic, `/media`, `/api/search`, parser/storage/media classification. `run_windows.bat` должен сохранить прежнее поведение запуска.
+В 2.9.2 нельзя менять frontend app logic, backend logic, `/media`, `/api/search`, parser/storage/media classification. `run_windows.bat` должен сохранить прежнее поведение запуска.
 
 ## Что должно быть в Windows-комплекте
 
@@ -20,9 +20,9 @@ TeleVault 2.8.9 - patch-релиз для синхронизации Windows `Te
 - `RELEASE_CHECKLIST.md`
 - `EXE_PACKAGING_PLAN.md`
 - `DEVELOPMENT_LOG.md`
-- `runtime/python/` с `runtime/python/python.exe`
+- `runtime/python/` с `runtime/python/python.exe` и `runtime/python/pythonw.exe`
 
-`TeleVault.exe` запускает `runtime\python\python.exe app.py` из папки, где лежит сам exe, без видимой консоли, ждёт готовности сервера и открывает app-like окно через Edge/Chrome или обычный browser fallback. `run_windows.bat` остаётся fallback/debug launcher и сначала пробует `runtime\python\python.exe`, затем системный `py`, затем системный `python`.
+`TeleVault.exe` запускает `runtime\python\pythonw.exe app.py` из папки, где лежит сам exe, без видимой консоли, ждёт готовности сервера и открывает app-like окно через Edge/Chrome или обычный browser fallback. `run_windows.bat` остаётся fallback/debug launcher и сначала пробует `runtime\python\python.exe`, затем системный `py`, затем системный `python`.
 
 `logs\launcher.log` нужен только для runtime-диагностики. Он не должен попадать в git или release zip.
 
@@ -33,7 +33,7 @@ TeleVault 2.8.9 - patch-релиз для синхронизации Windows `Te
 `build_portable.bat` по-прежнему создаёт clean portable folder/zip без обязательного `TeleVault.exe`.
 
 ```text
-dist/TeleVault-v2.8.9/
+dist/TeleVault-v2.9.2/
 - run_windows.bat
 - app.py
 - assets/
@@ -51,9 +51,9 @@ dist/TeleVault-v2.8.9/
 Проверки:
 
 1. Запустить `build_portable.bat`.
-2. Убедиться, что создана папка `dist\TeleVault-v2.8.9\`.
-3. Убедиться, что создан zip `dist\TeleVault-v2.8.9.zip`.
-4. Убедиться, что zip содержит верхнюю папку `TeleVault-v2.8.9/`.
+2. Убедиться, что создана папка `dist\TeleVault-v2.9.2\`.
+3. Убедиться, что создан zip `dist\TeleVault-v2.9.2.zip`.
+4. Убедиться, что zip содержит верхнюю папку `TeleVault-v2.9.2/`.
 5. Убедиться, что `build_portable.bat` не требует ручного PATH.
 6. Убедиться, что `dist/` не появляется в `git status --short`.
 
@@ -62,42 +62,42 @@ dist/TeleVault-v2.8.9/
 `build_exe_launcher.bat` должен сначала собрать portable folder через текущий portable builder, затем скомпилировать:
 
 ```text
-tools/launcher/TeleVaultLauncher.cs
+tools/launcher/TeleVaultLauncher.cpp
 ```
 
 в:
 
 ```text
-dist/TeleVault-v2.8.9/TeleVault.exe
+dist/TeleVault-v2.9.2/TeleVault.exe
 ```
 
 После добавления exe builder должен пересобрать:
 
 ```text
-dist/TeleVault-v2.8.9.zip
+dist/TeleVault-v2.9.2.zip
 ```
 
 Проверки:
 
 1. Запустить `build_exe_launcher.bat`.
-2. Убедиться, что `csc.exe` найден через PATH или один из типичных путей `.NET Framework`.
-3. Убедиться, что `dist\TeleVault-v2.8.9\TeleVault.exe` существует.
-4. Убедиться, что zip содержит `TeleVault-v2.8.9/TeleVault.exe`.
-5. Убедиться, что fake exe не создаётся, если `csc.exe` не найден.
-6. Убедиться, что в отчёте builder видны проверенные пути `csc.exe` при blocker.
+2. Убедиться, что MSVC `cl.exe`/`rc.exe` найдены через PATH или Visual Studio Build Tools `vcvarsall.bat`.
+3. Убедиться, что `dist\TeleVault-v2.9.2\TeleVault.exe` существует.
+4. Убедиться, что zip содержит `TeleVault-v2.9.2/TeleVault.exe`.
+5. Убедиться, что fake exe не создаётся, если MSVC C++ Build Tools не найдены.
+6. Убедиться, что builder показывает понятный blocker, если MSVC C++ Build Tools не найдены.
 7. Убедиться, что `assets\TeleVault.ico` существует.
-8. Убедиться, что builder сообщает `launcher icon:` и `launcher icon argument: /win32icon:...`.
+8. Убедиться, что builder компилирует `tools\launcher\TeleVaultLauncher.rc`.
 9. Убедиться, что `TeleVault.exe` собирается с custom TeleVault icon.
 10. Если `assets\TeleVault.ico` отсутствует, убедиться, что build не падает и сообщает, что custom icon не найден.
-11. Убедиться, что builder печатает `version sync check` и все версии равны `2.8.9`.
-12. Убедиться, что build падает с понятной ошибкой, если launcher `AppVersion` отличается от package version.
+11. Убедиться, что builder печатает `version sync check` и все версии равны `2.9.2`.
+12. Убедиться, что build падает с понятной ошибкой, если launcher `kAppVersion` отличается от package version.
 
 ## Запуск через TeleVault.exe
 
-1. Открыть `dist\TeleVault-v2.8.9\`.
+1. Открыть `dist\TeleVault-v2.9.2\`.
 2. Дважды нажать `TeleVault.exe`.
 3. Убедиться, что launcher использует папку, где лежит exe, а не current working directory.
-4. Убедиться, что launcher проверяет `runtime\python\python.exe`, `app.py`, `backend\` и `frontend\`.
+4. Убедиться, что launcher проверяет `runtime\python\pythonw.exe`, `app.py`, `backend\` и `frontend\`.
 5. Убедиться, что `TeleVault.exe` не показывает видимое окно консоли.
 6. Убедиться, что локальный сервер стартовал до открытия браузера.
 7. Убедиться, что `TeleVault.exe` открывает app-like окно через Edge/Chrome или обычный browser fallback.
@@ -106,8 +106,8 @@ dist/TeleVault-v2.8.9.zip
 10. Убедиться, что при отсутствии обязательных файлов launcher показывает понятный MessageBox, а технические детали пишет в `logs\launcher.log`.
 11. Убедиться, что `logs\launcher.log` создаётся только как runtime-лог и не попадает в git/package как dev-мусор.
 12. Открыть `/api/status`.
-13. Убедиться, что JSON содержит `"version": "2.8.9"`.
-14. Убедиться, что правый верхний угол UI показывает `v2.8.9`.
+13. Убедиться, что JSON содержит `"version": "2.9.2"`.
+14. Убедиться, что правый верхний угол UI показывает `v2.9.2`.
 
 ## Launcher UX patch checks
 
@@ -122,21 +122,21 @@ dist/TeleVault-v2.8.9.zip
 
 ## Fallback run_windows.bat
 
-1. Открыть `dist\TeleVault-v2.8.9\`.
+1. Открыть `dist\TeleVault-v2.9.2\`.
 2. Дважды нажать `run_windows.bat`.
 3. Убедиться, что fallback всё ещё запускает TeleVault через bundled runtime.
-4. Открыть `/api/status` и убедиться, что версия `2.8.9`.
+4. Открыть `/api/status` и убедиться, что версия `2.9.2`.
 
 ## Zip extraction
 
-1. Распаковать `dist\TeleVault-v2.8.9.zip` в отдельную папку.
-2. Убедиться, что внутри есть верхняя папка `TeleVault-v2.8.9/`.
+1. Распаковать `dist\TeleVault-v2.9.2.zip` в отдельную папку.
+2. Убедиться, что внутри есть верхняя папка `TeleVault-v2.9.2/`.
 3. Убедиться, что распакованная копия содержит `TeleVault.exe`.
 4. Запустить распакованную копию через `TeleVault.exe`.
 5. Убедиться, что распакованная копия запускается через bundled runtime.
 6. Убедиться, что `run_windows.bat` в распакованной копии тоже работает.
-7. Убедиться, что zip содержит `TeleVault-v2.8.9/assets/TeleVault.ico`.
-8. Убедиться, что zip содержит `TeleVault-v2.8.9/frontend/favicon.ico`.
+7. Убедиться, что zip содержит `TeleVault-v2.9.2/assets/TeleVault.ico`.
+8. Убедиться, что zip содержит `TeleVault-v2.9.2/frontend/favicon.ico`.
 9. Убедиться, что zip не содержит `logs/`, `logs/launcher.log`, `user_data/` и `user_data/launcher_window.json`.
 
 ## App behavior checks
@@ -191,9 +191,9 @@ git diff --check
 
 ## Документация
 
-- `README.md` должен указывать версию 2.8.9 и TeleVault.exe launcher version sync.
+- `README.md` должен указывать версию 2.9.2 и native Windows launcher.
 - `tools\build_exe_launcher.py` должен проверять синхронизацию package, backend и launcher version перед компиляцией exe.
 - `README_RUN.md` должен объяснять запуск через `TeleVault.exe` и fallback через `run_windows.bat`.
 - `EXE_PACKAGING_PLAN.md` должен оставлять one-file exe и installer будущими этапами.
 - `assets/README.md` должен объяснять `assets\TeleVault.ico` и пересоздание иконки через `tools\generate_icon.py`.
-- `CHANGELOG.md` и `DEVELOPMENT_LOG.md` должны содержать запись 2.8.9.
+- `CHANGELOG.md` и `DEVELOPMENT_LOG.md` должны содержать запись 2.9.2.

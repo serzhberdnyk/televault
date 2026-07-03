@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.2
+
+### Changed
+
+* replaced .NET Framework launcher with native Windows launcher
+* TeleVault.exe no longer requires installed .NET Framework just to start
+* improved portable startup compatibility
+* preserved Windows 10/11 launch behavior
+* Windows 7 SP1 remains best effort
+* no backend/parser/media/search behavior changes
+
 ## 2.9.1
 
 ### Fixed

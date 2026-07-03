@@ -38,6 +38,38 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.2 - native Windows launcher
+
+Changed:
+- replaced the .NET Framework `TeleVault.exe` launcher with a native C++ Win32 launcher in `tools\launcher\TeleVaultLauncher.cpp`
+- removed the old C# launcher source from the build path so startup no longer depends on .NET Framework v4.0.30319 just to show the first window
+- the native launcher resolves its own folder with `GetModuleFileNameW`, switches to it with `SetCurrentDirectoryW`, checks `app.py` and `runtime\python\pythonw.exe`, starts `pythonw.exe app.py` with `CreateProcessW`, opens the app with Edge/Chrome app mode or `ShellExecuteW`, and reports errors with `MessageBoxW`
+- `/api/status` readiness checks now use WinHTTP wide-character APIs against the existing `127.0.0.1:8766` endpoint; no new port or backend route was added
+- repeated `TeleVault.exe` launches still reuse the current-version backend and focus/open the existing app instead of starting more Python processes
+- the owned-backend lifecycle from the previous launcher is preserved: when the launcher starts the backend, it monitors the app window and stops that backend after the app window closes
+- updated `tools\build_exe_launcher.py` to compile the native launcher with MSVC `cl.exe`, `/MT` static CRT, Windows subsystem and the existing TeleVault icon resource
+- if MSVC C++ Build Tools are unavailable, the exe builder stops with a clear blocker instead of silently adding another compiler dependency; local verification on this machine hit that blocker because no MSVC/clang/g++ toolchain was installed
+- the build now checks version sync across package version, `app.py`, `frontend/index.html`, `run_windows.bat` and launcher `kAppVersion`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, README.md, README_RUN.md and CHANGELOG.md to 2.9.2
+- kept backend logic, parser, media endpoint, startup recovery, frontend behavior, message rendering, media playback, search logic and storage format unchanged
+- Windows 7 SP1 remains best effort; the launcher no longer requires .NET Framework, but a working modern browser is still required
+
+Manual test:
+- run `node --check frontend/app.js`
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `runtime\python\python.exe -m py_compile tools/build_portable.py tools/build_exe_launcher.py`
+- run `build_exe_launcher.bat` and confirm `dist\TeleVault-v2.9.2\TeleVault.exe` and `dist\TeleVault-v2.9.2.zip` are created
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.2
+- launch `dist\TeleVault-v2.9.2\TeleVault.exe` from the normal path, from a path with spaces and from a path with Cyrillic characters
+- launch `TeleVault.exe` again while the backend is already running and confirm it opens/focuses the app instead of starting more Python processes
+- rerun the 2.9.1 startup recovery scenario: clean APPDATA first-run, autoload an existing export, then rename/delete the saved export folder and confirm the missing export state appears
+- scan source, dist and extracted zip for local user paths, settings, cache, logs, user_data and saved export paths
+- run `git diff --check`
+
+Local verification note:
+- source checks and portable packaging can run without MSVC
+- native exe compilation, double-click launch checks, repeated-launch checks, and path-with-spaces/Cyrillic launch checks require MSVC C++ Build Tools on the verification machine
+
 ## 2.9.1 - missing saved export startup recovery
 
 Changed:

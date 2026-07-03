@@ -5,7 +5,7 @@ set "PYTHONUTF8=1"
 set "ROOT_DIR=%~dp0"
 cd /d "%ROOT_DIR%"
 
-echo building TeleVault exe launcher preview...
+echo building TeleVault native exe launcher...
 
 set "BUILD_SCRIPT=%ROOT_DIR%tools\build_exe_launcher.py"
 set "BUNDLED_PYTHON=%ROOT_DIR%runtime\python\python.exe"

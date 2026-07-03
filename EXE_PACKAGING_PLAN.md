@@ -1,12 +1,12 @@
 # TeleVault: exe packaging plan
 
-TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.8.8 adds the first dedicated app icon branding while keeping the launcher-style portable package. `run_windows.bat` remains the debug/fallback launcher.
+TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.9.2 replaces the .NET Framework launcher with a native Windows launcher while keeping the launcher-style portable package. `run_windows.bat` remains the debug/fallback launcher.
 
 ## Goal
 
 The exe phase should make TeleVault easier to start on Windows without changing the current app behavior.
 
-In 2.8.8, the user should get:
+In 2.9.2, the user should get:
 
 - `TeleVault.exe`
 - startup by double-clicking `TeleVault.exe`
@@ -14,7 +14,8 @@ In 2.8.8, the user should get:
 - an app-like browser window when Microsoft Edge or Google Chrome is available
 - normal default-browser fallback when app-mode is not available
 - clearer MessageBox errors with technical details in `logs/launcher.log`
-- `TeleVault.exe` compiled with the dedicated `assets/TeleVault.ico` icon through `/win32icon`
+- `TeleVault.exe` compiled as a native Windows subsystem executable with the dedicated `assets/TeleVault.ico` icon resource
+- no .NET Framework requirement just to start `TeleVault.exe`
 - no need to install or open Python, Git, or a terminal
 
 ## Current First Approach
@@ -34,7 +35,7 @@ TeleVault/
 - README_RUN.md
 ```
 
-The exe launches the existing portable flow through `runtime\python\python.exe app.py`. The backend, frontend, and runtime stay as normal folders beside the launcher.
+The exe launches the existing portable flow through `runtime\python\pythonw.exe app.py`. The backend, frontend, and runtime stay as normal folders beside the launcher.
 
 ## Why Launcher-Style First
 
@@ -51,13 +52,13 @@ This also gives a beginner-friendly release path: first make the existing folder
 
 Before shipping the launcher preview, verify that:
 
-- `TeleVault.exe` exists in `dist/TeleVault-v2.8.8/`
-- the zip contains `TeleVault-v2.8.8/TeleVault.exe`
-- the launcher finds `runtime/python/python.exe`, `app.py`, `backend/` and `frontend/` relative to its own folder
+- `TeleVault.exe` exists in `dist/TeleVault-v2.9.2/`
+- the zip contains `TeleVault-v2.9.2/TeleVault.exe`
+- the launcher finds `runtime/python/pythonw.exe`, `app.py`, `backend/` and `frontend/` relative to its own folder
 - the launcher does not depend on the current working directory
 - missing required files produce a readable MessageBox error
 - `logs/launcher.log` remains runtime troubleshooting output and is not included in git or zip artifacts
-- when `assets/TeleVault.ico` exists, the launcher build passes it to `csc.exe` through `/win32icon`
+- when `assets/TeleVault.ico` exists, the launcher build compiles `tools/launcher/TeleVaultLauncher.rc` through MSVC `rc.exe`
 - when `assets/TeleVault.ico` is absent, the launcher build continues and reports that the default executable icon is used
 - `run_windows.bat` still works as a fallback
 - the app finds `frontend/` after packaging
@@ -82,4 +83,4 @@ After the launcher preview is stable, later packaging options can be evaluated:
 - installer
 - desktop shortcut or Start Menu integration
 
-Installer and one-file exe remain future options, not part of 2.8.8.
+Installer and one-file exe remain future options, not part of 2.9.2.

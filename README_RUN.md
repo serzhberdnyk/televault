@@ -2,17 +2,21 @@
 
 TeleVault - локальный оффлайн-архив Telegram-переписок. Он открывает экспорт Telegram Desktop на вашем компьютере, показывает переписки и медиа в удобном окне и не отправляет данные наружу.
 
-Текущая версия: `2.9.1`.
+Текущая версия: `2.9.2`.
 
 ## Обычный запуск
 
-1. Откройте папку `TeleVault-v2.9.1` в Проводнике Windows.
+1. Откройте папку `TeleVault-v2.9.2` в Проводнике Windows.
 2. Дважды нажмите `TeleVault.exe`.
 3. Дождитесь окна TeleVault.
 4. Нажмите `добавить экспорт`.
 5. Выберите папку экспорта Telegram Desktop или общую папку с несколькими экспортами.
 
 Обычному пользователю не нужно открывать терминал, Git или редактор кода.
+
+## Если Windows показывает SmartScreen
+
+Для неподписанного portable exe Windows может показать предупреждение SmartScreen. Если вы скачали TeleVault из ожидаемого релиза GitHub, нажмите `Подробнее`, затем `Выполнить в любом случае`.
 
 ## Если TeleVault.exe не открылся
 
@@ -23,18 +27,23 @@ TeleVault - локальный оффлайн-архив Telegram-перепис
 http://127.0.0.1:8766
 ```
 
-Если `TeleVault.exe` показывает ошибку, проверьте файл `logs\launcher.log` рядом с приложением. Для portable-комплекта рядом с `TeleVault.exe` должны лежать:
+Если `TeleVault.exe` показывает ошибку, проверьте файл `logs\launcher.log` рядом с приложением. Также убедитесь, что папка была полностью распакована из zip. Для portable-комплекта рядом с `TeleVault.exe` должны лежать:
 
 ```text
-TeleVault-v2.9.1/
+TeleVault-v2.9.2/
 - TeleVault.exe
 - app.py
 - assets/
 - backend/
 - frontend/
 - runtime/python/python.exe
+- runtime/python/pythonw.exe
 - run_windows.bat
 ```
+
+Примечание: старые версии v2.9.0/v2.9.1 могли показывать ошибку `.NET Framework: v4.0.30319` на некоторых Windows 7 системах. В v2.9.2 launcher заменён на native Windows launcher, поэтому `TeleVault.exe` больше не требует .NET Framework только для старта.
+
+Windows 7 SP1: best effort. Для работы TeleVault всё ещё нужен рабочий современный браузер.
 
 ## Как выбрать архив
 
@@ -72,8 +81,8 @@ build_exe_launcher.bat
 Результат:
 
 ```text
-dist\TeleVault-v2.9.1\
-dist\TeleVault-v2.9.1.zip
+dist\TeleVault-v2.9.2\
+dist\TeleVault-v2.9.2.zip
 ```
 
-`build_exe_launcher.bat` перед сборкой проверяет, что package version, `app.py APP_VERSION` и launcher `AppVersion` совпадают.
+`build_exe_launcher.bat` перед сборкой проверяет, что package version, `app.py APP_VERSION`, frontend placeholder, `run_windows.bat` startup text и launcher `kAppVersion` совпадают.
