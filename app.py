@@ -20,12 +20,32 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.3"
+APP_VERSION = "2.9.4"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"
 LIBRARY = ExportLibrary()
+
+
+def frontend_asset_url(name: str) -> str:
+    path = FRONTEND / name
+    try:
+        version = str(path.stat().st_mtime_ns)
+    except OSError:
+        version = APP_VERSION
+    return f"/{name}?v={version}"
+
+
+def frontend_file_bytes(file_path: Path) -> bytes:
+    data = file_path.read_bytes()
+    if file_path.name != "index.html":
+        return data
+
+    html = data.decode("utf-8")
+    html = html.replace('href="/styles.css"', f'href="{frontend_asset_url("styles.css")}"')
+    html = html.replace('src="/app.js"', f'src="{frontend_asset_url("app.js")}"')
+    return html.encode("utf-8")
 
 
 class FolderPickerError(RuntimeError):
@@ -376,9 +396,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         mt, _ = mimetypes.guess_type(str(file_path))
-        data = file_path.read_bytes()
+        data = frontend_file_bytes(file_path)
         self.send_response(200)
         self.send_header("Content-Type", mt or "text/plain")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

@@ -127,13 +127,14 @@ const text = {
   pinnedMessageFallback: 'сообщение',
   genericService: 'системное событие Telegram',
   requestFailed: 'не удалось выполнить запрос',
-  fileMissing: 'файл не найден в архиве',
-  imageUnavailable: 'фото не найдено в архиве',
-  videoUnavailable: 'видео не найдено в архиве',
-  audioUnavailable: 'аудио не найдено в архиве',
-  fileUnavailable: 'файл не найден в архиве',
-  stickerUnavailable: 'стикер не найден в архиве',
-  animatedStickerUnavailable: 'анимированный стикер не найден в архиве',
+  fileMissing: 'файл отсутствует в этом архиве',
+  imageUnavailable: 'фото недоступно',
+  videoUnavailable: 'видео недоступно',
+  audioUnavailable: 'аудио недоступно',
+  fileUnavailable: 'файл недоступен',
+  stickerUnavailable: 'стикер недоступен',
+  animatedStickerUnavailable: 'анимированный стикер недоступен',
+  mediaUnavailableBody: 'файл отсутствует в этом архиве',
   open: 'открыть',
   close: 'закрыть',
   previous: 'назад',
@@ -210,6 +211,38 @@ const text = {
 
 let audioMetadataObserver = null;
 let videoMetadataObserver = null;
+
+const unavailableFallbackTextPattern = /^\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?$/i;
+const unavailableFallbackTextPatternGlobal = /\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?/gi;
+
+function visibleTextSource(value) {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.map(item => cleanVisibleText(item)).join('');
+  if (typeof value === 'object') {
+    if ('text' in value) return visibleTextSource(value.text);
+    if ('value' in value) return visibleTextSource(value.value);
+    return '';
+  }
+  return String(value);
+}
+
+function isUnavailableFallbackText(value) {
+  return unavailableFallbackTextPattern.test(visibleTextSource(value).replace(/\s+/g, ' ').trim());
+}
+
+function cleanVisibleText(value) {
+  const raw = visibleTextSource(value);
+  if (!raw) return '';
+  return raw
+    .split(/\r?\n/)
+    .filter(line => !isUnavailableFallbackText(line))
+    .join('\n')
+    .replace(unavailableFallbackTextPatternGlobal, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, options);
@@ -538,8 +571,9 @@ function renderChatCard(chat) {
   div.type = 'button';
   div.className = 'chat-card' + (chat.id === state.selectedChatId ? ' active' : '');
   const range = [chat.first_date, chat.last_date].filter(Boolean).join(' → ');
+  const title = cleanVisibleText(chat.title) || text.storageFolderFallback;
   div.innerHTML = `
-    <span class="chat-card__title">${escapeHtml(chat.title)}</span>
+    <span class="chat-card__title">${escapeHtml(title)}</span>
     <span class="chat-card__stats">${chat.message_count} ${text.messages} · ${chat.media_count} ${text.media}</span>
     <span class="chat-card__date">последнее: ${escapeHtml(chat.last_date || text.noDate)}</span>
     ${range ? `<span class="chat-card__range">${escapeHtml(range)}</span>` : ''}
@@ -594,7 +628,7 @@ function renderGlobalMessageResult(result) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'global-message-card';
-  const snippet = result.snippet || result.media_type || 'сообщение';
+  const snippet = cleanVisibleText(result.snippet) || cleanVisibleText(result.media_type) || 'сообщение';
   const meta = buildGlobalSearchResultMeta(result);
   button.innerHTML = `
     <span class="global-message-card__snippet">${renderHighlightedSearchSnippet(snippet, state.globalSearchQuery || state.chatSearchQuery)}</span>
@@ -607,7 +641,7 @@ function renderGlobalMessageResult(result) {
 }
 
 function normalizeSearchMetaValue(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
+  return cleanVisibleText(value).replace(/\s+/g, ' ').trim();
 }
 
 function sameSearchMetaValue(a, b) {
@@ -673,7 +707,7 @@ function conversationSearchText(chat) {
 
 function buildConversationSearchText(chat, messages = []) {
   const senders = uniqueSenderNames(messages.map(messageSender)).join(' ');
-  return [chat.title, chat.path, senders].map(value => String(value || '').toLowerCase()).join(' ');
+  return [chat.title, chat.path, senders].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
 }
 
 function compareChatsForSidebar(a, b) {
@@ -997,7 +1031,7 @@ function renderSelectedChat(data, search = '', options = {}) {
   $('filters').hidden = false;
   $('emptyState').style.display = 'none';
   $('messages').style.display = 'block';
-  $('chatTitle').textContent = data.chat.title;
+  $('chatTitle').textContent = cleanVisibleText(data.chat.title) || text.storageFolderFallback;
   $('chatMeta').textContent = 'сохранённая переписка в локальном хранилище';
   const senderNames = fillSenders(data.senders || []);
   updateChatFilterControls(senderNames);
@@ -1284,7 +1318,7 @@ function fillSenders(senders) {
 }
 
 function senderName(value) {
-  return String(value || '').trim();
+  return cleanVisibleText(value).replace(/\s+/g, ' ').trim();
 }
 
 function senderKey(value) {
@@ -1374,7 +1408,7 @@ function filterMessages(messages, search, sender = '') {
 
 function messageSearchText(msg) {
   return [
-    msg.text,
+    messageVisibleText(msg),
     isServiceMessage(msg) ? serviceNoticeLabel(msg) : '',
     msg.from,
     msg.actor,
@@ -1382,7 +1416,7 @@ function messageSearchText(msg) {
     msg.service_action,
     msg.pinned_message_preview,
     msg.pinned_message_id,
-  ].map(value => String(value || '').toLowerCase()).join(' ');
+  ].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
 }
 
 function messageDomId(msg) {
@@ -1400,15 +1434,14 @@ function messageArticleAttributes(msg, options = {}) {
 
 function mediaSearchText(msg) {
   return [
-    msg.text,
+    messageVisibleText(msg),
     msg.from,
-    msg.media,
-    msg.media_name,
+    mediaName(msg),
     msg.media_kind,
     msg.media_type,
     msg.mime_type,
     msg.sticker_emoji,
-  ].map(value => String(value || '').toLowerCase()).join(' ');
+  ].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
 }
 
 function matchesMediaMode(msg, mode) {
@@ -1491,11 +1524,19 @@ function isAudio(msg) {
 }
 
 function hasMessageText(msg) {
-  return String(msg?.text || '').trim().length > 0;
+  return messageVisibleText(msg).trim().length > 0;
 }
 
 function isAudioOnlyMessage(msg) {
   return isAudio(msg) && hasMedia(msg) && !hasMessageText(msg);
+}
+
+function messageVisibleText(msg) {
+  for (const candidate of [msg?.text, msg?.caption]) {
+    const value = cleanVisibleText(candidate);
+    if (value) return value;
+  }
+  return '';
 }
 
 function createMessageDirectionContext(chat = {}, senders = []) {
@@ -1573,7 +1614,7 @@ function serviceActor(msg) {
 }
 
 function shortServicePreview(value) {
-  const clean = String(value || '').replace(/\s+/g, ' ').replace(/\.{3,}$/, '').trim();
+  const clean = cleanVisibleText(value).replace(/\s+/g, ' ').replace(/\.{3,}$/, '').trim();
   const sectionBreak = clean.match(/^(.{8,52}?)(?:\s+[❕❗‼⚠•]|[.!?]\s+)/u);
   if (sectionBreak?.[1]) return sectionBreak[1].trim();
   if (clean.length <= 48) return clean;
@@ -1686,14 +1727,17 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       return;
     }
     const stickerMessage = isSticker(msg);
-    const messageHasText = hasMessageText(msg);
+    const messageText = messageVisibleText(msg);
+    const messageHasText = messageText.trim().length > 0;
     const audioOnlyMessage = isAudioOnlyMessage(msg);
+    const missingOnlyMessage = !stickerMessage && isMediaMissing(msg) && hasMedia(msg) && !messageHasText;
     const direction = getMessageDirection(msg, directionContext);
     const messageClasses = [
       'message',
       direction ? `message--${direction}` : 'message--neutral',
       stickerMessage ? 'message--sticker' : '',
       audioOnlyMessage ? 'message--audio-only' : '',
+      missingOnlyMessage ? 'message--missing-only' : '',
       hasMedia(msg) ? 'message--media' : '',
       messageHasText ? 'message--text' : 'message--no-text',
       searchActive ? 'message--search-result' : '',
@@ -1703,12 +1747,13 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       'conversation-message-card',
       stickerMessage ? 'bubble--sticker' : '',
       audioOnlyMessage ? 'bubble--audio-only' : '',
+      missingOnlyMessage ? 'bubble--missing-only' : '',
     ].filter(Boolean).join(' ');
     html.push(`
       <article class="${messageClasses}"${messageArticleAttributes(msg, { searchActive })}>
+        ${renderMessageMeta(msg)}
       <div class="${bubbleClasses}">
-        <div class="meta"><span class="sender">${escapeHtml(messageSender(msg) || text.system)}</span><span>${escapeHtml(messageTime(msg))}</span></div>
-        ${messageHasText ? `<div class="text">${escapeHtml(msg.text)}</div>` : ''}
+        ${messageHasText ? `<div class="text">${escapeHtml(messageText)}</div>` : ''}
         ${renderInlineMedia(msg, photoContext)}
       </div>
       </article>
@@ -1785,7 +1830,8 @@ function renderPhotoPreview(msg, index = -1, options = {}) {
   if (actualIndex < 0) return '';
   const className = options.className || 'photo-preview';
   const label = options.label || 'открыть фото';
-  const caption = options.caption ? `<span class="photo-preview-caption">${escapeHtml(options.caption)}</span>` : '';
+  const captionText = cleanVisibleText(options.caption);
+  const caption = captionText ? `<span class="photo-preview-caption">${escapeHtml(captionText)}</span>` : '';
   const previewUrl = getPhotoPreviewUrl(msg);
   if (!previewUrl) {
     return `
@@ -1832,7 +1878,8 @@ function mediaFallbackOriginalUrl(kind, msg) {
 }
 
 function renderMediaFallback(kind, msg, options = {}) {
-  const title = options.title || mediaFallbackTitle(kind);
+  const fallbackTitle = mediaFallbackTitle(kind);
+  const title = cleanVisibleText(options.title || fallbackTitle) || fallbackTitle;
   const name = mediaName(msg);
   const originalUrl = options.originalUrl === undefined ? mediaFallbackOriginalUrl(kind, msg) : options.originalUrl;
   const hidden = options.hidden ? ' hidden' : '';
@@ -1842,7 +1889,8 @@ function renderMediaFallback(kind, msg, options = {}) {
       ${icons.file}
       <div class="media-fallback-info">
         <strong>${escapeHtml(title)}</strong>
-        ${name ? `<span>${escapeHtml(name)}</span>` : ''}
+        <span class="media-fallback-body">${escapeHtml(text.mediaUnavailableBody)}</span>
+        ${name ? `<span class="media-fallback-name">${escapeHtml(name)}</span>` : ''}
         ${originalUrl ? `<a class="media-fallback-link" href="${escapeAttr(originalUrl)}" target="_blank" rel="noreferrer">${text.openOriginal}</a>` : ''}
       </div>
     </div>
@@ -1939,17 +1987,17 @@ function renderMediaCard(msg, index = -1, photoContext = 'vault-current') {
 
 function renderPhotoCard(msg, index, photoContext = 'vault-current') {
   return `
-    ${renderPhotoPreview(msg, index, { context: photoContext, className: 'media-preview photo-trigger', label: 'открыть фото' })}
     ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderPhotoPreview(msg, index, { context: photoContext, className: 'media-preview photo-trigger', label: 'открыть фото' })}
+    ${renderMediaCaption(msg)}
   `;
 }
 
 function renderStickerCard(msg, photoContext = 'vault-current') {
   return `
-    ${renderStickerMedia(msg, photoContext, 'sticker-preview-card')}
     ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderStickerMedia(msg, photoContext, 'sticker-preview-card')}
+    ${renderMediaCaption(msg)}
   `;
 }
 
@@ -1964,26 +2012,26 @@ function renderVideoCard(msg) {
   if (!canPlayVideo(msg)) return renderFileCard(msg, 'video');
   const poster = videoPosterAttribute(msg);
   return `
+    ${renderCardMeta(msg)}
     <div class="media-preview media-preview-video" data-media-container>
       <video controls preload="none"${poster} src="${escapeAttr(videoUrl)}" data-video-preload="lazy" data-media-element></video>
       ${renderMissingNotice('video', msg)}
     </div>
-    ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderMediaCaption(msg)}
   `;
 }
 
 function renderAudioCard(msg) {
   return `
-    ${renderAudioPlayer(msg)}
     ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderAudioPlayer(msg)}
+    ${renderMediaCaption(msg)}
   `;
 }
 
 function renderAudioLabel(msg) {
-  if (!msg.media_name && !msg.media) return '';
   const name = mediaName(msg);
+  if (!name) return '';
   const url = existingMediaUrl(msg.media_url, msg.media_exists);
   const label = escapeHtml(name);
   return `
@@ -2003,48 +2051,59 @@ function renderAudioPlayer(msg, options = {}) {
   `;
 }
 
-function renderFileCard(msg, kindLabel = '') {
+function renderFileCard(msg, kindLabel = '', options = {}) {
   const details = [kindLabel || fileType(msg), formatFileSize(msg.file_size)].filter(Boolean).join(' · ');
+  const meta = options.showMeta === false ? '' : renderCardMeta(msg);
+  const name = mediaName(msg) || text.unknownType;
   return `
+    ${meta}
     <div class="file-card-body">
       ${icons.file}
       <div class="file-card-info">
-        <a href="${escapeAttr(msg.media_url)}" target="_blank" rel="noreferrer">${escapeHtml(mediaName(msg))}</a>
+        <a href="${escapeAttr(msg.media_url)}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a>
         <span>${escapeHtml(details || text.unknownType)}</span>
       </div>
       ${msg.media_url ? `<a class="open-link" href="${escapeAttr(msg.media_url)}" target="_blank" rel="noreferrer">${text.open}</a>` : ''}
     </div>
-    ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderMediaCaption(msg)}
   `;
 }
 
 function renderMissingPhotoCard(msg, index, photoContext = 'vault-current') {
   return `
+    ${renderCardMeta(msg)}
     <button class="media-missing-card media-missing-trigger" type="button" data-photo-context="${escapeAttr(photoContext)}" data-photo-index="${index}" aria-label="${text.open}: ${escapeAttr(mediaName(msg))}">
       ${renderMediaFallback('image', msg)}
     </button>
-    ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderMediaCaption(msg)}
   `;
 }
 
 function renderMissingCard(msg) {
   const kind = mediaFallbackKind(msg);
   return `
-    ${renderMediaFallback(kind, msg, { className: 'media-missing-card' })}
     ${renderCardMeta(msg)}
-    ${msg.text ? `<div class="media-caption">${escapeHtml(shortText(msg.text))}</div>` : ''}
+    ${renderMediaFallback(kind, msg, { className: 'media-missing-card' })}
+    ${renderMediaCaption(msg)}
+  `;
+}
+
+function renderMediaCaption(msg) {
+  const caption = messageVisibleText(msg);
+  return caption ? `<div class="media-caption">${escapeHtml(shortText(caption))}</div>` : '';
+}
+
+function renderMessageMeta(msg) {
+  return `
+    <div class="message-meta">
+      <span class="message-meta__sender">${escapeHtml(messageSender(msg) || text.system)}</span>
+      <span class="message-meta__time">${escapeHtml(messageTime(msg))}</span>
+    </div>
   `;
 }
 
 function renderCardMeta(msg) {
-  return `
-    <div class="media-card-meta">
-      <span class="sender">${escapeHtml(msg.from || text.system)}</span>
-      <span>${escapeHtml(msg.date || '')}</span>
-    </div>
-  `;
+  return renderMessageMeta(msg);
 }
 
 function renderMissingNotice(kind = 'file', msg = null, options = {}) {
@@ -2066,7 +2125,7 @@ function renderInlineMedia(msg, photoContext = 'vault-current') {
   const videoUrl = getVideoSourceUrl(msg);
   if (isVideo(msg) && videoUrl && canPlayVideo(msg)) return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} src="${escapeAttr(videoUrl)}" data-video-preload="lazy" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
   if (isAudio(msg)) return `<div class="media media-audio">${renderAudioPlayer(msg)}</div>`;
-  return `<div class="media">${renderFileCard(msg)}</div>`;
+  return `<div class="media">${renderFileCard(msg, '', { showMeta: false })}</div>`;
 }
 
 function renderSmallMediaPreview(msg, photoContext = 'vault-current') {
@@ -2080,12 +2139,13 @@ function renderSmallMediaPreview(msg, photoContext = 'vault-current') {
   if (isPhoto(msg)) {
     const index = photoIndexFor(msg, photoContext);
     if (index >= 0) {
-      const caption = [msg.date, msg.from || msg.chatTitle].filter(Boolean).join(' · ');
+      const caption = [msg.date, messageSender(msg) || cleanVisibleText(msg.chatTitle)].filter(Boolean).join(' · ');
       return `<div class="mini-media">${renderPhotoPreview(msg, index, { context: photoContext, className: 'mini-photo-preview', label: 'открыть фото', caption })}</div>`;
     }
   }
   if (isMediaMissing(msg)) {
-    return `<div class="mini-media mini-missing">${escapeHtml(mediaFallbackTitle(mediaFallbackKind(msg)))}: ${escapeHtml(mediaName(msg))}</div>`;
+    const name = mediaName(msg);
+    return `<div class="mini-media mini-missing">${escapeHtml(mediaFallbackTitle(mediaFallbackKind(msg)))}${name ? `: ${escapeHtml(name)}` : ''}</div>`;
   }
   return `<div class="mini-media mini-file">${icons.file}<span>${escapeHtml(mediaName(msg))}</span></div>`;
 }
@@ -2305,7 +2365,21 @@ function canPlayVideo(msg) {
 }
 
 function mediaName(msg) {
-  return msg.media_name || (msg.media ? String(msg.media).split(/[\\/]/).pop() : '') || 'file';
+  const mediaPath = cleanVisibleText(msg?.media || msg?.file || '');
+  const pathName = mediaPath ? mediaPath.split(/[\\/]/).pop() : '';
+  const candidates = [
+    msg?.media_name,
+    msg?.file_name,
+    pathName,
+    msg?.name,
+    msg?.title,
+    msg?.description,
+  ];
+  for (const candidate of candidates) {
+    const name = cleanVisibleText(candidate);
+    if (name) return name;
+  }
+  return '';
 }
 
 function fileType(msg) {
@@ -2325,7 +2399,7 @@ function formatFileSize(value) {
 }
 
 function shortText(value) {
-  const clean = String(value || '').replace(/\s+/g, ' ').trim();
+  const clean = cleanVisibleText(value).replace(/\s+/g, ' ').trim();
   return clean.length > 120 ? `${clean.slice(0, 117)}...` : clean;
 }
 
@@ -2407,14 +2481,14 @@ function renderTimelineSection() {
 }
 
 function renderTimelineDayCard(day) {
-  const chats = Array.from(day.chats).slice(0, 3).map(escapeHtml).join(', ');
+  const chats = Array.from(day.chats).slice(0, 3).map(cleanVisibleText).filter(Boolean).map(escapeHtml).join(', ');
   const contextKey = `timeline-day-${day.key}`;
   const photos = setPhotoContext(contextKey, day.messages);
   const thumbs = photos.slice(0, 3).map((msg, index) => renderPhotoPreview(msg, index, {
     context: contextKey,
     className: 'timeline-thumb',
     label: 'открыть фото дня',
-    caption: [msg.chatTitle, msg.from].filter(Boolean).join(' · '),
+    caption: [cleanVisibleText(msg.chatTitle), messageSender(msg)].filter(Boolean).join(' · '),
   })).join('');
   return `
     <article class="vault-card timeline-day-card">
@@ -2500,14 +2574,14 @@ function renderPeopleSection() {
   bindPhotoTriggers(box);
 }
 function renderPersonCard(person) {
-  const chats = Array.from(person.chats).slice(0, 3).map(escapeHtml).join(', ');
+  const chats = Array.from(person.chats).slice(0, 3).map(cleanVisibleText).filter(Boolean).map(escapeHtml).join(', ');
   const contextKey = `person-card-${person.key}`;
   const photos = setPhotoContext(contextKey, person.messages);
   const thumbs = photos.slice(0, 3).map((msg, index) => renderPhotoPreview(msg, index, {
     context: contextKey,
     className: 'timeline-thumb',
     label: 'открыть фото человека',
-    caption: [msg.chatTitle, msg.date].filter(Boolean).join(' · '),
+    caption: [cleanVisibleText(msg.chatTitle), msg.date].filter(Boolean).join(' · '),
   })).join('');
   return `
     <article class="vault-card person-card">
@@ -2592,14 +2666,17 @@ function renderInsightCard(label, value) {
 }
 
 function renderArchiveMessage(msg, photoContext = 'vault-current') {
+  const bodyText = messageVisibleText(msg);
+  const chatTitle = cleanVisibleText(msg.chatTitle) || 'чат';
+  const sender = messageSender(msg) || text.systemSender;
   return `
     <article class="archive-message conversation-message-card">
       <div class="archive-message-meta">
-        <span class="archive-chat">${escapeHtml(msg.chatTitle || 'чат')}</span>
-        <span>${escapeHtml(msg.from || text.systemSender)}</span>
+        <span class="archive-chat">${escapeHtml(chatTitle)}</span>
+        <span>${escapeHtml(sender)}</span>
         <span>${escapeHtml(messageTime(msg))}</span>
       </div>
-      ${msg.text ? `<div class="archive-message-text">${escapeHtml(msg.text)}</div>` : ''}
+      ${bodyText ? `<div class="archive-message-text">${escapeHtml(bodyText)}</div>` : ''}
       ${renderSmallMediaPreview(msg, photoContext)}
     </article>
   `;
@@ -2624,7 +2701,7 @@ function buildTimelineDays() {
 function buildPeople() {
   const map = new Map();
   state.allMessages.forEach(msg => {
-    const rawName = String(msg.from || '').trim();
+    const rawName = messageSender(msg);
     const name = rawName || text.systemSender;
     const key = rawName ? rawName.toLowerCase() : '__system__';
     if (!map.has(key)) {
@@ -2834,11 +2911,12 @@ function renderLightboxPhoto() {
   const media = lightbox.querySelector('.lightbox-media');
   const original = lightbox.querySelector('.lightbox-original');
   const captionText = lightbox.querySelector('.lightbox-text');
-  const senderLabel = [msg.chatTitle, msg.from || text.system].filter(Boolean).join(' · ');
+  const senderLabel = [cleanVisibleText(msg.chatTitle), messageSender(msg) || text.system].filter(Boolean).join(' · ');
+  const caption = messageVisibleText(msg);
   lightbox.querySelector('.sender').textContent = senderLabel;
   lightbox.querySelector('.date').textContent = msg.date || '';
-  captionText.textContent = shortText(msg.text || '');
-  captionText.hidden = !msg.text;
+  captionText.textContent = shortText(caption);
+  captionText.hidden = !caption;
   const viewerUrl = getPhotoViewerUrl(msg);
   const originalUrl = getPhotoOriginalUrl(msg) || viewerUrl;
   original.href = originalUrl || '#';

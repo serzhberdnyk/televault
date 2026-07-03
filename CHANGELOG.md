@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.4
+
+### Improved
+
+* Unified sender/time metadata styling across text, audio, file and missing media message blocks.
+* Refreshed unavailable media cards with a lighter compact style and local-archive wording.
+* Audio playback, media classification, parser, backend storage and search behavior are unchanged.
+
+### Fixed
+
+* TeleVault.exe relaunches normally after the app window is closed, even when another browser tab title contains TeleVault.
+
 ## 2.9.3
 
 ### Added

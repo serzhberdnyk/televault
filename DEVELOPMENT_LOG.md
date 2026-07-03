@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.4 - unified message meta and missing media cards
+
+Changed:
+- added a shared frontend message meta renderer for sender/time so text messages, audio-only messages and media cards use the same class structure
+- moved media-card sender/time above the card content to match the normal message block pattern
+- removed duplicate inline file-card sender/time because the parent message already owns the shared meta row
+- refreshed missing/unavailable media cards with a lighter compact style, softer icon treatment and the local-archive text `файл отсутствует в этом архиве`
+- fixed TeleVault.exe relaunch after closing the app window by ignoring unrelated browser windows whose title only contains TeleVault as part of other text
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.4
+- kept backend, parser, storage, media endpoints, search, file opening logic, service notices, sticker behavior and media playback logic unchanged
+
+Manual test:
+- run `python -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend/app.js`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.4
+- launch `TeleVault.exe`, close the app window, then launch it again at least 3 times and confirm each relaunch opens TeleVault
+- confirm text message sender/time, audio/voice sender/time and missing media/file card sender/time follow the same visual system
+- confirm missing audio/file cards use the compact unavailable style and do not use network-style retry wording
+- confirm audio playback, text messages, photos, videos, stickers and service notices still behave normally
+- run `git diff --check`
+
 ## 2.9.3 - Windows 7 legacy runtime package
 
 Changed:

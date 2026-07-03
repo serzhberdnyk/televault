@@ -35,7 +35,7 @@
 namespace {
 
 constexpr wchar_t kAppName[] = L"TeleVault";
-constexpr wchar_t kAppVersion[] = L"2.9.3";
+constexpr wchar_t kAppVersion[] = L"2.9.4";
 constexpr wchar_t kNoAutoBrowserEnv[] = L"TELEVAULT_NO_AUTO_BROWSER";
 constexpr wchar_t kWindowStateDirectoryName[] = L"user_data";
 constexpr wchar_t kWindowStateFileName[] = L"launcher_window.json";
@@ -899,7 +899,10 @@ BOOL CALLBACK EnumWindowsCallback(HWND window, LPARAM parameter) {
     }
 
     const std::wstring title = GetWindowTitle(window);
-    if (!ContainsNoCase(title, kAppName)) {
+    if (!EqualsNoCase(title, kAppName)) {
+        if (context->logDetails && ContainsNoCase(title, kAppName)) {
+            Log(L"TeleVault-like window ignored because title is not exact: " + SafeLogValue(title));
+        }
         return TRUE;
     }
 
@@ -1207,13 +1210,18 @@ int MonitorStartedProcess(HANDLE processHandle) {
     bool hasLastWindowState = false;
     bool hasLastSavedState = false;
     bool sawWindow = false;
+    bool loggedWindowSearchDetails = false;
     bool loggedMissingWindowTimeout = false;
     const ULONGLONG firstWindowDeadline = GetTickCount64() + kWindowOpenWaitTimeoutMs;
     ULONGLONG missingWindowSince = 0;
     ULONGLONG lastSaveTick = 0;
 
     while (WaitForSingleObject(processHandle, kWindowMonitorIntervalMs) == WAIT_TIMEOUT) {
-        HWND window = FindExistingTeleVaultWindow(!sawWindow);
+        const bool logWindowSearchDetails = !sawWindow && !loggedWindowSearchDetails;
+        HWND window = FindExistingTeleVaultWindow(logWindowSearchDetails);
+        if (logWindowSearchDetails) {
+            loggedWindowSearchDetails = true;
+        }
         if (window) {
             if (!sawWindow) {
                 Log(L"launcher monitor attached to app window");

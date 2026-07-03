@@ -5,7 +5,7 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.3"
+APP_VERSION = "2.9.4"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
