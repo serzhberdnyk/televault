@@ -931,6 +931,27 @@ code {
   color: #7e8d9a;
 }
 
+.message-forwarded {
+  justify-self: start;
+  max-width: 100%;
+  padding: 0 2px;
+  color: #8fa2b2;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.message-forwarded span {
+  color: var(--muted-strong);
+  font-weight: 800;
+}
+
+.message--outgoing .message-forwarded {
+  justify-self: end;
+  text-align: right;
+}
+
 .message .text {
   white-space: pre-wrap;
   color: var(--text);

@@ -13,6 +13,19 @@ SERVICE_PREVIEW_LIMIT = 76
 CREATE_CHANNEL_ACTIONS = {"create_channel"}
 CREATE_CHAT_ACTIONS = {"create_chat", "create_group"}
 PHOTO_UPDATE_ACTIONS = {"edit_channel_photo", "edit_chat_photo", "edit_group_photo", "update_photo"}
+FORWARDED_FIELDS = (
+    "forwarded_from",
+    "forward_from",
+    "forwarded_from_chat",
+    "forward_from_chat",
+    "saved_from",
+    "saved_from_peer",
+    "forward_author",
+    "forward_signature",
+    "forward_date",
+    "via",
+    "via_bot",
+)
 GENERIC_SERVICE_TEXT = "системное событие Telegram"
 
 
@@ -108,6 +121,28 @@ def metadata_text(value: Any) -> str:
     if isinstance(value, list):
         return " ".join(metadata_text(item) for item in value)
     return str(value)
+
+
+def forwarded_field_text(value: Any) -> str:
+    if isinstance(value, dict):
+        for key in ("name", "title", "username", "id"):
+            candidate = compact_text(value.get(key))
+            if candidate:
+                return candidate
+        return compact_text(metadata_text(value))
+    return compact_text(value)
+
+
+def normalize_forwarded_fields(message: dict[str, Any]) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for key in FORWARDED_FIELDS:
+        value = message.get(key)
+        if value in (None, "", [], {}):
+            continue
+        text = forwarded_field_text(value)
+        if text:
+            fields[key] = text
+    return fields
 
 
 def media_extension(filename: str) -> str:
@@ -390,6 +425,7 @@ def normalize_message(
         "thumbnail_url": thumbnail_ref["url"],
         "thumbnail_exists": thumbnail_ref["exists"],
     }
+    normalized.update(normalize_forwarded_fields(message))
     if message.get("type") == "service":
         normalized.update(normalize_service_fields(message, messages_by_id))
     return normalized

@@ -37,6 +37,16 @@ def message_search_text(message: dict[str, Any]) -> str:
         message.get("media_type"),
         message.get("mime_type"),
         message.get("sticker_emoji"),
+        message.get("forwarded_from"),
+        message.get("forward_from"),
+        message.get("forwarded_from_chat"),
+        message.get("forward_from_chat"),
+        message.get("saved_from"),
+        message.get("saved_from_peer"),
+        message.get("forward_author"),
+        message.get("forward_signature"),
+        message.get("via"),
+        message.get("via_bot"),
     )
     return " ".join(compact_value(field) for field in fields).casefold()
 

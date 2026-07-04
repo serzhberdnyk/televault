@@ -122,6 +122,7 @@ const text = {
   nothingFound: 'ничего не найдено',
   changeFilters: 'попробуй изменить поиск, фильтр или вкладку',
   system: 'system',
+  forwardedFrom: 'переслано от',
   systemSender: 'Системные события',
   pinnedMessage: 'закреплено сообщение',
   pinnedMessageFallback: 'сообщение',
@@ -1325,6 +1326,27 @@ function senderKey(value) {
   return senderName(value).toLowerCase();
 }
 
+const FORWARDED_SOURCE_FIELDS = [
+  'forwarded_from',
+  'forward_from',
+  'forwarded_from_chat',
+  'forward_from_chat',
+  'saved_from',
+  'saved_from_peer',
+  'forward_author',
+  'forward_signature',
+  'via',
+  'via_bot',
+];
+
+function forwardedSource(msg) {
+  for (const key of FORWARDED_SOURCE_FIELDS) {
+    const source = senderName(msg?.[key]);
+    if (source) return source;
+  }
+  return '';
+}
+
 function messageSender(msg) {
   return senderName(msg.from || msg.sender || msg.author || msg.actor || msg.from_id || msg.actor_id || '');
 }
@@ -1412,6 +1434,7 @@ function messageSearchText(msg) {
     isServiceMessage(msg) ? serviceNoticeLabel(msg) : '',
     msg.from,
     msg.actor,
+    forwardedSource(msg),
     msg.service_kind,
     msg.service_action,
     msg.pinned_message_preview,
@@ -1441,6 +1464,7 @@ function mediaSearchText(msg) {
     msg.media_type,
     msg.mime_type,
     msg.sticker_emoji,
+    forwardedSource(msg),
   ].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
 }
 
@@ -1782,6 +1806,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       <article class="${messageClasses}"${messageArticleAttributes(msg, { searchActive })}>
         ${renderMessageMeta(msg)}
       <div class="${bubbleClasses}">
+        ${renderForwardedMeta(msg)}
         ${messageHasText ? `<div class="text">${escapeHtml(messageText)}</div>` : ''}
         ${renderInlineMedia(msg, photoContext)}
       </div>
@@ -2153,8 +2178,14 @@ function renderMessageMeta(msg) {
   `;
 }
 
+function renderForwardedMeta(msg) {
+  const source = forwardedSource(msg);
+  if (!source) return '';
+  return `<div class="message-forwarded">${escapeHtml(text.forwardedFrom)} <span>${escapeHtml(source)}</span></div>`;
+}
+
 function renderCardMeta(msg) {
-  return renderMessageMeta(msg);
+  return `${renderMessageMeta(msg)}${renderForwardedMeta(msg)}`;
 }
 
 function renderMissingNotice(kind = 'file', msg = null, options = {}) {
