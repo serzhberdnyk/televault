@@ -1516,6 +1516,34 @@ function isVideo(msg) {
   return kind === 'video' || mime.startsWith('video/') || mediaType.includes('video');
 }
 
+function isVideoNote(msg) {
+  if (!isVideo(msg) || isSticker(msg)) return false;
+  const flagValues = [
+    msg.is_video_note,
+    msg.video_note,
+    msg.is_round,
+    msg.round,
+    msg.round_message,
+  ];
+  if (flagValues.some(value => value === true || String(value || '').toLowerCase() === 'true')) return true;
+  const typeValues = [
+    msg.media_type,
+    msg.type,
+  ].map(value => String(value || '').toLowerCase().replace(/[\s-]+/g, '_'));
+  return typeValues.some(value => [
+    'round',
+    'video_note',
+    'round_video',
+    'round_video_message',
+    'round_message',
+    'video_message',
+  ].includes(value));
+}
+
+function isPlayableVideoNote(msg) {
+  return isVideoNote(msg) && Boolean(getVideoSourceUrl(msg)) && canPlayVideo(msg);
+}
+
 function isAudio(msg) {
   const kind = String(msg.media_kind || '').toLowerCase();
   const mediaType = String(msg.media_type || '').toLowerCase();
@@ -1730,6 +1758,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
     const messageHasText = messageText.trim().length > 0;
     const audioOnlyMessage = isAudioOnlyMessage(msg);
     const missingOnlyMessage = !stickerMessage && isMediaMissing(msg) && hasMedia(msg) && !messageHasText;
+    const playableVideoNote = isPlayableVideoNote(msg);
     const direction = getMessageDirection(msg, directionContext);
     const messageClasses = [
       'message',
@@ -1737,6 +1766,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       stickerMessage ? 'message--sticker' : '',
       audioOnlyMessage ? 'message--audio-only' : '',
       missingOnlyMessage ? 'message--missing-only' : '',
+      playableVideoNote ? 'message--video-note' : '',
       hasMedia(msg) ? 'message--media' : '',
       messageHasText ? 'message--text' : 'message--no-text',
       searchActive ? 'message--search-result' : '',
@@ -1790,8 +1820,13 @@ function renderMediaMode(messages) {
       html.push(renderDateSeparator(dayKey));
       previousDayKey = dayKey;
     }
+    const itemClasses = [
+      mediaCardClasses,
+      isSticker(msg) ? 'media-card-sticker' : '',
+      isPlayableVideoNote(msg) ? 'media-card--video-note' : '',
+    ].filter(Boolean).join(' ');
     html.push(`
-      <article class="${mediaCardClasses}" data-media-card="true">
+      <article class="${itemClasses}" data-media-card="true">
         ${renderMediaCard(msg, index, photoContext)}
       </article>
     `);
@@ -2002,10 +2037,30 @@ function videoPosterAttribute(msg) {
   return posterUrl ? ` poster="${escapeAttr(posterUrl)}"` : '';
 }
 
+function renderVideoNotePlayer(msg, className) {
+  const videoUrl = getVideoSourceUrl(msg);
+  const poster = videoPosterAttribute(msg);
+  return `
+    <div class="${className}" data-media-container data-video-note-container>
+      <video class="video-note" preload="none" playsinline${poster} data-media-src="${escapeAttr(videoUrl)}" data-media-element></video>
+      <button class="video-note-play-button" type="button" data-video-note-toggle aria-label="Play video note" aria-pressed="false"></button>
+      ${renderMissingNotice('video', msg)}
+    </div>
+  `;
+}
+
 function renderVideoCard(msg) {
   const videoUrl = getVideoSourceUrl(msg);
   if (!videoUrl) return renderMissingCard(msg);
   if (!canPlayVideo(msg)) return renderFileCard(msg, 'video');
+  const videoNote = isPlayableVideoNote(msg);
+  if (videoNote) {
+    return `
+      ${renderCardMeta(msg)}
+      ${renderVideoNotePlayer(msg, 'media-preview media-preview-video media-preview-video-note')}
+      ${renderMediaCaption(msg)}
+    `;
+  }
   const poster = videoPosterAttribute(msg);
   return `
     ${renderCardMeta(msg)}
@@ -2119,7 +2174,11 @@ function renderInlineMedia(msg, photoContext = 'vault-current') {
   }
   if (isMediaMissing(msg)) return `<div class="media">${renderMediaFallback(mediaFallbackKind(msg), msg, { className: 'inline-media-fallback' })}</div>`;
   const videoUrl = getVideoSourceUrl(msg);
-  if (isVideo(msg) && videoUrl && canPlayVideo(msg)) return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} data-media-src="${escapeAttr(videoUrl)}" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
+  if (isVideo(msg) && videoUrl && canPlayVideo(msg)) {
+    const videoNote = isPlayableVideoNote(msg);
+    if (videoNote) return renderVideoNotePlayer(msg, 'media media--video-note');
+    return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} data-media-src="${escapeAttr(videoUrl)}" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
+  }
   if (isAudio(msg)) return `<div class="media media-audio">${renderAudioPlayer(msg)}</div>`;
   return `<div class="media">${renderFileCard(msg, '', { showMeta: false })}</div>`;
 }
@@ -2264,6 +2323,58 @@ function handleRegularMediaPlay(event) {
   if (!isRegularPlayableMedia(element)) return;
   requestMediaMetadata(element);
   pauseOtherRegularMedia(element);
+}
+
+function isVideoNoteElement(element) {
+  return isMediaElement(element) && element.classList.contains('video-note');
+}
+
+function videoNoteContainerFor(element) {
+  return element?.closest('[data-video-note-container]') || null;
+}
+
+function updateVideoNotePlaybackState(video) {
+  if (!isVideoNoteElement(video)) return;
+  const container = videoNoteContainerFor(video);
+  if (!container) return;
+  const isPlaying = !video.paused && !video.ended;
+  container.classList.toggle('is-playing', isPlaying);
+  const button = container.querySelector('[data-video-note-toggle]');
+  if (!button) return;
+  button.setAttribute('aria-label', isPlaying ? 'Pause video note' : 'Play video note');
+  button.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+}
+
+function handleVideoNoteMediaState(event) {
+  updateVideoNotePlaybackState(event.target);
+}
+
+function toggleVideoNotePlayback(container) {
+  const video = container?.querySelector('video.video-note');
+  if (!video || video.hidden) return;
+  requestMediaMetadata(video);
+  if (!video.getAttribute('src')) return;
+  if (video.paused || video.ended) {
+    pauseOtherRegularMedia(video);
+    const playAttempt = video.play();
+    if (playAttempt && typeof playAttempt.catch === 'function') {
+      playAttempt.catch(() => updateVideoNotePlaybackState(video));
+    }
+  } else {
+    video.pause();
+  }
+  updateVideoNotePlaybackState(video);
+}
+
+function handleVideoNoteClick(event) {
+  if (event.defaultPrevented) return;
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  const container = target?.closest('[data-video-note-container]');
+  if (!container || !$('messages')?.contains(container)) return;
+  if (target.closest('a, [data-media-fallback]')) return;
+  event.preventDefault();
+  event.stopPropagation();
+  toggleVideoNotePlayback(container);
 }
 
 async function handleMediaElementError(element) {
@@ -2993,6 +3104,9 @@ function logPerformance(label, startedAt, details = {}) {
 function bindControls() {
   document.addEventListener('keydown', handleLightboxKeydown);
   document.addEventListener('play', handleRegularMediaPlay, true);
+  document.addEventListener('play', handleVideoNoteMediaState, true);
+  document.addEventListener('pause', handleVideoNoteMediaState, true);
+  document.addEventListener('ended', handleVideoNoteMediaState, true);
   document.addEventListener('click', event => {
     const forgetTrigger = event.target.closest('[data-forget-missing-export]');
     if (forgetTrigger) {
@@ -3014,6 +3128,7 @@ function bindControls() {
       if (event.key === 'Enter') loadFolderPath();
     });
   }
+  $('messages').addEventListener('click', handleVideoNoteClick);
   $('messages').addEventListener('click', handleSearchResultClick);
   const debouncedGlobalMessageSearch = debounce(loadGlobalMessageSearch, 220);
   pendingGlobalMessageSearch = debouncedGlobalMessageSearch;

@@ -794,6 +794,10 @@ code {
   justify-self: end;
 }
 
+.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) {
+  max-width: min(560px, 72vw);
+}
+
 .message--service {
   align-self: center;
   display: flex;
@@ -936,6 +940,8 @@ code {
 }
 
 .media {
+  display: grid;
+  justify-items: start;
   margin-top: 0;
   width: 100%;
   max-width: 100%;
@@ -943,20 +949,25 @@ code {
   box-sizing: border-box;
 }
 
+.message--outgoing .media {
+  justify-items: end;
+}
+
 .media img {
   width: auto;
-  max-width: min(520px, 100%);
-  max-height: 420px;
+  max-width: min(500px, 100%);
+  max-height: min(460px, 72vh);
   border-radius: var(--radius-md);
   display: block;
   object-fit: contain;
+  background: #070c12;
 }
 
 .media video {
-  width: min(640px, 100%);
-  max-width: 100%;
+  width: auto;
+  max-width: min(520px, 100%);
   height: auto;
-  max-height: 420px;
+  max-height: min(520px, 72vh);
   box-sizing: border-box;
   object-fit: contain;
   border-radius: var(--radius-md);
@@ -1028,12 +1039,13 @@ code {
 }
 
 .sticker-preview-card {
-  width: 100%;
-  min-height: 150px;
-  padding: 10px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 0;
+  padding: 2px;
   box-sizing: border-box;
-  border-radius: var(--radius-md);
-  background: rgba(7, 12, 18, 0.34);
+  border-radius: var(--radius-sm);
+  background: transparent;
 }
 
 .sticker-preview-card img,
@@ -1188,6 +1200,8 @@ code {
 .media-card {
   display: grid;
   gap: 7px;
+  width: min(560px, 100%);
+  max-width: 100%;
   min-width: 0;
   border: 1px solid rgba(49, 65, 84, 0.62);
   border-radius: var(--radius-md);
@@ -1219,6 +1233,50 @@ code {
   background: transparent;
 }
 
+.media-card.media-card-sticker {
+  justify-self: start;
+  width: fit-content;
+  max-width: min(230px, 100%);
+  padding: 4px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.media-card.media-card-sticker:hover {
+  border-color: transparent;
+  background: rgba(111, 199, 255, 0.035);
+}
+
+.media-card-sticker .message-meta,
+.media-card-sticker .media-caption {
+  max-width: min(220px, 100%);
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.media-card.media-card--video-note {
+  width: fit-content;
+  max-width: min(214px, 100%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.media-card.media-card--video-note:hover {
+  border: 0;
+  background: transparent;
+}
+
+.media-card--video-note .message-meta,
+.media-card--video-note .media-caption {
+  max-width: min(214px, 100%);
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
 .media-item--audio-compact .audio-card-body {
   gap: 5px;
   width: 100%;
@@ -1239,6 +1297,7 @@ code {
   display: grid;
   place-items: center;
   overflow: hidden;
+  max-width: 100%;
   min-height: 150px;
   border-radius: var(--radius-md);
   background: var(--control);
@@ -1254,8 +1313,28 @@ code {
 .media-preview-video video {
   width: 100%;
   max-height: 360px;
+  height: auto;
+  object-fit: contain;
   display: block;
   background: #060a0f;
+}
+
+.media-preview-video-note {
+  width: min(214px, calc(100vw - 96px));
+  height: min(214px, calc(100vw - 96px));
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.media-preview-video-note video {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: transparent;
 }
 
 .audio-card-body {
@@ -1314,9 +1393,12 @@ code {
 
 .media-caption {
   margin-top: 0;
+  max-width: min(48ch, 100%);
+  padding: 0 2px;
   color: var(--muted-strong);
   font-size: 13px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .file-card-body {
@@ -1324,6 +1406,9 @@ code {
   grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 9px;
   align-items: center;
+  width: min(430px, 100%);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .file-icon {
@@ -1420,8 +1505,8 @@ code {
   align-items: center;
   gap: 8px;
   width: 100%;
-  max-width: min(400px, 100%);
-  padding: 8px 10px;
+  max-width: min(360px, 100%);
+  padding: 7px 9px;
   border: 1px solid rgba(141, 154, 167, 0.16);
   border-radius: var(--radius-sm);
   background: rgba(31, 40, 49, 0.72);
@@ -1530,6 +1615,10 @@ code {
     max-width: min(92%, 720px);
   }
 
+  .message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) {
+    max-width: min(92%, 560px);
+  }
+
   .messages.media-mode-photo {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
@@ -1563,6 +1652,15 @@ code {
 
   .media img,
   .media video {
+    max-width: 100%;
+    max-height: min(420px, 68vh);
+  }
+
+  .message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) {
+    max-width: 100%;
+  }
+
+  .message--media:not(.message--audio-only):not(.message--sticker) .conversation-message-card {
     max-width: 100%;
   }
 
@@ -2078,7 +2176,181 @@ code {
 }
 
 .message--media:not(.message--audio-only):not(.message--sticker) .conversation-message-card {
-  padding: 9px 10px 10px;
+  width: fit-content;
+  max-width: min(548px, 100%);
+  padding: 7px;
+}
+
+.message--media:not(.message--audio-only):not(.message--sticker).message--text .conversation-message-card {
+  gap: 6px;
+  padding: 8px;
+}
+
+.message--media:not(.message--audio-only):not(.message--sticker).message--text .text {
+  min-width: 0;
+  max-width: min(48ch, 100%);
+  padding: 1px 3px 2px;
+}
+
+.message--media:not(.message--audio-only):not(.message--sticker).message--text .media {
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
+}
+
+.message--outgoing.message--media:not(.message--audio-only):not(.message--sticker).message--text .media {
+  justify-self: end;
+}
+
+.message--media:not(.message--audio-only):not(.message--sticker) .photo-preview-inline,
+.message--media:not(.message--audio-only):not(.message--sticker) .media video,
+.message--media:not(.message--audio-only):not(.message--sticker) .file-card-body,
+.message--media:not(.message--audio-only):not(.message--sticker) .media-fallback {
+  justify-self: start;
+}
+
+.message--outgoing.message--media:not(.message--audio-only):not(.message--sticker) .photo-preview-inline,
+.message--outgoing.message--media:not(.message--audio-only):not(.message--sticker) .media video,
+.message--outgoing.message--media:not(.message--audio-only):not(.message--sticker) .file-card-body,
+.message--outgoing.message--media:not(.message--audio-only):not(.message--sticker) .media-fallback {
+  justify-self: end;
+}
+
+.message--video-note.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) {
+  max-width: min(214px, 72vw);
+}
+
+.message--video-note.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) .conversation-message-card,
+.message--outgoing.message--video-note.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) .conversation-message-card {
+  width: fit-content;
+  max-width: min(214px, 100%);
+  padding: 0;
+  border: 0;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.message--video-note.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) .conversation-message-card:hover,
+.message--outgoing.message--video-note.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) .conversation-message-card:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.message--video-note.message--text:not(.message--missing-only) .conversation-message-card {
+  gap: 6px;
+}
+
+.message--video-note.message--text:not(.message--missing-only) .text {
+  max-width: min(34ch, 100%);
+  padding: 7px 10px;
+  border: 1px solid rgba(49, 65, 84, 0.34);
+  border-radius: 13px;
+  background: rgba(27, 35, 43, 0.84);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.message--outgoing.message--video-note.message--text:not(.message--missing-only) .text {
+  border-color: rgba(42, 171, 238, 0.18);
+  background: rgba(28, 52, 65, 0.78);
+}
+
+.media--video-note {
+  position: relative;
+  display: block;
+  width: min(214px, calc(100vw - 96px));
+  height: min(214px, calc(100vw - 96px));
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.media--video-note video,
+.media video.video-note {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  object-fit: cover;
+  background: transparent;
+}
+
+.media--video-note,
+.media-preview-video-note {
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.video-note-play-button {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin: auto;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  padding: 0;
+  background: rgba(5, 10, 15, 0.58);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    opacity var(--transition),
+    transform var(--transition),
+    background-color var(--transition);
+}
+
+.video-note-play-button::before {
+  content: "";
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  border-top: 11px solid transparent;
+  border-bottom: 11px solid transparent;
+  border-left: 16px solid #f4fbff;
+}
+
+.video-note-play-button:hover {
+  background: rgba(5, 10, 15, 0.72);
+}
+
+.video-note-play-button:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--shadow-focus),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+[data-video-note-container].is-playing .video-note-play-button {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+[data-video-note-container].is-playing:hover .video-note-play-button,
+[data-video-note-container].is-playing .video-note-play-button:focus-visible {
+  opacity: 0.92;
+  transform: scale(1);
+}
+
+[data-video-note-container].is-playing .video-note-play-button::before {
+  width: 15px;
+  height: 18px;
+  margin-left: 0;
+  border: 0;
+  background: linear-gradient(to right, #f4fbff 0 36%, transparent 36% 64%, #f4fbff 64% 100%);
+}
+
+[data-video-note-container].is-missing .video-note-play-button {
+  display: none;
 }
 
 .conversation-message-card:hover {
@@ -2107,6 +2379,10 @@ code {
 .message.message--missing-only {
   width: min(430px, calc(100vw - 96px));
   max-width: 100%;
+}
+
+.message.message--missing-only {
+  width: min(360px, calc(100vw - 96px));
 }
 
 .message.message--audio-only {
@@ -2166,19 +2442,22 @@ code {
 }
 
 .message--sticker {
-  max-width: min(40ch, 72vw, 380px);
+  max-width: min(380px, 72vw);
 }
 
 .message--sticker.message--no-text {
-  max-width: min(240px, 72vw);
+  max-width: min(220px, 72vw);
 }
 
 .bubble--sticker,
 .message--outgoing .bubble--sticker {
   gap: 5px;
+  width: fit-content;
+  max-width: 100%;
+  justify-items: start;
   border-color: transparent;
   background: transparent;
-  padding: 2px 0 0;
+  padding: 0;
   box-shadow: none;
   transition:
     background-color var(--transition),
@@ -2189,6 +2468,10 @@ code {
 .message--outgoing .bubble--sticker:hover {
   border-color: transparent;
   background: transparent;
+}
+
+.message--outgoing.message--sticker .bubble--sticker {
+  justify-items: end;
 }
 
 .message--sticker .text {
@@ -2209,10 +2492,37 @@ code {
 
 .message--sticker .media {
   margin-top: 1px;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
+}
+
+.message--outgoing.message--sticker .media {
+  justify-self: end;
 }
 
 .message--sticker .media-sticker {
-  justify-items: inherit;
+  width: fit-content;
+  max-width: 100%;
+  justify-items: start;
+}
+
+.message--outgoing.message--sticker .media-sticker {
+  justify-items: end;
+}
+
+.message--sticker .sticker-preview-inline {
+  width: fit-content;
+  max-width: min(190px, calc(100vw - 96px));
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.message--sticker .sticker-preview-inline.sticker-preview-button,
+.message--sticker .sticker-preview-inline.sticker-preview-static {
+  min-width: min(112px, calc(100vw - 96px));
+  min-height: min(112px, calc(100vw - 96px));
 }
 
 .message--sticker .sticker-preview-button:hover {
@@ -2548,12 +2858,14 @@ code {
   display: block;
   width: fit-content;
   max-width: 100%;
+  border-radius: var(--radius-md);
+  background: #070c12;
 }
 
 .photo-preview-inline img {
   width: auto;
-  max-width: min(520px, 100%);
-  max-height: 420px;
+  max-width: min(500px, 100%);
+  max-height: min(460px, 72vh);
   border-radius: var(--radius-md);
   object-fit: contain;
 }
