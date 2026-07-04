@@ -38,6 +38,41 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.5 - deferred large chat media sources
+
+Changed:
+- deferred regular audio, voice and video `src` assignment in the frontend until the user interacts with the native media control
+- kept native browser controls, single-active playback and the existing visual layout unchanged
+- avoided binding `src/currentSrc` to all regular audio/video at initial large-chat render
+- restored native audio, voice and video duration display by allowing only near-viewport or interacted media to request metadata
+- removed the custom duration badge from chat native media controls so duration stays inside the browser control surface
+- replaced per-media lazy preload listeners with idempotent delegated listeners on the messages container
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.5
+- kept backend, parser, storage, media endpoints, search, file opening logic, photo lightbox and sticker autoplay previews unchanged
+
+Baseline:
+- source-run `run_windows.bat` on v2.9.4 returned `/api/status` version 2.9.4
+- large chat `катя`: 8742 rendered `.message` elements, 1101 `audio` elements and 235 `video` elements
+- 1294 regular audio/video elements had `preload="none"` and 42 sticker autoplay videos had `preload="metadata"`
+- all 1336 audio/video elements had `src/currentSrc` immediately after opening the chat
+- server logs showed many initial `/media` requests for image/video thumbnails and sticker preview videos; regular audio/video metadata loading was still wired through IntersectionObserver for later viewport entry
+
+Technical note:
+- root overhead: ordinary audio/video controls were rendered for the whole chat with sources attached immediately, and the lazy metadata observer could promote regular media to metadata loading while reading/scrolling
+- fix: keep the source URL in `data-media-src`, leave offscreen regular media at `preload="none"`, and request `metadata` only for near-viewport or interacted media
+- duration regression cause: native controls no longer knew duration at initial render because `src` and metadata loading were deferred
+- visual regression cause: the first duration fix rendered a separate custom badge from message data, which duplicated the native control surface
+- duration fix: the custom badge was removed; lazy metadata loading lets the browser show duration inside native controls after a near-viewport metadata request or user interaction
+- sticker preview videos still keep their source because they intentionally autoplay as lightweight previews
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `runtime\python\python.exe -m compileall -q app.py backend tools`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.5
+- open chat `катя` and confirm messages render, audio/video no longer show a separate duration badge over native controls, native controls can show duration after lazy metadata/play, audio/voice play and seek work, video starts, single-active playback pauses the previous regular media player, regular audio/video are not mass-bound to `src/currentSrc`, scrolling is not worse, photo lightbox works and unavailable media fallback still appears only for actually missing media
+
 ## 2.9.4 - unified message meta and missing media cards
 
 Changed:

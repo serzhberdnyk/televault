@@ -209,8 +209,7 @@ const text = {
   },
 };
 
-let audioMetadataObserver = null;
-let videoMetadataObserver = null;
+let deferredMediaSourceObserver = null;
 let activeRegularMediaElement = null;
 
 const unavailableFallbackTextPattern = /^\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?$/i;
@@ -1701,8 +1700,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
   const photoContext = 'vault-current';
   const searchActive = Boolean(options.searchActive);
   setPhotoContext(photoContext, messages);
-  resetAudioMetadataObserver();
-  resetVideoMetadataObserver();
+  resetDeferredMediaSourceObserver();
   box.className = 'messages';
   box.style.display = 'flex';
   box.innerHTML = '';
@@ -1762,8 +1760,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
   });
   box.innerHTML = html.join('');
   bindMediaErrorHandlers(box);
-  bindLazyAudioMetadata(box);
-  bindLazyVideoMetadata(box);
+  bindDeferredMediaSources(box);
   bindPhotoTriggers(box);
 }
 
@@ -1771,8 +1768,7 @@ function renderMediaMode(messages) {
   const box = $('messages');
   const photoContext = 'vault-current';
   state.lightboxPhotos = setPhotoContext(photoContext, messages);
-  resetAudioMetadataObserver();
-  resetVideoMetadataObserver();
+  resetDeferredMediaSourceObserver();
   box.className = `messages media-mode media-mode-${state.mediaMode}`;
   box.style.display = 'grid';
   box.innerHTML = '';
@@ -1802,8 +1798,7 @@ function renderMediaMode(messages) {
   });
   box.innerHTML = html.join('');
   bindMediaErrorHandlers(box);
-  bindLazyAudioMetadata(box);
-  bindLazyVideoMetadata(box);
+  bindDeferredMediaSources(box);
   bindPhotoTriggers(box);
 }
 
@@ -2015,7 +2010,7 @@ function renderVideoCard(msg) {
   return `
     ${renderCardMeta(msg)}
     <div class="media-preview media-preview-video" data-media-container>
-      <video controls preload="none"${poster} src="${escapeAttr(videoUrl)}" data-video-preload="lazy" data-media-element></video>
+      <video controls preload="none"${poster} data-media-src="${escapeAttr(videoUrl)}" data-media-element></video>
       ${renderMissingNotice('video', msg)}
     </div>
     ${renderMediaCaption(msg)}
@@ -2046,7 +2041,7 @@ function renderAudioPlayer(msg, options = {}) {
   return `
     <div class="audio-card-body" data-media-container>
       ${options.showLabel ? renderAudioLabel(msg) : ''}
-      <audio controls preload="none" src="${escapeAttr(msg.media_url)}" data-audio-preload="lazy" data-media-element></audio>
+      <audio controls preload="none" data-media-src="${escapeAttr(msg.media_url)}" data-media-element></audio>
       ${renderMissingNotice('audio', msg)}
     </div>
   `;
@@ -2124,7 +2119,7 @@ function renderInlineMedia(msg, photoContext = 'vault-current') {
   }
   if (isMediaMissing(msg)) return `<div class="media">${renderMediaFallback(mediaFallbackKind(msg), msg, { className: 'inline-media-fallback' })}</div>`;
   const videoUrl = getVideoSourceUrl(msg);
-  if (isVideo(msg) && videoUrl && canPlayVideo(msg)) return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} src="${escapeAttr(videoUrl)}" data-video-preload="lazy" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
+  if (isVideo(msg) && videoUrl && canPlayVideo(msg)) return `<div class="media" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} data-media-src="${escapeAttr(videoUrl)}" data-media-element></video>${renderMissingNotice('video', msg)}</div>`;
   if (isAudio(msg)) return `<div class="media media-audio">${renderAudioPlayer(msg)}</div>`;
   return `<div class="media">${renderFileCard(msg, '', { showMeta: false })}</div>`;
 }
@@ -2157,94 +2152,83 @@ function bindMediaErrorHandlers(root) {
   });
 }
 
-function resetAudioMetadataObserver() {
-  if (!audioMetadataObserver) return;
-  audioMetadataObserver.disconnect();
-  audioMetadataObserver = null;
+function resetDeferredMediaSourceObserver() {
+  if (!deferredMediaSourceObserver) return;
+  deferredMediaSourceObserver.disconnect();
+  deferredMediaSourceObserver = null;
 }
 
-function resetVideoMetadataObserver() {
-  if (!videoMetadataObserver) return;
-  videoMetadataObserver.disconnect();
-  videoMetadataObserver = null;
+function hydrateDeferredMediaSource(element) {
+  if (!isRegularPlayableMedia(element)) return false;
+  const source = element.dataset.mediaSrc || '';
+  if (!source || element.getAttribute('src')) return false;
+  element.setAttribute('src', source);
+  return true;
 }
 
-function bindLazyAudioMetadata(root) {
-  resetAudioMetadataObserver();
-  const audioElements = Array.from(root.querySelectorAll('audio[data-audio-preload="lazy"]'));
-  if (!audioElements.length) return;
-
-  const requestMetadata = (audio) => {
-    if (!audio || audio.dataset.audioMetadataLoaded === '1') return;
-    audio.dataset.audioMetadataLoaded = '1';
-    audio.preload = 'metadata';
-    if (audioMetadataObserver) audioMetadataObserver.unobserve(audio);
-    if (audio.readyState === 0 && audio.paused) {
-      try {
-        audio.load();
-      } catch {}
-    }
-  };
-
-  audioElements.forEach(audio => {
-    audio.addEventListener('pointerenter', () => requestMetadata(audio), { once: true });
-    audio.addEventListener('focus', () => requestMetadata(audio), { once: true });
-    audio.addEventListener('play', () => requestMetadata(audio), { once: true });
-  });
-
-  if (!('IntersectionObserver' in window)) return;
-
-  audioMetadataObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) requestMetadata(entry.target);
-    });
-  }, {
-    root: root.id === 'messages' ? root : null,
-    rootMargin: '220px 0px',
-    threshold: 0.01,
-  });
-
-  audioElements.forEach(audio => audioMetadataObserver.observe(audio));
-}
-
-function requestVideoMetadata(video) {
-  if (!video || video.dataset.videoMetadataLoaded === '1') return;
-  if (!isRegularPlayableMedia(video)) return;
-  video.dataset.videoMetadataLoaded = '1';
-  video.preload = 'metadata';
-  if (videoMetadataObserver) videoMetadataObserver.unobserve(video);
-  if (video.readyState === 0 && video.paused) {
+function requestMediaMetadata(element) {
+  if (!element || element.dataset.mediaMetadataLoaded === '1') return;
+  if (!isRegularPlayableMedia(element)) return;
+  if (!hydrateDeferredMediaSource(element) && !element.getAttribute('src')) return;
+  element.dataset.mediaMetadataLoaded = '1';
+  element.preload = 'metadata';
+  if (element.readyState === 0 && element.paused) {
     try {
-      video.load();
+      element.load();
     } catch {}
   }
 }
 
-function bindLazyVideoMetadata(root) {
-  resetVideoMetadataObserver();
-  const videoElements = Array.from(root.querySelectorAll('video[data-video-preload="lazy"]'))
-    .filter(isRegularPlayableMedia);
-  if (!videoElements.length) return;
+function deferredMediaElementFromEvent(event) {
+  const root = event.currentTarget instanceof Element ? event.currentTarget : null;
+  const target = event.target instanceof Element
+    ? event.target.closest('audio[data-media-src], video[data-media-src]')
+    : null;
+  return root && target && root.contains(target) ? target : null;
+}
 
-  videoElements.forEach(video => {
-    video.addEventListener('pointerenter', () => requestVideoMetadata(video), { once: true });
-    video.addEventListener('focus', () => requestVideoMetadata(video), { once: true });
-    video.addEventListener('play', () => requestVideoMetadata(video), { once: true });
-  });
+function hydrateDeferredMediaFromEvent(event) {
+  const element = deferredMediaElementFromEvent(event);
+  if (element) requestMediaMetadata(element);
+}
 
+function handleDeferredMediaKeydown(event) {
+  if (event.key !== ' ' && event.key !== 'Enter') return;
+  hydrateDeferredMediaFromEvent(event);
+}
+
+function observeDeferredMediaSources(root) {
   if (!('IntersectionObserver' in window)) return;
+  const mediaElements = Array.from(root.querySelectorAll('audio[data-media-src], video[data-media-src]'))
+    .filter(isRegularPlayableMedia);
+  if (!mediaElements.length) return;
 
-  videoMetadataObserver = new IntersectionObserver(entries => {
+  deferredMediaSourceObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) requestVideoMetadata(entry.target);
+      if (!entry.isIntersecting) return;
+      requestMediaMetadata(entry.target);
+      if (deferredMediaSourceObserver) deferredMediaSourceObserver.unobserve(entry.target);
     });
   }, {
     root: root.id === 'messages' ? root : null,
-    rootMargin: '220px 0px',
+    rootMargin: '180px 0px',
     threshold: 0.01,
   });
 
-  videoElements.forEach(video => videoMetadataObserver.observe(video));
+  mediaElements.forEach(element => deferredMediaSourceObserver.observe(element));
+}
+
+function bindDeferredMediaSources(root) {
+  if (!root) return;
+  if (root.dataset.deferredMediaSourcesBound !== '1') {
+    root.dataset.deferredMediaSourcesBound = '1';
+    root.addEventListener('pointerover', hydrateDeferredMediaFromEvent, true);
+    root.addEventListener('pointerdown', hydrateDeferredMediaFromEvent, true);
+    root.addEventListener('focusin', hydrateDeferredMediaFromEvent, true);
+    root.addEventListener('play', hydrateDeferredMediaFromEvent, true);
+    root.addEventListener('keydown', handleDeferredMediaKeydown, true);
+  }
+  observeDeferredMediaSources(root);
 }
 
 function isMediaElement(element) {
@@ -2278,7 +2262,7 @@ function pauseOtherRegularMedia(activeElement) {
 function handleRegularMediaPlay(event) {
   const element = event.target;
   if (!isRegularPlayableMedia(element)) return;
-  if (String(element.tagName || '').toLowerCase() === 'video') requestVideoMetadata(element);
+  requestMediaMetadata(element);
   pauseOtherRegularMedia(element);
 }
 

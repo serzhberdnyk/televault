@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.9.5
+
+### Improved
+
+* Large chats now defer regular audio, voice and video `src` assignment until user interaction while keeping native browser controls.
+* Regular audio/video metadata is now requested only for near-viewport or interacted media instead of every media element in a large chat.
+* Initial large-chat render keeps ordinary audio/video at `preload="none"` and avoids binding a source to every native media control upfront.
+
+### Fixed
+
+* Restored native audio, voice and video duration display without a separate custom duration badge over native media controls.
+
+### Changed
+
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.5.
+* Backend, parser, storage, media endpoint, search behavior, sticker autoplay previews and the visual layout are unchanged.
+
 ## 2.9.4
 
 ### Improved
