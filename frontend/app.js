@@ -160,24 +160,24 @@ const text = {
   mediaFilterNothingFoundBody: 'в этой переписке нет таких вложений',
   noChatMessages: 'переписка пуста',
   noChatMessagesBody: 'в архиве для этой переписки пока нет сообщений',
-  savedVaultMissing: 'папка экспорта больше недоступна',
-  savedVaultMissingBody: 'выберите папку заново',
-  savedVaultMissingDetail: 'Последний выбранный экспорт удален, переименован или сейчас недоступен.',
+  savedVaultMissing: 'папка экспорта недоступна',
+  savedVaultMissingBody: 'TeleVault помнит этот архив, но сейчас не может открыть его папку.',
+  savedVaultMissingDetail: 'Возможно, папку перенесли или диск отключён.',
   forgetUnavailableExport: 'удалить недоступный экспорт из библиотеки',
   forgettingUnavailableExport: 'удаляем...',
   forgotUnavailableExport: 'недоступный экспорт удален из библиотеки',
   storageReady: 'архив открыт',
   storageLoading: 'открываем локальный архив...',
-  storageNotSelected: 'архив не выбран',
-  storageNotSelectedBody: 'Сохрани важные Telegram-переписки локально: добавь папку экспорта, и TeleVault откроет их оффлайн.',
+  storageNotSelected: 'библиотека пуста',
+  storageNotSelectedBody: 'добавьте экспорт Telegram, чтобы хранить переписки локально и открывать их оффлайн.',
   storageNoChatsBody: 'В этой папке не нашлось переписок из Telegram. Выбери папку экспорта или общую папку с экспортами.',
   storageLoadFailed: 'не удалось открыть архив',
   storageLoadFailedBody: 'Проверь, что выбрана папка экспорта Telegram.',
   storageTryAnotherFolder: 'Попробуй выбрать другую папку экспорта.',
   storagePartialErrors: 'часть переписок не загрузилась',
   storageFolderFallback: 'папка архива',
-  chooseConversationTitle: 'Выбери переписку слева',
-  chooseConversationBody: 'Архив открыт. Открой переписку, чтобы читать сообщения и смотреть медиа.',
+  chooseConversationTitle: 'выберите переписку',
+  chooseConversationBody: 'откройте чат из списка слева, чтобы начать читать архив.',
   mediaLabels: {
     all: 'все',
     photo: 'фото',
@@ -1013,12 +1013,11 @@ function renderVaultWelcome(options = {}) {
     action.hidden = false;
     note.hidden = false;
   } else {
-    title.textContent = 'Локальный архив Telegram-переписок';
-    lead.textContent = 'Сохрани важные переписки на этом компьютере и открывай их оффлайн.';
-    body.textContent = 'Добавь папку экспорта Telegram: TeleVault соберёт переписки, медиа и файлы в один локальный архив.';
-    note.textContent = 'Данные не отправляются наружу; всё работает с выбранной папкой на диске.';
-    body.hidden = false;
+    title.textContent = 'ваша библиотека пока пуста';
+    lead.textContent = text.storageNotSelectedBody;
+    body.hidden = true;
     action.hidden = false;
+    note.textContent = 'данные остаются на этом компьютере.';
     note.hidden = false;
   }
   $('emptyState').style.display = 'grid';
