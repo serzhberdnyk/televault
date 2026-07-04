@@ -47,8 +47,15 @@ Changed:
 - refreshed missing/unavailable media cards with a lighter compact style, softer icon treatment and the local-archive text `файл отсутствует в этом архиве`
 - fixed TeleVault.exe relaunch after closing the app window by ignoring unrelated browser windows whose title only contains TeleVault as part of other text
 - added a portable instance identity to `/api/status` so TeleVault.exe can refuse a running TeleVault backend from another folder instead of silently focusing that old window
+- fixed an audio/voice playback regression in large chats by keeping the previous active regular media element instead of scanning all audio/video controls on every play
 - updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.4
-- kept backend, parser, storage, media endpoints, search, file opening logic, service notices, sticker behavior and media playback logic unchanged
+- kept backend, parser, storage, media endpoints, search, file opening logic, service notices and sticker behavior unchanged
+
+Technical note:
+- the problem reproduced in a large chat with roughly 1100 audio controls and 8700+ messages
+- root cause: single-active playback ran a full `document.querySelectorAll('video, audio')` on every play
+- fix: keep the previous active media element and only pause/reset it when another regular audio/video starts
+- manual package check confirmed audio/voice playback is normal again
 
 Manual test:
 - run `python -m py_compile app.py backend\parser.py backend\library.py`
@@ -58,7 +65,8 @@ Manual test:
 - launch old portable TeleVault 2.9.4, then launch a freshly built TeleVault 2.9.4 portable folder and confirm the new copy shows a clear other-folder message instead of focusing the old window
 - confirm text message sender/time, audio/voice sender/time and missing media/file card sender/time follow the same visual system
 - confirm missing audio/file cards use the compact unavailable style and do not use network-style retry wording
-- confirm audio playback, text messages, photos, videos, stickers and service notices still behave normally
+- confirm audio/voice playback is smooth in a large chat, seek/play respond normally and single active playback still pauses the previous regular media player
+- confirm text messages, photos, videos, stickers and service notices still behave normally
 - run `git diff --check`
 
 ## 2.9.3 - Windows 7 legacy runtime package

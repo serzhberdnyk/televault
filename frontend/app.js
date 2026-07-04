@@ -211,6 +211,7 @@ const text = {
 
 let audioMetadataObserver = null;
 let videoMetadataObserver = null;
+let activeRegularMediaElement = null;
 
 const unavailableFallbackTextPattern = /^\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?$/i;
 const unavailableFallbackTextPatternGlobal = /\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?/gi;
@@ -2264,14 +2265,14 @@ function isRegularPlayableMedia(element) {
 }
 
 function pauseOtherRegularMedia(activeElement) {
-  document.querySelectorAll('video, audio').forEach(element => {
-    if (element === activeElement) return;
-    if (!isRegularPlayableMedia(element)) return;
-    if (element.paused) return;
-    try {
-      element.pause();
-    } catch {}
-  });
+  const previousElement = activeRegularMediaElement;
+  activeRegularMediaElement = activeElement;
+  if (!previousElement || previousElement === activeElement) return;
+  if (!isRegularPlayableMedia(previousElement)) return;
+  if (previousElement.paused) return;
+  try {
+    previousElement.pause();
+  } catch {}
 }
 
 function handleRegularMediaPlay(event) {

@@ -6,12 +6,14 @@
 
 * Unified sender/time metadata styling across text, audio, file and missing media message blocks.
 * Refreshed unavailable media cards with a lighter compact style and local-archive wording.
-* Audio playback, media classification, parser, backend storage and search behavior are unchanged.
+* Media classification, parser, backend storage and search behavior are unchanged.
 
 ### Fixed
 
 * TeleVault.exe relaunches normally after the app window is closed, even when another browser tab title contains TeleVault.
 * TeleVault.exe no longer silently focuses a TeleVault window from another portable folder when that other copy is already running.
+* Audio/voice playback is smoother in large chats.
+* Single-active playback no longer scans every audio/video element on each play.
 
 ## 2.9.3
 

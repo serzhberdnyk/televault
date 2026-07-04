@@ -2109,6 +2109,10 @@ code {
   max-width: 100%;
 }
 
+.message.message--audio-only {
+  contain: layout paint;
+}
+
 .bubble--audio-only,
 .bubble--missing-only,
 .message--outgoing .bubble--audio-only,
@@ -2149,6 +2153,7 @@ code {
   border: 0;
   background: transparent;
   box-shadow: none;
+  contain: layout paint;
 }
 
 .message--audio-only .audio-card-body audio {
