@@ -26,6 +26,7 @@ PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"
 LIBRARY = ExportLibrary()
+MEDIA_CHUNK_SIZE = 1024 * 1024
 
 
 def stable_app_root_id(root: Path) -> str:
@@ -213,6 +214,21 @@ def send_empty_range_error(handler: BaseHTTPRequestHandler, file_size: int, cont
     handler.end_headers()
 
 
+def stream_file_response(handler: BaseHTTPRequestHandler, file_path: Path, start: int, length: int) -> None:
+    remaining = length
+    with file_path.open("rb") as f:
+        f.seek(start)
+        while remaining > 0:
+            chunk = f.read(min(MEDIA_CHUNK_SIZE, remaining))
+            if not chunk:
+                break
+            try:
+                handler.wfile.write(chunk)
+            except (BrokenPipeError, ConnectionError):
+                break
+            remaining -= len(chunk)
+
+
 def send_media_file(handler: BaseHTTPRequestHandler, file_path: Path) -> None:
     content_type, _ = mimetypes.guess_type(str(file_path))
     content_type = content_type or "application/octet-stream"
@@ -227,26 +243,21 @@ def send_media_file(handler: BaseHTTPRequestHandler, file_path: Path) -> None:
             return
 
         length = end - start + 1
-        with file_path.open("rb") as f:
-            f.seek(start)
-            data = f.read(length)
-
         handler.send_response(206)
         handler.send_header("Content-Type", content_type)
         handler.send_header("Accept-Ranges", "bytes")
         handler.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
-        handler.send_header("Content-Length", str(len(data)))
+        handler.send_header("Content-Length", str(length))
         handler.end_headers()
-        handler.wfile.write(data)
+        stream_file_response(handler, file_path, start, length)
         return
 
-    data = file_path.read_bytes()
     handler.send_response(200)
     handler.send_header("Content-Type", content_type)
     handler.send_header("Accept-Ranges", "bytes")
-    handler.send_header("Content-Length", str(len(data)))
+    handler.send_header("Content-Length", str(file_size))
     handler.end_headers()
-    handler.wfile.write(data)
+    stream_file_response(handler, file_path, 0, file_size)
 
 
 class MediaForbiddenError(Exception):
