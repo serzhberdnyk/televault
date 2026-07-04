@@ -408,7 +408,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/":
             path = "/index.html"
         file_path = (FRONTEND / path.lstrip("/")).resolve()
-        if not str(file_path).startswith(str(FRONTEND)) or not file_path.exists():
+        try:
+            file_path.relative_to(FRONTEND)
+        except ValueError:
+            self.send_error(404)
+            return
+        if not file_path.exists():
             self.send_error(404)
             return
         mt, _ = mimetypes.guess_type(str(file_path))
