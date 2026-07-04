@@ -46,6 +46,7 @@ Changed:
 - removed duplicate inline file-card sender/time because the parent message already owns the shared meta row
 - refreshed missing/unavailable media cards with a lighter compact style, softer icon treatment and the local-archive text `файл отсутствует в этом архиве`
 - fixed TeleVault.exe relaunch after closing the app window by ignoring unrelated browser windows whose title only contains TeleVault as part of other text
+- added a portable instance identity to `/api/status` so TeleVault.exe can refuse a running TeleVault backend from another folder instead of silently focusing that old window
 - updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.4
 - kept backend, parser, storage, media endpoints, search, file opening logic, service notices, sticker behavior and media playback logic unchanged
 
@@ -54,6 +55,7 @@ Manual test:
 - run `node --check frontend/app.js`
 - launch with `run_windows.bat` and confirm `/api/status` returns 2.9.4
 - launch `TeleVault.exe`, close the app window, then launch it again at least 3 times and confirm each relaunch opens TeleVault
+- launch old portable TeleVault 2.9.4, then launch a freshly built TeleVault 2.9.4 portable folder and confirm the new copy shows a clear other-folder message instead of focusing the old window
 - confirm text message sender/time, audio/voice sender/time and missing media/file card sender/time follow the same visual system
 - confirm missing audio/file cards use the compact unavailable style and do not use network-style retry wording
 - confirm audio playback, text messages, photos, videos, stickers and service notices still behave normally

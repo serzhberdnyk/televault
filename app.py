@@ -28,6 +28,22 @@ FRONTEND = ROOT / "frontend"
 LIBRARY = ExportLibrary()
 
 
+def stable_app_root_id(root: Path) -> str:
+    value = root.as_posix()
+    while len(value) > 3 and value.endswith("/"):
+        value = value[:-1]
+    data = value.lower().encode("utf-8")
+
+    hash_value = 14695981039346656037
+    for byte in data:
+        hash_value ^= byte
+        hash_value = (hash_value * 1099511628211) & 0xFFFFFFFFFFFFFFFF
+    return f"{hash_value:016x}"
+
+
+APP_ROOT_ID = stable_app_root_id(ROOT)
+
+
 def frontend_asset_url(name: str) -> str:
     path = FRONTEND / name
     try:
@@ -348,7 +364,7 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
 
         if path == "/api/status":
-            json_response(self, {"name": APP_NAME, "version": APP_VERSION, "ready": True})
+            json_response(self, {"name": APP_NAME, "version": APP_VERSION, "ready": True, "app_root_id": APP_ROOT_ID})
             return
 
         if path == "/api/startup-vault":

@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cwchar>
 #include <cwctype>
@@ -61,11 +62,13 @@ std::wstring g_windowStatePath;
 struct StatusInfo {
     std::wstring name;
     std::wstring version;
+    std::wstring appRootId;
 };
 
 enum class ExistingInstanceState {
     NotRunning,
     CurrentVersionTeleVaultRunning,
+    OtherFolderTeleVaultRunning,
     DifferentVersionTeleVaultRunning,
     PortOccupiedByOther,
 };
@@ -74,6 +77,7 @@ struct ExistingInstanceResult {
     ExistingInstanceState state = ExistingInstanceState::NotRunning;
     std::wstring name;
     std::wstring version;
+    std::wstring appRootId;
 };
 
 struct HttpStatusResponse {
@@ -390,6 +394,27 @@ std::wstring QuoteArgument(const std::wstring& value) {
     return result;
 }
 
+std::wstring NormalizeAppRootIdentity(std::wstring value) {
+    std::replace(value.begin(), value.end(), L'\\', L'/');
+    while (value.size() > 3 && value.back() == L'/') {
+        value.pop_back();
+    }
+    return WideToLower(value);
+}
+
+std::wstring BuildAppRootId(const std::wstring& appRoot) {
+    const std::string data = WideToUtf8(NormalizeAppRootIdentity(appRoot));
+    std::uint64_t hash = 14695981039346656037ull;
+    for (unsigned char byte : data) {
+        hash ^= byte;
+        hash *= 1099511628211ull;
+    }
+
+    wchar_t buffer[17]{};
+    swprintf_s(buffer, L"%016llx", static_cast<unsigned long long>(hash));
+    return std::wstring(buffer);
+}
+
 bool ReadFileUtf8(const std::wstring& path, std::string* body) {
     body->clear();
     HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -530,6 +555,7 @@ StatusInfo ParseStatusBody(const std::string& body) {
     StatusInfo status;
     status.name = Utf8ToWide(ExtractJsonStringField(body, "name"));
     status.version = Utf8ToWide(ExtractJsonStringField(body, "version"));
+    status.appRootId = Utf8ToWide(ExtractJsonStringField(body, "app_root_id"));
     return status;
 }
 
@@ -537,10 +563,11 @@ bool IsTeleVaultStatus(const StatusInfo& status) {
     return EqualsNoCase(status.name, kAppName);
 }
 
-bool IsTeleVaultReadyStatusBody(const std::string& body) {
+bool IsTeleVaultReadyStatusBody(const std::string& body, const std::wstring& expectedAppRootId) {
     const StatusInfo status = ParseStatusBody(body);
     return IsTeleVaultStatus(status)
         && EqualsNoCase(status.version, kAppVersion)
+        && EqualsNoCase(status.appRootId, expectedAppRootId)
         && ExtractJsonBoolField(body, "ready", false);
 }
 
@@ -681,36 +708,42 @@ bool IsLocalPortOccupied() {
     return occupied;
 }
 
-ExistingInstanceResult CheckExistingInstance() {
+ExistingInstanceResult CheckExistingInstance(const std::wstring& expectedAppRootId) {
     Log(L"checking existing instance: http://127.0.0.1:8766/api/status");
 
     const HttpStatusResponse response = FetchStatus(1000);
     if (response.ok) {
         if (response.httpStatus == 200) {
             const StatusInfo status = ParseStatusBody(response.body);
-            Log(L"existing instance check: status name=" + SafeLogValue(status.name) + L", version=" + SafeLogValue(status.version));
+            Log(L"existing instance check: status name=" + SafeLogValue(status.name)
+                + L", version=" + SafeLogValue(status.version)
+                + L", app_root_id=" + SafeLogValue(status.appRootId));
             if (IsTeleVaultStatus(status)) {
                 if (EqualsNoCase(status.version, kAppVersion)) {
-                    Log(L"existing TeleVault detected with current version");
-                    return {ExistingInstanceState::CurrentVersionTeleVaultRunning, status.name, status.version};
+                    if (!status.appRootId.empty() && EqualsNoCase(status.appRootId, expectedAppRootId)) {
+                        Log(L"existing TeleVault detected with current version and current app root");
+                        return {ExistingInstanceState::CurrentVersionTeleVaultRunning, status.name, status.version, status.appRootId};
+                    }
+                    Log(L"existing TeleVault current version belongs to another folder or lacks app_root_id");
+                    return {ExistingInstanceState::OtherFolderTeleVaultRunning, status.name, status.version, status.appRootId};
                 }
                 Log(L"existing TeleVault detected with different version");
-                return {ExistingInstanceState::DifferentVersionTeleVaultRunning, status.name, status.version};
+                return {ExistingInstanceState::DifferentVersionTeleVaultRunning, status.name, status.version, status.appRootId};
             }
         }
 
         Log(L"existing instance check: port occupied by non-TeleVault status endpoint, HTTP " + std::to_wstring(response.httpStatus));
-        return {ExistingInstanceState::PortOccupiedByOther, L"", L""};
+        return {ExistingInstanceState::PortOccupiedByOther, L"", L"", L""};
     }
 
     Log(L"existing instance check: status endpoint not available, error=" + std::to_wstring(response.error));
     if (IsLocalPortOccupied()) {
         Log(L"existing instance check: port occupied by another program");
-        return {ExistingInstanceState::PortOccupiedByOther, L"", L""};
+        return {ExistingInstanceState::PortOccupiedByOther, L"", L"", L""};
     }
 
     Log(L"existing instance check: no TeleVault detected");
-    return {ExistingInstanceState::NotRunning, L"", L""};
+    return {ExistingInstanceState::NotRunning, L"", L"", L""};
 }
 
 std::wstring GetInvalidWindowStateReason(const LauncherWindowState& state) {
@@ -1148,12 +1181,12 @@ void OpenBrowserWindow(const std::wstring& url, const LauncherWindowState* windo
     ShowInfo(L"TeleVault opened in your default browser because Microsoft Edge or Google Chrome app mode was not found.");
 }
 
-bool IsServerReady() {
+bool IsServerReady(const std::wstring& expectedAppRootId) {
     const HttpStatusResponse response = FetchStatus(1000);
-    return response.ok && response.httpStatus == 200 && IsTeleVaultReadyStatusBody(response.body);
+    return response.ok && response.httpStatus == 200 && IsTeleVaultReadyStatusBody(response.body, expectedAppRootId);
 }
 
-bool WaitForServerReady(HANDLE processHandle) {
+bool WaitForServerReady(HANDLE processHandle, const std::wstring& expectedAppRootId) {
     const ULONGLONG deadline = GetTickCount64() + kServerStartupTimeoutMs;
     while (GetTickCount64() < deadline) {
         const DWORD waitResult = WaitForSingleObject(processHandle, 0);
@@ -1164,7 +1197,7 @@ bool WaitForServerReady(HANDLE processHandle) {
             return false;
         }
 
-        if (IsServerReady()) {
+        if (IsServerReady(expectedAppRootId)) {
             Log(L"server ready: status endpoint confirmed");
             return true;
         }
@@ -1375,6 +1408,13 @@ std::wstring BuildVersionMismatchMessage(const std::wstring& version) {
         + LogLocationText();
 }
 
+std::wstring BuildOtherFolderInstanceMessage() {
+    return L"\u0443\u0436\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d TeleVault \u0438\u0437 \u0434\u0440\u0443\u0433\u043e\u0439 \u043f\u0430\u043f\u043a\u0438. "
+        L"\u0437\u0430\u043a\u0440\u043e\u0439\u0442\u0435 \u0435\u0433\u043e \u0438 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u044d\u0442\u0443 \u0432\u0435\u0440\u0441\u0438\u044e \u0441\u043d\u043e\u0432\u0430."
+        L"\n\n"
+        + LogLocationText();
+}
+
 std::wstring BuildPythonStartFailedMessage() {
     return L"TeleVault could not start its bundled Python runtime."
         L"\n\nExtract the TeleVault zip again and start TeleVault.exe from the extracted TeleVault folder."
@@ -1443,6 +1483,8 @@ int RunLauncher() {
     Log(L"launcher version: " + std::wstring(kAppVersion));
     Log(L"detected architecture: " + GetArchitectureText());
     Log(L"app root: " + appRoot);
+    const std::wstring currentAppRootId = BuildAppRootId(appRoot);
+    Log(L"app root id: " + currentAppRootId);
 
     if (!SetCurrentDirectoryW(appRoot.c_str())) {
         Log(L"SetCurrentDirectoryW failed: " + FormatLastError(GetLastError()));
@@ -1450,7 +1492,7 @@ int RunLauncher() {
         return 1;
     }
 
-    const ExistingInstanceResult existingInstance = CheckExistingInstance();
+    const ExistingInstanceResult existingInstance = CheckExistingInstance(currentAppRootId);
     if (existingInstance.state == ExistingInstanceState::CurrentVersionTeleVaultRunning) {
         Log(L"existing instance check: current TeleVault version already running");
         if (TryFocusExistingWindow()) {
@@ -1464,6 +1506,12 @@ int RunLauncher() {
         OpenBrowserWindow(kAppUrl, hasWindowState ? &windowState : nullptr);
         Log(L"launcher finished: existing backend reused");
         return 0;
+    }
+
+    if (existingInstance.state == ExistingInstanceState::OtherFolderTeleVaultRunning) {
+        Log(L"launcher stopped because TeleVault is already running from another folder");
+        ShowError(BuildOtherFolderInstanceMessage());
+        return 1;
     }
 
     if (existingInstance.state == ExistingInstanceState::DifferentVersionTeleVaultRunning) {
@@ -1508,7 +1556,7 @@ int RunLauncher() {
         return 1;
     }
 
-    if (!WaitForServerReady(process.hProcess)) {
+    if (!WaitForServerReady(process.hProcess, currentAppRootId)) {
         StopStartedProcess(process.hProcess);
         CloseHandle(process.hProcess);
         ShowError(BuildServerTimeoutMessage());

@@ -11,6 +11,7 @@
 ### Fixed
 
 * TeleVault.exe relaunches normally after the app window is closed, even when another browser tab title contains TeleVault.
+* TeleVault.exe no longer silently focuses a TeleVault window from another portable folder when that other copy is already running.
 
 ## 2.9.3
 
