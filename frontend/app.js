@@ -1,4 +1,8 @@
 const DEFAULT_CHAT_SORT_MODE = 'newest';
+const INLINE_PHOTO_MAX_WIDTH = 500;
+const INLINE_PHOTO_MAX_HEIGHT = 460;
+const INLINE_VIDEO_MAX_WIDTH = 520;
+const INLINE_VIDEO_MAX_HEIGHT = 520;
 
 const state = {
   chats: [],
@@ -1574,6 +1578,28 @@ function isAudio(msg) {
   return kind === 'audio' || mime.startsWith('audio/') || mediaType.includes('audio') || mediaType.includes('voice');
 }
 
+function positiveDimension(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function inlineMediaPreviewWidth(msg) {
+  if (!msg || isMediaMissing(msg) || isAudio(msg) || isSticker(msg) || isVideoNote(msg)) return 0;
+  const width = positiveDimension(msg.width);
+  const height = positiveDimension(msg.height);
+  if (!width || !height) return 0;
+  const ratio = width / height;
+  if (isPhoto(msg) && getPhotoPreviewUrl(msg)) {
+    const photoWidth = Math.min(width, INLINE_PHOTO_MAX_WIDTH, INLINE_PHOTO_MAX_HEIGHT * ratio);
+    return Math.round(photoWidth + 2);
+  }
+  if (isVideo(msg) && getVideoSourceUrl(msg) && canPlayVideo(msg)) {
+    const videoWidth = Math.min(width, INLINE_VIDEO_MAX_WIDTH, INLINE_VIDEO_MAX_HEIGHT * ratio);
+    return Math.round(Math.max(300, videoWidth));
+  }
+  return 0;
+}
+
 function hasMessageText(msg) {
   return messageVisibleText(msg).trim().length > 0;
 }
@@ -1782,6 +1808,9 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
     const audioOnlyMessage = isAudioOnlyMessage(msg);
     const missingOnlyMessage = !stickerMessage && isMediaMissing(msg) && hasMedia(msg) && !messageHasText;
     const playableVideoNote = isPlayableVideoNote(msg);
+    const mediaPreviewWidth = messageHasText && hasMedia(msg) && !stickerMessage && !audioOnlyMessage && !missingOnlyMessage && !playableVideoNote
+      ? inlineMediaPreviewWidth(msg)
+      : 0;
     const direction = getMessageDirection(msg, directionContext);
     const messageClasses = [
       'message',
@@ -1800,11 +1829,13 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       stickerMessage ? 'bubble--sticker' : '',
       audioOnlyMessage ? 'bubble--audio-only' : '',
       missingOnlyMessage ? 'bubble--missing-only' : '',
+      mediaPreviewWidth ? 'bubble--media-preview-sized' : '',
     ].filter(Boolean).join(' ');
+    const bubbleStyle = mediaPreviewWidth ? ` style="--media-preview-width: ${mediaPreviewWidth}px"` : '';
     html.push(`
       <article class="${messageClasses}"${messageArticleAttributes(msg, { searchActive })}>
         ${renderMessageMeta(msg)}
-      <div class="${bubbleClasses}">
+      <div class="${bubbleClasses}"${bubbleStyle}>
         ${renderForwardedMeta(msg)}
         ${messageHasText ? `<div class="text">${escapeHtml(messageText)}</div>` : ''}
         ${renderInlineMedia(msg, photoContext)}

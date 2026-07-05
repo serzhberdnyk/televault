@@ -2226,13 +2226,20 @@ code {
 
 .message--media:not(.message--audio-only):not(.message--sticker).message--text .conversation-message-card {
   gap: 6px;
+  justify-items: start;
   padding: 8px;
 }
 
+.message--media:not(.message--audio-only):not(.message--sticker).message--text .conversation-message-card.bubble--media-preview-sized {
+  width: min(calc(var(--media-preview-width) + 18px), 100%);
+}
+
 .message--media:not(.message--audio-only):not(.message--sticker).message--text .text {
+  width: 100%;
   min-width: 0;
-  max-width: min(48ch, 100%);
+  max-width: 100%;
   padding: 1px 3px 2px;
+  box-sizing: border-box;
 }
 
 .message--media:not(.message--audio-only):not(.message--sticker).message--text .media {
