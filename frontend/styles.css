@@ -2256,8 +2256,23 @@ code {
   justify-self: start;
 }
 
+.message--media:not(.message--audio-only):not(.message--sticker):not(.message--video-note):not(.message--missing-only).message--text .conversation-message-card.bubble--media-preview-sized > .media:not(.media--video-note) {
+  width: min(var(--media-preview-width), 100%);
+}
+
 .message--outgoing.message--media:not(.message--audio-only):not(.message--sticker).message--text .media {
   justify-self: end;
+}
+
+.message--media:not(.message--audio-only):not(.message--sticker):not(.message--video-note):not(.message--missing-only).message--text .conversation-message-card.bubble--media-preview-sized > .media:not(.media--video-note) > .photo-preview-inline,
+.message--media:not(.message--audio-only):not(.message--sticker):not(.message--video-note):not(.message--missing-only).message--text .conversation-message-card.bubble--media-preview-sized > .media:not(.media--video-note) > video:not(.video-note) {
+  width: 100%;
+  max-width: 100%;
+}
+
+.message--media:not(.message--audio-only):not(.message--sticker):not(.message--video-note):not(.message--missing-only).message--text .conversation-message-card.bubble--media-preview-sized > .media:not(.media--video-note) > .photo-preview-inline img {
+  width: 100%;
+  height: auto;
 }
 
 .message--media:not(.message--audio-only):not(.message--sticker) .photo-preview-inline,
