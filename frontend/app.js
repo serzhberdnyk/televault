@@ -1084,7 +1084,8 @@ function findMessageElementById(messageId) {
   const id = String(messageId || '');
   const box = $('messages');
   if (!id || !box) return null;
-  return Array.from(box.querySelectorAll('[data-message-id]')).find(element => element.dataset.messageId === id) || null;
+  const element = Array.from(box.querySelectorAll('[data-message-id]')).find(item => item.dataset.messageId === id);
+  return element?.closest('.message') || element || null;
 }
 
 function jumpToMessage(messageId) {
@@ -1485,6 +1486,9 @@ function hasMedia(msg) {
   return !isServiceMessage(msg) && Boolean(msg.media || msg.media_url);
 }
 
+const PROBABLE_MEDIA_ALBUM_MIN_SIZE = 2;
+const PROBABLE_MEDIA_ALBUM_MAX_SIZE = 10;
+
 function mediaExtension(msg) {
   const name = mediaName(msg).toLowerCase();
   const dot = name.lastIndexOf('.');
@@ -1606,6 +1610,81 @@ function hasMessageText(msg) {
 
 function isAudioOnlyMessage(msg) {
   return isAudio(msg) && hasMedia(msg) && !hasMessageText(msg);
+}
+
+function usesMediaFirstCaptionLayout(msg) {
+  if (!hasMedia(msg) || !hasMessageText(msg) || isMediaMissing(msg) || isSticker(msg) || isAudio(msg) || isVideoNote(msg)) return false;
+  if (isPhoto(msg)) return Boolean(getPhotoPreviewUrl(msg));
+  if (isVideo(msg)) return Boolean(getVideoSourceUrl(msg)) && canPlayVideo(msg);
+  return false;
+}
+
+function probableAlbumTimestampKey(msg) {
+  return [
+    msg?.date_unixtime ? `unix:${String(msg.date_unixtime).trim()}` : '',
+    msg?.timestamp ? `timestamp:${String(msg.timestamp).trim()}` : '',
+    msg?.date ? `date:${String(msg.date).trim()}` : '',
+  ].filter(Boolean).join('|');
+}
+
+function isProbableAlbumMediaMessage(msg) {
+  if (!hasMedia(msg) || isServiceMessage(msg) || isSticker(msg) || isAudio(msg) || isVideoNote(msg) || isMediaMissing(msg)) return false;
+  if (isPhoto(msg)) return Boolean(getPhotoPreviewUrl(msg));
+  if (isVideo(msg)) return Boolean(getVideoSourceUrl(msg)) && canPlayVideo(msg);
+  return false;
+}
+
+function probableAlbumSignature(msg) {
+  if (!isProbableAlbumMediaMessage(msg)) return null;
+  const sender = senderKey(messageSender(msg));
+  const timestamp = probableAlbumTimestampKey(msg);
+  if (!sender || !timestamp) return null;
+  return {
+    sender,
+    timestamp,
+    forwarded: senderKey(forwardedSource(msg)),
+  };
+}
+
+function matchesProbableAlbumSignature(msg, signature) {
+  const current = probableAlbumSignature(msg);
+  return Boolean(current
+    && current.sender === signature.sender
+    && current.timestamp === signature.timestamp
+    && current.forwarded === signature.forwarded);
+}
+
+function detectProbableMediaAlbum(messages, startIndex) {
+  const first = messages[startIndex];
+  const signature = probableAlbumSignature(first);
+  if (!signature) return null;
+  if (startIndex > 0 && matchesProbableAlbumSignature(messages[startIndex - 1], signature)) return null;
+
+  const album = [first];
+  for (let index = startIndex + 1; index < messages.length; index += 1) {
+    const candidate = messages[index];
+    if (!matchesProbableAlbumSignature(candidate, signature)) break;
+    if (hasMessageText(candidate)) return null;
+    if (album.length >= PROBABLE_MEDIA_ALBUM_MAX_SIZE) return null;
+    album.push(candidate);
+  }
+
+  return album.length >= PROBABLE_MEDIA_ALBUM_MIN_SIZE ? album : null;
+}
+
+function groupProbableMediaAlbums(messages) {
+  const items = [];
+  for (let index = 0; index < messages.length;) {
+    const album = detectProbableMediaAlbum(messages, index);
+    if (album) {
+      items.push({ type: 'album', messages: album });
+      index += album.length;
+      continue;
+    }
+    items.push({ type: 'message', message: messages[index] });
+    index += 1;
+  }
+  return items;
 }
 
 function messageVisibleText(msg) {
@@ -1788,11 +1867,16 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
   const directionContext = createMessageDirectionContext(chat, senders);
   const html = [];
   let previousDayKey = '';
-  messages.forEach(msg => {
+  groupProbableMediaAlbums(messages).forEach(item => {
+    const msg = item.type === 'album' ? item.messages[0] : item.message;
     const dayKey = messageDayKey(msg);
     if (dayKey !== previousDayKey) {
       html.push(renderDateSeparator(dayKey));
       previousDayKey = dayKey;
+    }
+    if (item.type === 'album') {
+      html.push(renderProbableMediaAlbum(item.messages, directionContext, photoContext, { searchActive }));
+      return;
     }
     if (isPinnedServiceMessage(msg)) {
       html.push(renderPinnedServiceMessage(msg, { searchActive }));
@@ -1808,6 +1892,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
     const audioOnlyMessage = isAudioOnlyMessage(msg);
     const missingOnlyMessage = !stickerMessage && isMediaMissing(msg) && hasMedia(msg) && !messageHasText;
     const playableVideoNote = isPlayableVideoNote(msg);
+    const mediaFirstCaptionLayout = usesMediaFirstCaptionLayout(msg);
     const mediaPreviewWidth = messageHasText && hasMedia(msg) && !stickerMessage && !audioOnlyMessage && !missingOnlyMessage && !playableVideoNote
       ? inlineMediaPreviewWidth(msg)
       : 0;
@@ -1832,13 +1917,15 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       mediaPreviewWidth ? 'bubble--media-preview-sized' : '',
     ].filter(Boolean).join(' ');
     const bubbleStyle = mediaPreviewWidth ? ` style="--media-preview-width: ${mediaPreviewWidth}px"` : '';
+    const inlineMedia = renderInlineMedia(msg, photoContext);
     html.push(`
       <article class="${messageClasses}"${messageArticleAttributes(msg, { searchActive })}>
         ${renderMessageMeta(msg)}
       <div class="${bubbleClasses}"${bubbleStyle}>
         ${renderForwardedMeta(msg)}
+        ${mediaFirstCaptionLayout ? inlineMedia : ''}
         ${messageHasText ? `<div class="text">${escapeHtml(messageText)}</div>` : ''}
-        ${renderInlineMedia(msg, photoContext)}
+        ${mediaFirstCaptionLayout ? '' : inlineMedia}
       </div>
       </article>
     `);
@@ -2216,6 +2303,69 @@ function renderForwardedMeta(msg) {
 
 function renderCardMeta(msg) {
   return `${renderMessageMeta(msg)}${renderForwardedMeta(msg)}`;
+}
+
+function albumGridClass(size) {
+  if (size === 2) return 'media-album--two media-album-grid--count-2';
+  if (size === 3) return 'media-album--compact media-album-grid--count-3';
+  if (size === 4) return 'media-album--compact media-album-grid--count-4';
+  return 'media-album--many media-album-grid--count-many';
+}
+
+function messageIdAttribute(msg) {
+  const id = messageDomId(msg);
+  return id ? ` data-message-id="${escapeAttr(id)}"` : '';
+}
+
+function renderAlbumMediaItem(msg, photoContext = 'vault-current') {
+  const kindClass = isPhoto(msg) ? 'media-album-item--photo' : 'media-album-item--video';
+  const idAttribute = messageIdAttribute(msg);
+  if (isPhoto(msg)) {
+    const index = photoIndexFor(msg, photoContext);
+    const preview = index >= 0
+      ? renderPhotoPreview(msg, index, { context: photoContext, className: 'album-photo-preview', label: 'открыть фото' })
+      : renderMediaFallback('image', msg);
+    return `<div class="media-album-item ${kindClass}"${idAttribute}>${preview}</div>`;
+  }
+
+  const videoUrl = getVideoSourceUrl(msg);
+  const content = videoUrl && canPlayVideo(msg)
+    ? `<div class="album-video-preview" data-media-container><video controls preload="none"${videoPosterAttribute(msg)} data-media-src="${escapeAttr(videoUrl)}" data-media-element></video>${renderMissingNotice('video', msg)}</div>`
+    : renderMediaFallback('video', msg);
+  return `<div class="media-album-item ${kindClass}"${idAttribute}>${content}</div>`;
+}
+
+function renderProbableMediaAlbum(albumMessages, directionContext, photoContext = 'vault-current', options = {}) {
+  const first = albumMessages[0];
+  const caption = messageVisibleText(first);
+  const direction = getMessageDirection(first, directionContext);
+  const sizeClass = albumMessages.length < 5 ? 'bubble--media-album-compact' : 'bubble--media-album-wide';
+  const messageClasses = [
+    'message',
+    'message--album',
+    direction ? `message--${direction}` : 'message--neutral',
+    'message--media',
+    caption ? 'message--text' : 'message--no-text',
+    options.searchActive ? 'message--search-result' : '',
+  ].filter(Boolean).join(' ');
+  const bubbleClasses = [
+    'message-bubble',
+    'conversation-message-card',
+    'bubble--media-album',
+    sizeClass,
+  ].join(' ');
+  return `
+    <article class="${messageClasses}"${messageArticleAttributes(first, options)} data-media-album="true" data-album-size="${albumMessages.length}">
+      ${renderMessageMeta(first)}
+      <div class="${bubbleClasses}">
+        ${renderForwardedMeta(first)}
+        <div class="media media-album media-album-grid ${albumGridClass(albumMessages.length)}">
+          ${albumMessages.map(msg => renderAlbumMediaItem(msg, photoContext)).join('')}
+        </div>
+        ${caption ? `<div class="text media-album-caption">${escapeHtml(caption)}</div>` : ''}
+      </div>
+    </article>
+  `;
 }
 
 function renderMissingNotice(kind = 'file', msg = null, options = {}) {
