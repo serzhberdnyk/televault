@@ -34,9 +34,9 @@ TeleVault.exe
 
 Recommended: Windows 10/11 x64 через основную portable-сборку.
 
-Legacy / best effort: Windows 7 SP1 x64 только через отдельную сборку `TeleVault-v2.9.5-win7-legacy-x64.zip`.
+Legacy / best effort: Windows 7 SP1 x64 только через отдельную win7 legacy-сборку, если она отдельно опубликована как release asset.
 
-Основная сборка не поддерживает Windows 7: она остаётся на текущем Python runtime для Windows 10/11. Win7 legacy-сборка использует отдельный Python 3.8 legacy runtime.
+Основная сборка v2.9.5 предназначена для Windows 10/11 и не поддерживает Windows 7: она остаётся на текущем Python runtime для Windows 10/11. Win7 legacy-сборка использует отдельный Python 3.8 legacy runtime.
 
 Не скачивайте отсутствующие DLL, включая `api-ms-win-core-path-l1-1-0.dll`, с случайных сайтов и не копируйте их в `System32` или `SysWOW64`.
 

@@ -43,7 +43,7 @@ TeleVault-v2.9.5/
 
 Если рядом с exe нельзя создать лог, launcher пишет диагностику в `%LOCALAPPDATA%\TeleVault\logs\launcher.log`.
 
-Windows 7 SP1 x64: legacy / best effort только через отдельную сборку `TeleVault-v2.9.5-win7-legacy-x64.zip`. Основная Windows 10/11 сборка не поддерживает Windows 7. Не скачивайте `api-ms-win-core-path-l1-1-0.dll` отдельно.
+Windows 7 SP1 x64: legacy / best effort только через отдельную win7 legacy-сборку, если она отдельно опубликована как release asset. Основная Windows 10/11 сборка не поддерживает Windows 7. Не скачивайте `api-ms-win-core-path-l1-1-0.dll` отдельно.
 
 ## Как выбрать архив
 
@@ -93,11 +93,13 @@ dist\TeleVault-v2.9.5.zip
 build_win7_legacy_package.bat
 ```
 
-Результат:
+Результат локальной сборки:
 
 ```text
-dist\TeleVault-v2.9.5-win7-legacy-x64\
-dist\TeleVault-v2.9.5-win7-legacy-x64.zip
+dist\TeleVault-v<version>-win7-legacy-x64\
+dist\TeleVault-v<version>-win7-legacy-x64.zip
 ```
+
+Это не означает, что win7 legacy asset опубликован для каждого release. Используйте отдельный Win7 package только если он реально есть в GitHub release assets.
 
 Win7 legacy package prepared; requires validation on Windows 7 SP1 x64.

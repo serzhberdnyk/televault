@@ -1,10 +1,6 @@
 # TeleVault Windows 7 legacy build
 
-Use this only for Windows 7 SP1 x64:
-
-```text
-TeleVault-v2.9.5-win7-legacy-x64.zip
-```
+Use this only for Windows 7 SP1 x64, and only when a separate win7 legacy package is actually published in the GitHub release assets.
 
 This is a legacy / best effort package. The main Windows 10/11 package does not support Windows 7 because its current bundled Python runtime depends on newer Windows APIs.
 
