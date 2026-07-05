@@ -2259,6 +2259,10 @@ code {
   justify-self: end;
 }
 
+.message--media:not(.message--audio-only):not(.message--sticker):not(.message--video-note):not(.message--missing-only) .media:not(.media--video-note) > video:not(.video-note) {
+  min-width: min(300px, calc(100vw - 96px));
+}
+
 .message--video-note.message--media:not(.message--audio-only):not(.message--sticker):not(.message--missing-only) {
   max-width: min(214px, 72vw);
 }
