@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.6 - local API POST guard
+
+Changed:
+- added a local request guard for state-changing API `POST` endpoints: `/api/pick-folder`, `/api/load-folder` and `/api/forget-missing-vault`
+- the guard allows only `Host` values for the actual local app port on `127.0.0.1` or `localhost`
+- allowed `Origin` values are absent, `http://127.0.0.1:<port>` or `http://localhost:<port>`; external origins are rejected with 403
+- a present `Referer` must start with the local app origin, and `Sec-Fetch-Site: cross-site` is rejected with 403
+- added `OPTIONS /api/*` handling that returns no CORS allow headers; external preflight requests are rejected before POST is permitted
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.6
+- kept GET endpoints, media endpoint, parser, storage, frontend app logic, styles, launcher logic and package artifacts unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `runtime\python\python.exe -m compileall -q app.py backend tools`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.6
+- confirm local `/api/load-folder`, `/api/pick-folder` and `/api/forget-missing-vault` requests are not rejected when sent from the local app origin
+- confirm cross-origin POST requests with external `Origin`, wrong `Host`, external `Referer` or `Sec-Fetch-Site: cross-site` return 403 before business logic
+- confirm `OPTIONS /api/load-folder` with an external origin does not receive CORS permission for POST
+- confirm `GET /api/status`, `/api/startup-vault`, `/api/chat`, `/api/search`, media range requests and static files still work
+
 ## 2.9.5 - deferred large chat media sources
 
 Changed:

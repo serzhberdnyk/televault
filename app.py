@@ -20,7 +20,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.5"
+APP_VERSION = "2.9.6"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -173,6 +173,50 @@ def read_body(handler: BaseHTTPRequestHandler) -> dict:
         return {}
     raw = handler.rfile.read(length).decode("utf-8")
     return json.loads(raw or "{}")
+
+
+def request_local_port(handler: BaseHTTPRequestHandler) -> int:
+    try:
+        return int(handler.server.server_address[1])
+    except Exception:
+        return PORT
+
+
+def local_app_origins(handler: BaseHTTPRequestHandler) -> tuple[str, str]:
+    port = request_local_port(handler)
+    return (f"http://127.0.0.1:{port}", f"http://localhost:{port}")
+
+
+def is_allowed_local_host(handler: BaseHTTPRequestHandler) -> bool:
+    port = request_local_port(handler)
+    host = str(handler.headers.get("Host") or "").strip().lower()
+    return host in {f"127.0.0.1:{port}", f"localhost:{port}"}
+
+
+def is_allowed_local_post(handler: BaseHTTPRequestHandler) -> bool:
+    if not is_allowed_local_host(handler):
+        return False
+
+    origins = local_app_origins(handler)
+    origin = str(handler.headers.get("Origin") or "").strip().lower()
+    if origin and origin not in origins:
+        return False
+
+    referer = str(handler.headers.get("Referer") or "").strip().lower()
+    if referer and not any(referer.startswith(f"{origin}/") for origin in origins):
+        return False
+
+    sec_fetch_site = str(handler.headers.get("Sec-Fetch-Site") or "").strip().lower()
+    if sec_fetch_site == "cross-site":
+        return False
+
+    return True
+
+
+def empty_response(handler: BaseHTTPRequestHandler, status: int) -> None:
+    handler.send_response(status)
+    handler.send_header("Content-Length", "0")
+    handler.end_headers()
 
 
 def parse_range_header(range_header: str, file_size: int) -> tuple[int, int]:
@@ -441,6 +485,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/api/pick-folder":
+            if not is_allowed_local_post(self):
+                json_response(self, {"error": "forbidden"}, 403)
+                return
             try:
                 folder = choose_folder_dialog()
             except FolderPickerError as e:
@@ -457,6 +504,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/load-folder":
+            if not is_allowed_local_post(self):
+                json_response(self, {"error": "forbidden"}, 403)
+                return
             try:
                 body = read_body(self)
                 folder = str(body.get("folder", ""))
@@ -467,6 +517,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/forget-missing-vault":
+            if not is_allowed_local_post(self):
+                json_response(self, {"error": "forbidden"}, 403)
+                return
             try:
                 json_response(self, forget_saved_vault_path())
             except Exception as e:
@@ -474,6 +527,20 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         json_response(self, {"error": "not found"}, 404)
+
+    def do_OPTIONS(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/"):
+            if not is_allowed_local_post(self):
+                empty_response(self, 403)
+                return
+            self.send_response(204)
+            self.send_header("Allow", "GET, POST, OPTIONS")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        empty_response(self, 404)
 
 
 def find_free_port(preferred: int) -> int:

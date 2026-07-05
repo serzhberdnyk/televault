@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.9.6
+
+### Security
+
+* Added a local request guard for state-changing API `POST` endpoints: `/api/pick-folder`, `/api/load-folder` and `/api/forget-missing-vault`.
+* External `Origin`, external `Referer`, wrong `Host` and `Sec-Fetch-Site: cross-site` requests are rejected before folder picker, request body parsing, loading or settings changes.
+* `OPTIONS /api/*` now returns no CORS permission for external origins.
+
+### Changed
+
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.6.
+* GET endpoints, media endpoint, parser, storage and frontend UI are unchanged.
+
 ## 2.9.5
 
 ### Improved
