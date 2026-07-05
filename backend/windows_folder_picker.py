@@ -155,9 +155,15 @@ def get_window_process_name(user32, kernel32, hwnd) -> str:
 
 
 def is_owner_process_allowed(process_name: str) -> bool:
-    if not process_name:
-        return True
     return process_name.lower() in ALLOWED_OWNER_PROCESSES
+
+
+def is_televault_owner_title(title: str) -> bool:
+    return title.strip().casefold() == APP_NAME.casefold()
+
+
+def title_mentions_televault(title: str) -> bool:
+    return APP_NAME.casefold() in title.casefold()
 
 
 def find_televault_owner_hwnd() -> int:
@@ -165,7 +171,7 @@ def find_televault_owner_hwnd() -> int:
         user32 = ctypes.WinDLL("user32", use_last_error=True)
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         configure_window_api(user32, kernel32)
-        found: list[tuple[int, str]] = []
+        found: list[tuple[int, str, str]] = []
 
         @ENUM_WINDOWS_PROC
         def enum_window(hwnd, _lparam):
@@ -173,20 +179,32 @@ def find_televault_owner_hwnd() -> int:
                 return True
 
             title = get_window_title(user32, hwnd)
-            if APP_NAME.lower() not in title.lower():
+            if not is_televault_owner_title(title):
+                if title_mentions_televault(title):
+                    log_launcher(
+                        "TeleVault-like window ignored because title is not exact: "
+                        f"{safe_log_value(title)}"
+                    )
                 return True
 
             process_name = get_window_process_name(user32, kernel32, hwnd)
             if not is_owner_process_allowed(process_name):
+                log_launcher(
+                    "TeleVault-titled window ignored because process is not Edge/Chrome: "
+                    f"{safe_log_value(process_name)}"
+                )
                 return True
 
-            found.append((hwnd_to_int(hwnd), process_name))
+            found.append((hwnd_to_int(hwnd), title.strip(), process_name))
             return False
 
         user32.EnumWindows(enum_window, 0)
         if found:
-            hwnd, process_name = found[0]
-            log_launcher(f"owner hwnd found: 0x{hwnd:X}, process={safe_log_value(process_name)}")
+            hwnd, title, process_name = found[0]
+            log_launcher(
+                f"owner hwnd found: 0x{hwnd:X}, title={safe_log_value(title)}, "
+                f"process={safe_log_value(process_name)}"
+            )
             return hwnd
 
         log_launcher("owner hwnd not found")
