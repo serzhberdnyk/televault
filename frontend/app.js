@@ -2309,6 +2309,7 @@ function albumGridClass(size) {
   if (size === 2) return 'media-album--two media-album-grid--count-2';
   if (size === 3) return 'media-album--compact media-album-grid--count-3';
   if (size === 4) return 'media-album--compact media-album-grid--count-4';
+  if (size === 8) return 'media-album--many media-album-grid--count-8';
   return 'media-album--many media-album-grid--count-many';
 }
 

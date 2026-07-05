@@ -2331,6 +2331,18 @@ code {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.media-album-grid--count-8 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.media-album-grid--count-8 .media-album-item {
+  grid-column: span 2;
+}
+
+.media-album-grid--count-8 .media-album-item:nth-child(-n + 2) {
+  grid-column: span 3;
+}
+
 .media-album-grid--count-3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
