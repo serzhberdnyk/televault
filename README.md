@@ -4,9 +4,9 @@ TeleVault - локальный оффлайн-архив Telegram-перепис
 
 Приложение открывает папки экспорта Telegram Desktop, собирает переписки, медиа и файлы в удобный локальный интерфейс и не отправляет данные наружу. Архив остаётся на компьютере пользователя и доступен без облака.
 
-Текущая версия: `2.9.3`.
+Текущая версия: `2.9.5`.
 
-Статус: 2.9.3 добавляет отдельный Windows 7 legacy build profile. Основная Windows 10/11 сборка остаётся на текущем runtime; parser, media endpoint, playback logic и search logic не менялись.
+Статус: 2.9.5 улучшает чтение больших переписок: аудио, голосовые и видео загружают источники лениво, без массовой привязки media `src` при первом открытии чата. Backend, parser, storage, media endpoint и search behavior не менялись.
 
 ## Возможности
 
@@ -22,7 +22,7 @@ TeleVault - локальный оффлайн-архив Telegram-перепис
 
 ## Быстрый запуск
 
-Основной сценарий - Windows 10/11. Скачайте portable zip, распакуйте его и запустите TeleVault двойным кликом по файлу:
+Основной сценарий - Windows 10/11. Скачайте portable zip `TeleVault-v2.9.5.zip`, распакуйте его и запустите TeleVault двойным кликом по файлу:
 
 ```bat
 TeleVault.exe
@@ -34,7 +34,7 @@ TeleVault.exe
 
 Recommended: Windows 10/11 x64 через основную portable-сборку.
 
-Legacy / best effort: Windows 7 SP1 x64 только через отдельную сборку `TeleVault-v2.9.3-win7-legacy-x64.zip`.
+Legacy / best effort: Windows 7 SP1 x64 только через отдельную сборку `TeleVault-v2.9.5-win7-legacy-x64.zip`.
 
 Основная сборка не поддерживает Windows 7: она остаётся на текущем Python runtime для Windows 10/11. Win7 legacy-сборка использует отдельный Python 3.8 legacy runtime.
 
