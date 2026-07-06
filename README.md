@@ -1,103 +1,68 @@
 # TeleVault
 
-Локальный оффлайн-архив важных Telegram-переписок.
+**TeleVault — офлайн-ридер экспортов Telegram Desktop для Windows 10/11.**
 
-TeleVault помогает сохранить экспортированные Telegram-переписки на компьютере, открыть их оффлайн и удобно просматривать сообщения, фото, видео, голосовые, аудио и файлы.
+Открыл папку экспорта → добавил в библиотеку → читаешь переписки и медиа без интернета.
 
-Важные переписки должны быть под рукой, даже если доступ к аккаунту, чату или интернету однажды пропадет.
+TeleVault работает с уже созданными экспортами Telegram Desktop. Это не Telegram-клиент, не облако и не синхронизация.
 
-## почему это удобно
+## что умеет
 
-- Все хранится локально на вашем компьютере.
-- Переписки можно открыть без интернета.
-- Не нужен вход в Telegram.
-- Экспорт удобно читать в одном интерфейсе, а не искать сообщения в папках, JSON или HTML.
-- Фото, видео, голосовые, аудио и файлы доступны рядом с перепиской.
-- Можно хранить несколько экспортов в локальной библиотеке.
-- Простой portable-запуск на Windows: распаковали zip и запустили `TeleVault.exe`.
+* добавлять несколько экспортов в локальную библиотеку;
+* открывать переписки из Telegram Desktop exports;
+* удобно читать сообщения;
+* просматривать фото, видео, голосовые, аудио и файлы;
+* искать внутри выбранной переписки;
+* показывать понятные ошибки, если экспорт или медиафайл недоступны;
+* запускаться как portable-приложение: распаковал zip и открыл `TeleVault.exe`.
 
 ## privacy / local-first
 
-- Без облачного аккаунта.
-- Без входа в Telegram.
-- Без bot token.
-- Без синхронизации.
-- Без загрузки переписок на сервер.
-- Экспорт остается на компьютере пользователя.
-- Приложение работает с локальной папкой экспорта Telegram Desktop.
+TeleVault работает с файлами на твоём компьютере.
 
-TeleVault - локальное приложение для чтения уже сохраненных экспортов. Это не облачный сервис, не Telegram-клиент и не инструмент синхронизации.
+Приложение не требует:
 
-## скриншоты
+* входа в Telegram;
+* bot token;
+* облачного аккаунта;
+* синхронизации;
+* отправки экспортов на внешний сервер.
 
-### чтение переписки
+## как запустить
 
-![чтение переписки в TeleVault](docs/screenshots/01-chat-reading.png)
+1. скачай последнюю версию в разделе **Releases**.
+2. распакуй архив `TeleVault-vX.X.X.zip` в отдельную папку.
+3. запусти `TeleVault.exe`.
+4. выбери папку экспорта Telegram Desktop.
+5. добавь экспорт в библиотеку и открой нужную переписку.
 
-### просмотр фото
+## какой экспорт нужен
 
-![просмотр фото в TeleVault](docs/screenshots/02-photo-viewer.png)
+TeleVault рассчитан на экспорт, созданный в Telegram Desktop.
 
-## скачать и запустить
-
-1. Откройте [GitHub Releases](https://github.com/serzhberdnyk/televault/releases).
-2. Скачайте последний `TeleVault-vX.Y.Z-windows-x64.zip`.
-3. Распакуйте архив в отдельную папку.
-4. Запустите `TeleVault.exe`.
-5. Выберите папку экспорта Telegram Desktop.
-6. Откройте чат из локальной библиотеки.
-
-Для portable-пакета не нужно устанавливать Python, Git или инструменты разработчика.
-
-Если Windows SmartScreen показывает предупреждение для нового exe, выберите `More info` -> `Run anyway`, если доверяете скачанному архиву.
-
-Если `TeleVault.exe` не открывается, запустите `run_windows.bat` из той же папки. Если браузер не открылся автоматически, перейдите на `http://127.0.0.1:8766`.
-
-Если лаунчер сообщает об ошибке, проверьте `logs\launcher.log` рядом с приложением. Если эта папка недоступна для записи, диагностика сохраняется в `%LOCALAPPDATA%\TeleVault\logs\launcher.log`.
+Рекомендуется экспортировать данные в формате **JSON** и сохранять медиафайлы вместе с перепиской.
 
 ## платформы
 
-- Основной пакет: Windows 10/11 x64.
-- Windows 7: только legacy / best effort, если опубликован и проверен отдельный legacy-пакет.
-
-Основной пакет для Windows 10/11 не предназначен для Windows 7. Не скачивайте отсутствующие системные DLL с случайных сайтов.
+* Windows 10 / 11;
+* portable zip, без установки.
 
 ## ограничения
 
-- TeleVault работает с экспортированными данными Telegram Desktop, а не с live-синхронизацией Telegram.
-- Приложение не входит в Telegram-аккаунт.
-- Приложение не восстанавливает удаленные сообщения из облака Telegram.
-- Приложение не загружает архивы онлайн.
-- Качество отображения зависит от структуры конкретного Telegram export.
+TeleVault не получает данные из Telegram и не восстанавливает удалённые чаты.
 
-## обратная связь
+Он открывает только те экспортированные файлы, которые уже есть на компьютере.
 
-Если нашли ошибку, создайте [GitHub Issue](https://github.com/serzhberdnyk/televault/issues).
+В проект не входят:
 
-Желательно указать:
-
-- версию TeleVault;
-- версию Windows;
-- тип экспорта, если это безопасно;
-- что ожидали увидеть;
-- что произошло.
+* Telegram login;
+* cloud/sync;
+* аккаунты пользователей;
+* AI;
+* теги, заметки, избранное и статистика.
 
 ## english
 
-TeleVault is a local offline archive for important Telegram chats.
+**TeleVault is an offline reader for Telegram Desktop exports.**
 
-It lets you add Telegram Desktop export folders to a local library and browse saved conversations offline, including messages, photos, videos, voice messages, audio and files.
-
-Privacy / local-first:
-
-- no cloud account
-- no Telegram login
-- no bot token
-- no sync
-- your exports stay on your computer
-
-Download the latest Windows package from [GitHub Releases](https://github.com/serzhberdnyk/televault/releases), unzip it and run `TeleVault.exe`.
-
-Main package: Windows 10/11 x64.
-
-Windows 7 is legacy / best effort only if a separate legacy package is published and tested.
+It lets you add local Telegram exports to a library and read messages, photos, videos, voice messages, audio and files on your Windows PC without logging in to Telegram or syncing data to the cloud.
