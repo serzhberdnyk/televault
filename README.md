@@ -6,7 +6,9 @@ TeleVault lets you add Telegram Desktop exports to a local library and browse sa
 
 ## Screenshots
 
-Screenshots will be added later using safe demo data only. See the [screenshots guide](docs/SCREENSHOTS.md).
+![TeleVault chat reading](docs/screenshots/01-chat-reading.png)
+
+![TeleVault photo viewer](docs/screenshots/02-photo-viewer.png)
 
 ## Features
 
