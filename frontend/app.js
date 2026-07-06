@@ -1,4 +1,3 @@
-const DEFAULT_CHAT_SORT_MODE = 'newest';
 const LARGE_CHAT_RENDER_MESSAGE_LIMIT = 500;
 const CHAT_LOADING_STATE_DELAY_MS = 120;
 const INLINE_PHOTO_MAX_WIDTH = 500;
@@ -23,7 +22,6 @@ const state = {
   mediaMode: 'all',
   isPickingFolder: false,
   chatSearchQuery: '',
-  chatSortMode: DEFAULT_CHAT_SORT_MODE,
   globalSearchLimit: 50,
   globalSearchQuery: '',
   globalSearchResults: [],
@@ -651,7 +649,7 @@ function renderHighlightedSearchSnippet(value, query) {
 function getVisibleChats() {
   const q = state.chatSearchQuery.trim().toLowerCase();
   const chats = state.chats.filter(chat => !q || conversationSearchText(chat).includes(q));
-  return chats.sort(compareChatsForSidebar);
+  return chats.sort(compareChatsNewestFirst);
 }
 
 function conversationSearchText(chat) {
@@ -665,11 +663,7 @@ function buildConversationSearchText(chat, messages = []) {
   return [chat.title, chat.path, senders].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
 }
 
-function compareChatsForSidebar(a, b) {
-  if (state.chatSortMode === 'oldest') return dateSortValue(a.last_date) - dateSortValue(b.last_date);
-  if (state.chatSortMode === 'title') return String(a.title || '').localeCompare(String(b.title || ''), 'ru', { sensitivity: 'base' });
-  if (state.chatSortMode === 'messages') return Number(b.message_count || 0) - Number(a.message_count || 0);
-  if (state.chatSortMode === 'media') return Number(b.media_count || 0) - Number(a.media_count || 0);
+function compareChatsNewestFirst(a, b) {
   return dateSortValue(b.last_date) - dateSortValue(a.last_date);
 }
 
@@ -736,7 +730,6 @@ async function afterLibraryLoaded(data) {
   state.messagesRequestId += 1;
   state.ownerSenderKey = '';
   state.chatSearchQuery = '';
-  state.chatSortMode = DEFAULT_CHAT_SORT_MODE;
   resetGlobalMessageSearch();
   state.photoContexts = {};
   state.photoContextIndexes = {};
