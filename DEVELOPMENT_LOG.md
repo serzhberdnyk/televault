@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.7 - large chat opening state
+
+Changed:
+- added an in-chat loading state before expensive full-message rendering in `frontend/app.js`
+- large full-chat renders now show "открываем переписку..." / "готовим сообщения и медиа архива." using the existing empty-state styling
+- `renderSelectedChat` yields for two animation frames before inserting more than 500 filtered messages, so the loading state has a real chance to paint first
+- cache-miss chat loads show the same loading state after a 120 ms delay, avoiding a quick flash on fast small chats
+- guarded the async render yield with request id, selected chat id and media mode checks so an older render cannot overwrite a newer selection
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.7
+- kept preload strategy, backend, parser, storage, media endpoints, albums, stickers, video notes, forwarded labels and audio/video lazy loading unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `runtime\python\python.exe -m compileall -q app.py backend tools`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.7
+- confirm the app and library open normally
+- confirm a small chat opens without a noticeable extra loading flash
+- confirm a large cached chat shows the loading state before messages appear and then renders as before
+- confirm albums 3/8/9, forwarded audio labels, video notes, stickers, photo lightbox, audio/video play/seek and missing audio behavior are unchanged
+- confirm `document.querySelectorAll('.media-duration-label').length` returns 0
+- confirm regular `audio,video` elements do not receive mass `src/currentSrc` assignments at initial large-chat render
+
 ## 2.9.6 - local API POST guard
 
 Changed:

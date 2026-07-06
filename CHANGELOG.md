@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.9.7
+
+### Improved
+
+* Large chats now show a calm in-chat loading state before the expensive browser DOM insertion starts.
+* The full chat view yields for two animation frames before rendering more than 500 filtered messages, so the loading state can visibly paint first.
+* Cache-miss chat loads show the same loading state only after a short delay, avoiding a quick flash for fast small chats.
+
+### Changed
+
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.7.
+* Preload strategy, backend, parser, storage, media endpoints, albums, stickers, video notes and audio/video lazy loading are unchanged.
+
 ## 2.9.6
 
 ### Security

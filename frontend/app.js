@@ -1,4 +1,6 @@
 const DEFAULT_CHAT_SORT_MODE = 'newest';
+const LARGE_CHAT_RENDER_MESSAGE_LIMIT = 500;
+const CHAT_LOADING_STATE_DELAY_MS = 120;
 const INLINE_PHOTO_MAX_WIDTH = 500;
 const INLINE_PHOTO_MAX_HEIGHT = 460;
 const INLINE_VIDEO_MAX_WIDTH = 520;
@@ -158,6 +160,8 @@ const text = {
   globalSearchFailed: 'поиск временно недоступен',
   globalSearchFailedBody: '',
   globalSearchLimitHint: 'показаны первые {limit} результатов, уточни запрос',
+  openingChat: 'открываем переписку...',
+  openingChatBody: 'готовим сообщения и медиа архива.',
   chatMessagesNotFound: 'нет результатов поиска',
   chatMessagesNotFoundBody: 'в этой переписке нет совпадений',
   chatFilterNothingFoundBody: 'попробуй другой фильтр',
@@ -910,25 +914,39 @@ async function loadMessages(options = {}) {
     renderVaultWelcome();
     return;
   }
+  const selectedChatId = state.selectedChatId;
   const search = $('searchBox').value.trim();
   const requestId = ++state.messagesRequestId;
-  const cached = state.chatCache[state.selectedChatId];
+  const cached = state.chatCache[selectedChatId];
   const startedAt = performance.now();
   if (cached && Array.isArray(cached.messages) && !cached.error) {
-    renderSelectedChat(cached, search, {
+    await renderSelectedChat(cached, search, {
       ...options,
+      chatId: selectedChatId,
       perfStartedAt: startedAt,
       perfSource: 'cache',
+      requestId,
     });
     return;
   }
+  let loadingTimer = window.setTimeout(() => {
+    if (requestId === state.messagesRequestId && state.selectedChatId === selectedChatId) {
+      renderChatOpeningState();
+    }
+  }, CHAT_LOADING_STATE_DELAY_MS);
+  const clearLoadingTimer = () => {
+    if (!loadingTimer) return;
+    window.clearTimeout(loadingTimer);
+    loadingTimer = 0;
+  };
   try {
-    const data = await api(`/api/chat?id=${encodeURIComponent(state.selectedChatId)}&q=&sender=&media=0`);
+    const data = await api(`/api/chat?id=${encodeURIComponent(selectedChatId)}&q=&sender=&media=0`);
+    clearLoadingTimer();
     if (requestId !== state.messagesRequestId) return;
-    const chat = data.chat || state.chats.find(item => item.id === state.selectedChatId) || {};
+    const chat = data.chat || state.chats.find(item => item.id === selectedChatId) || {};
     const messages = (data.messages || []).map((msg, index) => ({
       ...msg,
-      chatId: state.selectedChatId,
+      chatId: selectedChatId,
       chatTitle: chat.title,
       sourceIndex: index,
     }));
@@ -938,13 +956,16 @@ async function loadMessages(options = {}) {
       messages,
       searchText: buildConversationSearchText(chat, messages),
     };
-    state.chatCache[state.selectedChatId] = cachedData;
-    renderSelectedChat(cachedData, search, {
+    state.chatCache[selectedChatId] = cachedData;
+    await renderSelectedChat(cachedData, search, {
       ...options,
+      chatId: selectedChatId,
       perfStartedAt: startedAt,
       perfSource: 'api',
+      requestId,
     });
   } catch (e) {
+    clearLoadingTimer();
     if (requestId !== state.messagesRequestId) return;
     setLibraryError(e);
     if (!state.vaultLoaded) renderVaultWelcome({ mode: 'error', error: e });
@@ -1029,13 +1050,45 @@ function renderVaultWelcome(options = {}) {
   resetMessageScroll();
 }
 
-function renderSelectedChat(data, search = '', options = {}) {
-  if (state.activeSection !== 'vault' || state.conversationMode !== 'chats') return;
+function chatRenderId(data, options = {}) {
+  return options.chatId || data?.chat?.id || data?.messages?.[0]?.chatId || '';
+}
+
+function isCurrentChatRender(data, options = {}, mediaMode = state.mediaMode) {
+  if (state.activeSection !== 'vault' || state.conversationMode !== 'chats') return false;
+  if (options.requestId && options.requestId !== state.messagesRequestId) return false;
+  const chatId = chatRenderId(data, options);
+  if (chatId && state.selectedChatId !== chatId) return false;
+  return state.mediaMode === mediaMode;
+}
+
+function renderChatOpeningState() {
+  const box = $('messages');
+  resetDeferredMediaSourceObserver();
+  $('emptyState').style.display = 'none';
+  box.className = 'messages';
+  box.style.display = 'flex';
+  box.innerHTML = `<div class="empty in-messages">${renderEmptyState(text.openingChat, text.openingChatBody, { className: 'empty-state--messages' })}</div>`;
+}
+
+function waitForAnimationFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
+}
+
+async function waitForChatOpeningPaint() {
+  await waitForAnimationFrame();
+  await waitForAnimationFrame();
+}
+
+async function renderSelectedChat(data, search = '', options = {}) {
+  const mediaMode = state.mediaMode;
+  if (!isCurrentChatRender(data, options, mediaMode)) return;
+  const chat = data.chat || {};
   $('mediaTabs').hidden = false;
   $('filters').hidden = false;
   $('emptyState').style.display = 'none';
   $('messages').style.display = 'block';
-  $('chatTitle').textContent = cleanVisibleText(data.chat.title) || text.storageFolderFallback;
+  $('chatTitle').textContent = cleanVisibleText(chat.title) || text.storageFolderFallback;
   $('chatMeta').textContent = 'сохранённая переписка в локальном хранилище';
   const senderNames = fillSenders(data.senders || []);
   updateChatFilterControls(senderNames);
@@ -1043,14 +1096,19 @@ function renderSelectedChat(data, search = '', options = {}) {
   const messages = filterMessages(data.messages || [], search, $('senderFilter').value);
   const searchActive = Boolean(search.trim());
   updateChatFilterControls(senderNames, {
-    showSearchHint: state.mediaMode === 'all' && searchActive && messages.length > 0,
+    showSearchHint: mediaMode === 'all' && searchActive && messages.length > 0,
   });
-  if (state.mediaMode === 'all') {
+  if (mediaMode === 'all') {
     $('chatMeta').textContent = `${messages.length} из ${data.total} ${text.messages} · локальное хранилище`;
-    renderMessages(messages, data.chat, data.senders || [], { searchActive });
+    if (messages.length > LARGE_CHAT_RENDER_MESSAGE_LIMIT) {
+      renderChatOpeningState();
+      await waitForChatOpeningPaint();
+      if (!isCurrentChatRender(data, options, mediaMode)) return;
+    }
+    renderMessages(messages, chat, data.senders || [], { searchActive });
     logPerformance('render chat', options.perfStartedAt, {
       source: options.perfSource || 'unknown',
-      mode: state.mediaMode,
+      mode: mediaMode,
       shown: messages.length,
       total: data.total,
     });
@@ -1059,11 +1117,11 @@ function renderSelectedChat(data, search = '', options = {}) {
     return;
   }
 
-  $('chatMeta').textContent = `${messages.length} ${text.mediaLabels[state.mediaMode]} из ${data.total} ${text.messages}`;
+  $('chatMeta').textContent = `${messages.length} ${text.mediaLabels[mediaMode]} из ${data.total} ${text.messages}`;
   renderMediaMode(messages);
   logPerformance('render chat', options.perfStartedAt, {
     source: options.perfSource || 'unknown',
-    mode: state.mediaMode,
+    mode: mediaMode,
     shown: messages.length,
     total: data.total,
   });
@@ -1272,7 +1330,8 @@ async function openGlobalSearchResult(result) {
 
     const cached = state.chatCache[chatId];
     if (cached && Array.isArray(cached.messages) && !cached.error) {
-      renderSelectedChat(cached, '', {
+      await renderSelectedChat(cached, '', {
+        chatId,
         jumpToMessageId: messageId,
         perfStartedAt: performance.now(),
         perfSource: 'cache',
@@ -1295,7 +1354,12 @@ function handleSearchResultClick(event) {
   clearMessageFiltersForJump();
   const cached = state.chatCache[state.selectedChatId];
   if (cached && Array.isArray(cached.messages) && !cached.error) {
-    renderSelectedChat(cached, '', { jumpToMessageId: messageId, perfStartedAt: performance.now(), perfSource: 'cache' });
+    renderSelectedChat(cached, '', {
+      chatId: state.selectedChatId,
+      jumpToMessageId: messageId,
+      perfStartedAt: performance.now(),
+      perfSource: 'cache',
+    });
     return;
   }
   loadMessages({ jumpToMessageId: messageId });
