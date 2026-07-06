@@ -45,14 +45,25 @@ Changed:
 - accepted only local app hosts for the actual server port: `127.0.0.1:<port>` or `localhost:<port>`; local host headers without a port are tolerated for simple test clients
 - invalid or missing `Host` receives an empty 403 before static file serving, API handling, media resolving, POST body reading, picker logic or settings changes
 - kept the existing state-changing POST Origin/Referer/Sec-Fetch guard in place for `/api/pick-folder`, `/api/load-folder` and `/api/forget-missing-vault`
+- rewrote README as a Russian benefits-first public page with privacy/local-first positioning
+- added public screenshots to README: `docs/screenshots/01-chat-reading.png` and `docs/screenshots/02-photo-viewer.png`
+- cleaned repository root documentation by moving internal build, development and release docs under `docs/`
+- removed extra root `README_RUN.md` and `README_WIN7.md`
+- added `docs/SCREENSHOTS.md`, `docs/DEMO_EXPORT.md` and `docs/RELEASE_NOTES_TEMPLATE.md` for release preparation
+- updated package/build allowlist paths for moved docs
 - updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.8
-- kept frontend UI, parser, storage, media behavior, launcher logic and package artifacts unchanged
+- runtime app behavior is unchanged except for the local Host guard security hardening
+- parser, storage, media and frontend UI behavior was not intentionally changed in this release
 
 Manual test:
 - run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
 - run `runtime\python\python.exe -m compileall -q app.py backend tools`
 - run `node --check frontend\app.js`
 - run `git diff --check`
+- run the version sync check in `tools\build_exe_launcher.py`
+- build the main Windows 10/11 portable package with `build_exe_launcher.bat`
+- confirm `dist\TeleVault-v2.9.8.zip` contains `TeleVault-v2.9.8/TeleVault.exe`
+- confirm the package does not contain personal exports, cache, logs, `user_data`, `.git`, local settings or nested `dist`
 - launch with `run_windows.bat` and confirm `/api/status` returns 2.9.8
 - confirm the app, library and chats open normally
 - confirm `GET /api/status` returns 200 for `Host: 127.0.0.1:8766` and `Host: localhost:8766`
