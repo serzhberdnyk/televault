@@ -20,7 +20,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.7"
+APP_VERSION = "2.9.8"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -187,14 +187,19 @@ def local_app_origins(handler: BaseHTTPRequestHandler) -> tuple[str, str]:
     return (f"http://127.0.0.1:{port}", f"http://localhost:{port}")
 
 
-def is_allowed_local_host(handler: BaseHTTPRequestHandler) -> bool:
+def is_allowed_host(handler: BaseHTTPRequestHandler) -> bool:
     port = request_local_port(handler)
     host = str(handler.headers.get("Host") or "").strip().lower()
-    return host in {f"127.0.0.1:{port}", f"localhost:{port}"}
+    return host in {
+        f"127.0.0.1:{port}",
+        f"localhost:{port}",
+        "127.0.0.1",
+        "localhost",
+    }
 
 
 def is_allowed_local_post(handler: BaseHTTPRequestHandler) -> bool:
-    if not is_allowed_local_host(handler):
+    if not is_allowed_host(handler):
         return False
 
     origins = local_app_origins(handler)
@@ -415,6 +420,10 @@ class Handler(BaseHTTPRequestHandler):
         print(format % args)
 
     def do_GET(self) -> None:
+        if not is_allowed_host(self):
+            empty_response(self, 403)
+            return
+
         parsed = urlparse(self.path)
         path = parsed.path
 
@@ -483,6 +492,10 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self) -> None:
+        if not is_allowed_host(self):
+            empty_response(self, 403)
+            return
+
         parsed = urlparse(self.path)
         if parsed.path == "/api/pick-folder":
             if not is_allowed_local_post(self):
@@ -529,6 +542,10 @@ class Handler(BaseHTTPRequestHandler):
         json_response(self, {"error": "not found"}, 404)
 
     def do_OPTIONS(self) -> None:
+        if not is_allowed_host(self):
+            empty_response(self, 403)
+            return
+
         parsed = urlparse(self.path)
         if parsed.path.startswith("/api/"):
             if not is_allowed_local_post(self):

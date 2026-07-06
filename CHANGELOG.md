@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.9.8
+
+### Security
+
+* Added a shared local `Host` guard for all HTTP requests before API, static file and media routing.
+* Requests are accepted only for the local app host on the actual server port: `127.0.0.1:<port>` or `localhost:<port>`; local host headers without a port are tolerated for simple test clients.
+* Requests with an external or missing `Host` now receive an empty 403 response before business logic, POST body reading, static file serving or media file resolving.
+* The existing state-changing POST Origin/Referer/Sec-Fetch guard remains in place.
+
+### Changed
+
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.8.
+* Frontend UI, parser, storage, media file behavior and package artifacts are unchanged.
+
 ## 2.9.7
 
 ### Improved

@@ -38,6 +38,29 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.8 - local Host guard for all requests
+
+Changed:
+- added a shared local `Host` guard in `app.py` before `do_GET`, `do_POST` and `do_OPTIONS` route handling
+- accepted only local app hosts for the actual server port: `127.0.0.1:<port>` or `localhost:<port>`; local host headers without a port are tolerated for simple test clients
+- invalid or missing `Host` receives an empty 403 before static file serving, API handling, media resolving, POST body reading, picker logic or settings changes
+- kept the existing state-changing POST Origin/Referer/Sec-Fetch guard in place for `/api/pick-folder`, `/api/load-folder` and `/api/forget-missing-vault`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.8
+- kept frontend UI, parser, storage, media behavior, launcher logic and package artifacts unchanged
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `runtime\python\python.exe -m compileall -q app.py backend tools`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.8
+- confirm the app, library and chats open normally
+- confirm `GET /api/status` returns 200 for `Host: 127.0.0.1:8766` and `Host: localhost:8766`
+- confirm `Host: wrong.example` returns 403 for `/api/status`, `/api/load-folder`, `/media/...` and `/app.js`
+- confirm local `GET /api/startup-vault`, `/api/chat`, `/api/search`, static files, normal `/media`, `/media` range 206 and invalid media range 416 still work
+- confirm trusted same-origin `POST /api/load-folder` is not rejected by the Host guard
+- confirm evil `Origin` and `Origin: null` POST requests to `/api/load-folder` still return 403
+
 ## 2.9.7 - large chat opening state
 
 Changed:
