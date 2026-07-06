@@ -225,7 +225,8 @@ git diff --check
 
 ## Документация
 
-- `README.md` должен указывать версию 2.9.3 и native Windows launcher.
+- `README.md` должен быть обязательной проверкой перед release, если в нём указаны текущая версия, download-инструкция, имя portable zip, GitHub Releases links или Windows compatibility wording.
+- `README.md` должен указывать актуальную release version, объяснять установку через portable zip из GitHub Releases и не обещать официальную поддержку Windows 7 для основной Windows 10/11-сборки.
 - `tools\build_exe_launcher.py` должен проверять синхронизацию package, backend и launcher version перед компиляцией exe.
 - `README_RUN.md` должен объяснять запуск через `TeleVault.exe` и fallback через `run_windows.bat`.
 - `EXE_PACKAGING_PLAN.md` должен оставлять one-file exe и installer будущими этапами.
