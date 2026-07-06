@@ -15,12 +15,10 @@ TeleVault 2.9.3 - patch-релиз для отдельной Windows 7 legacy-с
 - `backend/`
 - `frontend/`
 - `README.md`
-- `README_RUN.md`
-- `README_WIN7.md`
 - `CHANGELOG.md`
-- `RELEASE_CHECKLIST.md`
-- `EXE_PACKAGING_PLAN.md`
-- `DEVELOPMENT_LOG.md`
+- `docs/release/RELEASE_CHECKLIST.md`
+- `docs/dev/EXE_PACKAGING_PLAN.md`
+- `docs/dev/DEVELOPMENT_LOG.md`
 - `runtime/python/` с `runtime/python/python.exe` и `runtime/python/pythonw.exe`
 
 `TeleVault.exe` запускает `runtime\python\pythonw.exe app.py` из папки, где лежит сам exe, без видимой консоли, ждёт готовности сервера и открывает app-like окно через Edge/Chrome или обычный browser fallback. `run_windows.bat` остаётся fallback/debug launcher и сначала пробует `runtime\python\python.exe`, затем системный `py`, затем системный `python`.
@@ -41,11 +39,10 @@ dist/TeleVault-v2.9.3/
 - backend/
 - frontend/
 - README.md
-- README_RUN.md
 - CHANGELOG.md
-- RELEASE_CHECKLIST.md
-- EXE_PACKAGING_PLAN.md
-- DEVELOPMENT_LOG.md
+- docs/release/RELEASE_CHECKLIST.md
+- docs/dev/EXE_PACKAGING_PLAN.md
+- docs/dev/DEVELOPMENT_LOG.md
 - runtime/python/ optional, only when runtime/python/python.exe exists in the source project
 ```
 
@@ -105,10 +102,8 @@ dist/TeleVault-v2.9.3-win7-legacy-x64/
 - backend/
 - frontend/
 - README.md
-- README_RUN.md
-- README_WIN7.md
 - CHANGELOG.md
-- DEVELOPMENT_LOG.md
+- docs/dev/DEVELOPMENT_LOG.md
 - requirements-win7.txt
 - runtime/python38-win7/python.exe
 - runtime/python38-win7/pythonw.exe
@@ -228,7 +223,7 @@ git diff --check
 - `README.md` должен быть обязательной проверкой перед release, если в нём указаны текущая версия, download-инструкция, имя portable zip, GitHub Releases links или Windows compatibility wording.
 - `README.md` должен указывать актуальную release version, объяснять установку через portable zip из GitHub Releases и не обещать официальную поддержку Windows 7 для основной Windows 10/11-сборки.
 - `tools\build_exe_launcher.py` должен проверять синхронизацию package, backend и launcher version перед компиляцией exe.
-- `README_RUN.md` должен объяснять запуск через `TeleVault.exe` и fallback через `run_windows.bat`.
-- `EXE_PACKAGING_PLAN.md` должен оставлять one-file exe и installer будущими этапами.
+- `README.md` должен объяснять запуск через `TeleVault.exe` и fallback через `run_windows.bat`.
+- `docs/dev/EXE_PACKAGING_PLAN.md` должен оставлять one-file exe и installer будущими этапами.
 - `assets/README.md` должен объяснять `assets\TeleVault.ico` и пересоздание иконки через `tools\generate_icon.py`.
-- `CHANGELOG.md` и `DEVELOPMENT_LOG.md` должны содержать запись 2.9.3.
+- `CHANGELOG.md` и `docs/dev/DEVELOPMENT_LOG.md` должны содержать запись 2.9.3.

@@ -43,7 +43,6 @@ def unique(items: list[str]) -> list[str]:
 
 
 ALLOWLIST_FILES = unique(build_portable.ALLOWLIST_FILES + [
-    "README_WIN7.md",
     "requirements-win7.txt",
 ])
 ALLOWLIST_DIRS = build_portable.ALLOWLIST_DIRS

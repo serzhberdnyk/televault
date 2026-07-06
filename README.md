@@ -31,13 +31,23 @@ Screenshots will be added later using safe demo data only. See the [screenshots 
 1. Download the latest Windows zip from [GitHub Releases](https://github.com/serzhberdnyk/televault/releases).
 2. Unzip it to a folder.
 3. Run `TeleVault.exe`.
-4. Choose a Telegram export folder.
+4. Choose a Telegram export folder, or a parent folder that contains several exports.
 5. Open a chat from the local library.
+
+You do not need to install Python, Git, or developer tools for the portable Windows package.
+
+## Windows Startup Notes
+
+- If Windows SmartScreen warns about the unsigned portable exe, use it only when you downloaded TeleVault from the expected GitHub release.
+- If `TeleVault.exe` does not open, run `run_windows.bat` from the same folder.
+- If the browser does not open automatically, open `http://127.0.0.1:8766`.
+- If the launcher reports an error, check `logs\launcher.log` next to the app. If that folder is not writable, diagnostics are written to `%LOCALAPPDATA%\TeleVault\logs\launcher.log`.
+- Always unzip the full package before running the app.
 
 ## Supported Platforms
 
 - Main package: Windows 10/11 x64.
-- Windows 7: legacy / best effort only if a separate legacy package is published and tested.
+- Windows 7: legacy / best effort only if a separate legacy package is published and tested. The main Windows 10/11 package does not support Windows 7. Do not download missing system DLLs such as `api-ms-win-core-path-l1-1-0.dll` from random DLL websites.
 
 ## Limitations
 
@@ -54,5 +64,6 @@ When reporting a bug, include the TeleVault version, Windows version, export typ
 
 ## More
 
-- [README_RUN.md](README_RUN.md) - Windows run and troubleshooting notes
-- [README_WIN7.md](README_WIN7.md) - Windows 7 legacy package limitations
+- [CHANGELOG.md](CHANGELOG.md) - release history
+- [docs/release/RELEASE_CHECKLIST.md](docs/release/RELEASE_CHECKLIST.md) - release checks
+- [docs/dev/DEVELOPMENT_LOG.md](docs/dev/DEVELOPMENT_LOG.md) - development notes

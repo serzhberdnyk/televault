@@ -17,12 +17,10 @@ ALLOWLIST_FILES = [
     "app.py",
     "run_windows.bat",
     "README.md",
-    "README_RUN.md",
-    "README_WIN7.md",
     "CHANGELOG.md",
-    "RELEASE_CHECKLIST.md",
-    "EXE_PACKAGING_PLAN.md",
-    "DEVELOPMENT_LOG.md",
+    "docs/release/RELEASE_CHECKLIST.md",
+    "docs/dev/EXE_PACKAGING_PLAN.md",
+    "docs/dev/DEVELOPMENT_LOG.md",
 ]
 
 ALLOWLIST_DIRS = [

@@ -32,7 +32,7 @@ TeleVault/
 - frontend/
 - assets/
 - runtime/python/
-- README_RUN.md
+- README.md
 ```
 
 The exe launches the existing portable flow through `runtime\python\pythonw.exe app.py`. The backend, frontend, and runtime stay as normal folders beside the launcher.
