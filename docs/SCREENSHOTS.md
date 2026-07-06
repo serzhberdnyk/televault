@@ -21,6 +21,7 @@ Create clear product screenshots without exposing personal Telegram chats, local
 ## Recommended Demo Content
 
 Use small, neutral demo data that looks realistic but contains no personal content.
+See the [demo export plan](DEMO_EXPORT.md) before creating any fake export data.
 
 - fake chat names: Alice, Bob, Family Archive, Work Notes
 - neutral messages about travel, photos, project notes, reminders
