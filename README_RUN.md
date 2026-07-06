@@ -2,11 +2,11 @@
 
 TeleVault - локальный оффлайн-архив Telegram-переписок. Он открывает экспорт Telegram Desktop на вашем компьютере, показывает переписки и медиа в удобном окне и не отправляет данные наружу.
 
-Текущая версия: `2.9.5`.
+Текущая версия: `2.9.7`.
 
 ## Обычный запуск
 
-1. Откройте папку `TeleVault-v2.9.5` в Проводнике Windows.
+1. Откройте папку `TeleVault-v2.9.7` в Проводнике Windows.
 2. Дважды нажмите `TeleVault.exe`.
 3. Дождитесь окна TeleVault.
 4. Нажмите `добавить экспорт`.
@@ -30,7 +30,7 @@ http://127.0.0.1:8766
 Если `TeleVault.exe` показывает ошибку, проверьте файл `logs\launcher.log` рядом с приложением. Также убедитесь, что папка была полностью распакована из zip. Для portable-комплекта рядом с `TeleVault.exe` должны лежать:
 
 ```text
-TeleVault-v2.9.5/
+TeleVault-v2.9.7/
 - TeleVault.exe
 - app.py
 - assets/
@@ -81,8 +81,8 @@ build_exe_launcher.bat
 Результат:
 
 ```text
-dist\TeleVault-v2.9.5\
-dist\TeleVault-v2.9.5.zip
+dist\TeleVault-v2.9.7\
+dist\TeleVault-v2.9.7.zip
 ```
 
 `build_exe_launcher.bat` перед сборкой проверяет, что package version, `app.py APP_VERSION`, frontend placeholder, `run_windows.bat` startup text и launcher `kAppVersion` совпадают.
