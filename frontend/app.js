@@ -51,19 +51,9 @@ if ('scrollRestoration' in history) {
 }
 
 const icons = {
-  messages: `
-    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v6A2.5 2.5 0 0 1 16.5 14H11l-4.2 3.3A.5.5 0 0 1 6 16.9v-2.8a2.5 2.5 0 0 1-1-2V5.5Z" />
-    </svg>
-  `,
   media: `
     <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18.5v-13Zm3.2 1.2v8.6l2.8-3.2 2.1 2.5 1.4-1.5 2.3 2.7V6.7H8.2Z" />
-    </svg>
-  `,
-  date: `
-    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M7 3a1 1 0 0 1 1 1v1h8V4a1 1 0 1 1 2 0v1.1A2.9 2.9 0 0 1 20.5 8v9.1A2.9 2.9 0 0 1 17.6 20H6.4a2.9 2.9 0 0 1-2.9-2.9V8A2.9 2.9 0 0 1 6 5.1V4a1 1 0 0 1 1-1Zm-1.5 7v7.1c0 .5.4.9.9.9h11.2c.5 0 .9-.4.9-.9V10h-13Z" />
     </svg>
   `,
   folder: `
@@ -108,9 +98,7 @@ const text = {
   choosingFolder: 'ожидание выбора...',
   openingPicker: 'открываю выбор папки...',
   checkingStartupVault: 'проверяем последний локальный архив...',
-  pasteFolderFirst: 'сначала укажи папку архива',
   indexingVault: 'собираю локальный архив...',
-  chatsFound: 'найдено чатов',
   errors: 'ошибок',
   messages: 'сообщений',
   media: 'медиа',
@@ -123,7 +111,6 @@ const text = {
   changeFilters: 'попробуй изменить поиск, фильтр или вкладку',
   system: 'system',
   forwardedFrom: 'переслано от',
-  systemSender: 'Системные события',
   pinnedMessage: 'закреплено сообщение',
   pinnedMessageFallback: 'сообщение',
   genericService: 'системное событие Telegram',
@@ -142,9 +129,7 @@ const text = {
   next: 'вперёд',
   openOriginal: 'открыть оригинал',
   unknownType: 'тип неизвестен',
-  addFirstExport: 'добавь первый архив',
   conversationsNotFound: 'переписки не найдены',
-  conversationsEmptyBody: 'добавь экспорт, чтобы собрать локальный архив переписок',
   chatSearchNothingFound: 'нет результатов поиска',
   chatSearchNothingFoundBody: 'в локальном архиве нет совпадений по этому запросу',
   globalSearchTitle: 'Найденные сообщения',
@@ -254,10 +239,6 @@ async function api(path, options = {}) {
     throw error;
   }
   return data;
-}
-
-function setInfo(message, isError = false) {
-  setLibraryMessage(message, isError ? 'error' : 'note');
 }
 
 function setLibraryMessage(message, kind = 'note', detail = '') {
@@ -740,22 +721,6 @@ async function forgetMissingExport() {
     renderVaultWelcome({ mode: 'missing' });
   } finally {
     setForgetMissingButtonLoading(false);
-  }
-}
-
-async function loadFolderPath() {
-  try {
-    const field = $('folderPath');
-    const folder = field ? field.value.trim() : '';
-    if (!folder) return setInfo(text.pasteFolderFirst, true);
-    const data = await api('/api/load-folder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folder }),
-    });
-    await afterLibraryLoaded(data);
-  } catch (e) {
-    setInfo(e.message, true);
   }
 }
 
@@ -1704,24 +1669,6 @@ function getMessageDirection(msg, context = {}) {
     return sender === chatTitle ? 'incoming' : 'outgoing';
   }
   return '';
-}
-
-function createDateSeparator(dayKey) {
-  const separator = document.createElement('div');
-  const label = document.createElement('span');
-  separator.className = 'date-separator';
-  separator.setAttribute('role', 'separator');
-  label.textContent = formatDayTitle(dayKey);
-  separator.appendChild(label);
-  return separator;
-}
-
-function appendDateSeparatorIfNeeded(frag, msg, previousDayKey) {
-  const dayKey = messageDayKey(msg);
-  if (dayKey !== previousDayKey) {
-    frag.appendChild(createDateSeparator(dayKey));
-  }
-  return dayKey;
 }
 
 function renderDateSeparator(dayKey) {
@@ -2993,14 +2940,6 @@ function bindControls() {
       pickFolder();
     }
   });
-  const loadPathButton = $('loadPath');
-  const folderPathField = $('folderPath');
-  if (loadPathButton) loadPathButton.addEventListener('click', loadFolderPath);
-  if (folderPathField) {
-    folderPathField.addEventListener('keydown', event => {
-      if (event.key === 'Enter') loadFolderPath();
-    });
-  }
   $('messages').addEventListener('click', handleVideoNoteClick);
   $('messages').addEventListener('click', handleSearchResultClick);
   const debouncedGlobalMessageSearch = debounce(loadGlobalMessageSearch, 220);

@@ -220,10 +220,6 @@ select:focus-visible {
   fill: currentColor;
 }
 
-.manual-load {
-  display: none;
-}
-
 .hint {
   color: var(--muted);
   font-size: 12.5px;
@@ -1093,11 +1089,6 @@ code {
   max-height: 180px;
 }
 
-.sticker-preview-mini img {
-  max-width: 68px;
-  max-height: 68px;
-}
-
 .sticker-video-preview video {
   background: transparent;
 }
@@ -1179,23 +1170,6 @@ code {
   transform: rotate(-8deg);
 }
 
-.sticker-fallback-icon .file-icon {
-  width: 34px;
-  height: 34px;
-}
-
-.sticker-fallback-info {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.sticker-fallback-info strong {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.sticker-fallback-info span,
 .sticker-fallback-note {
   color: var(--muted);
   font-size: 12px;
@@ -1607,10 +1581,6 @@ code {
   display: none;
 }
 
-.sticker-fallback.is-missing > .sticker-fallback-info {
-  display: none;
-}
-
 .error {
   color: var(--danger);
 }
@@ -1679,10 +1649,6 @@ code {
   .messages {
     padding-left: 14px;
     padding-right: 14px;
-  }
-
-  .manual-load {
-    grid-template-columns: 1fr;
   }
 
   .primary {
@@ -2726,25 +2692,6 @@ code {
     font-size: 21px;
   }
 }
-.chat-list-empty {
-  display: grid;
-  gap: 4px;
-  margin: 7px 10px;
-  padding: 11px 12px;
-  border: 1px solid rgba(49, 65, 84, 0.44);
-  border-radius: var(--radius-md);
-  background: rgba(17, 27, 38, 0.54);
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.42;
-}
-
-.chat-list-empty strong {
-  color: var(--muted-strong);
-  font-size: 13px;
-  font-weight: 650;
-}
-
 .empty-state--sidebar {
   grid-template-columns: 8px minmax(0, 1fr);
   width: auto;
