@@ -38,11 +38,7 @@ const state = {
   chatCache: {},
   senderFilterSignature: '',
   messagesRequestId: 0,
-  allMessages: [],
   ownerSenderKey: '',
-  selectedDay: null,
-  selectedPersonKey: null,
-  peopleList: [],
 };
 
 let jumpHighlightTimer = null;
@@ -148,8 +144,6 @@ const text = {
   next: 'вперёд',
   openOriginal: 'открыть оригинал',
   unknownType: 'тип неизвестен',
-  backToTimeline: 'назад к Timeline',
-  backToPeople: 'назад к людям',
   addFirstExport: 'добавь первый архив',
   conversationsNotFound: 'переписки не найдены',
   conversationsEmptyBody: 'добавь экспорт, чтобы собрать локальный архив переписок',
@@ -289,7 +283,6 @@ function setLibraryEmpty() {
   state.missingVaultPath = '';
   state.selectedChatId = null;
   state.chatCache = {};
-  state.allMessages = [];
   setLibraryMessage(text.storageNotSelected, 'empty', text.storageNotSelectedBody);
 }
 
@@ -305,7 +298,6 @@ function setLibraryMissing(details = {}) {
   state.missingVaultPath = missingPath;
   state.selectedChatId = null;
   state.chatCache = {};
-  state.allMessages = [];
   resetGlobalMessageSearch();
   $('libraryInfo').className = 'hint library-info library-info--warning';
   $('libraryInfo').innerHTML = renderLibraryStatus({
@@ -727,38 +719,6 @@ function compareChatsForSidebar(a, b) {
   return dateSortValue(b.last_date) - dateSortValue(a.last_date);
 }
 
-function renderPeopleList() {
-  const box = $('chatList');
-  const people = buildPeople();
-  state.peopleList = people;
-  $('chatListTitle').textContent = 'Люди в переписках';
-  box.innerHTML = '';
-  if (!people.length) {
-    box.innerHTML = '<div class="chat-list-empty">люди появятся после добавления экспорта</div>';
-    return;
-  }
-  people.forEach(person => {
-    const div = document.createElement('button');
-    div.type = 'button';
-    div.className = 'chat-card person-list-card' + (person.key === state.selectedPersonKey ? ' active' : '');
-    div.innerHTML = `
-      <span class="chat-card__title">${escapeHtml(person.name)}</span>
-      <span class="chat-card__stats">
-        <span>${icons.messages}${person.messages.length} ${text.messages}</span>
-        <span>${icons.media}${person.mediaCount} ${text.media}</span>
-      </span>
-      <span class="chat-card__date">${escapeHtml(person.firstDate || text.noDate)} → ${escapeHtml(person.lastDate || text.noDate)}</span>
-    `;
-    div.addEventListener('click', () => {
-      state.selectedPersonKey = person.key;
-      setActiveSection('vault', { render: false });
-      renderConversationList();
-      renderPeopleSection();
-    });
-    box.appendChild(div);
-  });
-}
-
 async function pickFolder() {
   if (state.isPickingFolder) return;
   const hadOpenVault = state.vaultLoaded;
@@ -837,10 +797,7 @@ async function afterLibraryLoaded(data) {
   state.chatCache = {};
   state.senderFilterSignature = '';
   state.messagesRequestId += 1;
-  state.allMessages = [];
   state.ownerSenderKey = '';
-  state.selectedDay = null;
-  state.selectedPersonKey = null;
   state.conversationMode = 'chats';
   state.chatSearchQuery = '';
   state.chatSortMode = DEFAULT_CHAT_SORT_MODE;
@@ -870,7 +827,7 @@ async function afterLibraryLoaded(data) {
 }
 
 async function preloadArchiveMessages() {
-  const batches = await Promise.all(state.chats.map(async chat => {
+  await Promise.all(state.chats.map(async chat => {
     try {
       const data = await api(`/api/chat?id=${encodeURIComponent(chat.id)}&q=&sender=&media=0`);
       const messages = (data.messages || []).map((msg, index) => ({
@@ -890,8 +847,8 @@ async function preloadArchiveMessages() {
       return [];
     }
   }));
-  state.allMessages = batches.flat().sort(compareMessagesAsc);
 }
+
 async function selectChat(chatId) {
   const chatChanged = state.selectedChatId !== chatId;
   if (!chatChanged) {
@@ -900,7 +857,6 @@ async function selectChat(chatId) {
   }
   state.selectedChatId = chatId;
   state.conversationMode = 'chats';
-  state.selectedPersonKey = null;
   closeLightbox();
   $('senderFilter').value = '';
   state.senderFilterSignature = '';
@@ -1323,7 +1279,6 @@ async function openGlobalSearchResult(result) {
     clearMessageFiltersForJump();
     state.selectedChatId = chatId;
     state.conversationMode = 'chats';
-    state.selectedPersonKey = null;
     state.senderFilterSignature = '';
     closeLightbox();
     renderConversationList();
@@ -2459,28 +2414,6 @@ function renderInlineMedia(msg, photoContext = 'vault-current') {
   return `<div class="media">${renderFileCard(msg, '', { showMeta: false })}</div>`;
 }
 
-function renderSmallMediaPreview(msg, photoContext = 'vault-current') {
-  if (!hasMedia(msg)) return '';
-  if (isSticker(msg)) {
-    if (isStickerImage(msg)) {
-      return `<div class="mini-media mini-sticker-preview">${renderStickerImage(msg, photoContext, 'sticker-preview-mini')}</div>`;
-    }
-    return `<div class="mini-media mini-file">${icons.file}<span>${escapeHtml(mediaName(msg))}</span></div>`;
-  }
-  if (isPhoto(msg)) {
-    const index = photoIndexFor(msg, photoContext);
-    if (index >= 0) {
-      const caption = [msg.date, messageSender(msg) || cleanVisibleText(msg.chatTitle)].filter(Boolean).join(' · ');
-      return `<div class="mini-media">${renderPhotoPreview(msg, index, { context: photoContext, className: 'mini-photo-preview', label: 'открыть фото', caption })}</div>`;
-    }
-  }
-  if (isMediaMissing(msg)) {
-    const name = mediaName(msg);
-    return `<div class="mini-media mini-missing">${escapeHtml(mediaFallbackTitle(mediaFallbackKind(msg)))}${name ? `: ${escapeHtml(name)}` : ''}</div>`;
-  }
-  return `<div class="mini-media mini-file">${icons.file}<span>${escapeHtml(mediaName(msg))}</span></div>`;
-}
-
 function bindMediaErrorHandlers(root) {
   root.querySelectorAll('[data-media-element]').forEach(element => {
     element.addEventListener('error', () => handleMediaElementError(element), { once: true });
@@ -2810,309 +2743,6 @@ function renderEmpty() {
   return `<div class="empty in-messages">${renderEmptyState(text.noChatMessages, text.noChatMessagesBody, { className: 'empty-state--messages' })}</div>`;
 }
 
-function renderSectionEmpty(title = text.addFirstExport, body = 'Добавь папку экспорта Telegram, чтобы собрать локальный архив переписок.') {
-  return `
-    <div class="section-empty">
-      <h3>${escapeHtml(title)}</h3>
-      <p>${escapeHtml(body)}</p>
-      <button class="primary section-empty-action" type="button" data-pick-folder>${icons.folder}<span>${text.chooseFolder}</span></button>
-    </div>
-  `;
-}
-
-function renderTimelineSection() {
-  $('chatTitle').textContent = 'Timeline';
-  $('chatMeta').textContent = 'дни активности во всём локальном хранилище';
-  const box = $('timelineContent');
-  if (!state.allMessages.length) {
-    box.innerHTML = renderSectionEmpty('Timeline появится после добавления экспорта', 'TeleVault соберёт дни активности из сохранённых сообщений.');
-    return;
-  }
-  if (state.selectedDay) {
-    renderTimelineDay(box, state.selectedDay);
-    return;
-  }
-  const days = buildTimelineDays();
-  box.innerHTML = `
-    <div class="section-heading">
-      <h3>Timeline</h3>
-      <p>Хранилище сгруппировано по дням из всех найденных чатов.</p>
-    </div>
-    <div class="timeline-list">
-      ${days.map(day => renderTimelineDayCard(day)).join('')}
-    </div>
-  `;
-  box.querySelectorAll('[data-day]').forEach(button => {
-    button.addEventListener('click', () => {
-      state.selectedDay = button.dataset.day;
-      renderTimelineSection();
-    });
-  });
-  bindMediaErrorHandlers(box);
-  bindPhotoTriggers(box);
-}
-
-function renderTimelineDayCard(day) {
-  const chats = Array.from(day.chats).slice(0, 3).map(cleanVisibleText).filter(Boolean).map(escapeHtml).join(', ');
-  const contextKey = `timeline-day-${day.key}`;
-  const photos = setPhotoContext(contextKey, day.messages);
-  const thumbs = photos.slice(0, 3).map((msg, index) => renderPhotoPreview(msg, index, {
-    context: contextKey,
-    className: 'timeline-thumb',
-    label: 'открыть фото дня',
-    caption: [cleanVisibleText(msg.chatTitle), messageSender(msg)].filter(Boolean).join(' · '),
-  })).join('');
-  return `
-    <article class="vault-card timeline-day-card">
-      <button type="button" class="card-main" data-day="${escapeAttr(day.key)}">
-        <span class="card-title">${escapeHtml(formatDayTitle(day.key))}</span>
-        <span class="card-meta">${day.messages.length} ${text.messages} · ${day.chats.size} ${pluralRu(day.chats.size, 'чат', 'чата', 'чатов')} · ${day.mediaCount} ${text.media}</span>
-        <span class="card-subtitle">${chats || text.systemSender}</span>
-      </button>
-      ${thumbs ? `<span class="timeline-thumbs">${thumbs}</span>` : ''}
-    </article>
-  `;
-}
-
-function renderTimelineDay(box, dayKey) {
-  const day = buildTimelineDays().find(item => item.key === dayKey);
-  if (!day) {
-    state.selectedDay = null;
-    renderTimelineSection();
-    return;
-  }
-  const messages = [...day.messages].sort(compareMessagesAsc);
-  const photoContext = `timeline-detail-${day.key}`;
-  setPhotoContext(photoContext, messages);
-  box.innerHTML = `
-    <div class="section-heading section-heading-row">
-      <div>
-        <h3>${escapeHtml(formatDayTitle(day.key))}</h3>
-        <p>${day.messages.length} ${text.messages} · ${day.chats.size} ${pluralRu(day.chats.size, 'чат', 'чата', 'чатов')} · ${day.mediaCount} ${text.media}</p>
-      </div>
-      <button type="button" class="back-button" data-timeline-back>${text.backToTimeline}</button>
-    </div>
-    <div class="archive-message-list">
-      ${messages.map(msg => renderArchiveMessage(msg, photoContext)).join('')}
-    </div>
-  `;
-  box.querySelector('[data-timeline-back]').addEventListener('click', () => {
-    state.selectedDay = null;
-    renderTimelineSection();
-  });
-  bindMediaErrorHandlers(box);
-  bindPhotoTriggers(box);
-}
-
-function renderPeopleSection() {
-  if (state.activeSection !== 'vault') return;
-  $('mediaTabs').hidden = true;
-  $('filters').hidden = true;
-  $('emptyState').style.display = 'none';
-  const box = $('messages');
-  box.style.display = 'block';
-  box.className = 'messages people-vault';
-  const people = buildPeople();
-  state.peopleList = people;
-  if (!people.length) {
-    $('chatTitle').textContent = 'Переписки';
-    $('chatMeta').textContent = 'люди появятся после добавления экспорта';
-    box.innerHTML = renderSectionEmpty('Люди появятся после добавления экспорта', 'TeleVault соберёт отправителей из сообщений в локальном хранилище.');
-    return;
-  }
-  if (state.selectedPersonKey) {
-    renderPersonDetail(box, state.selectedPersonKey);
-    return;
-  }
-  $('chatTitle').textContent = 'Переписки';
-  $('chatMeta').textContent = 'люди из сохранённых переписок в локальном хранилище';
-  box.innerHTML = `
-    <div class="section-heading">
-      <h3>Люди в переписках</h3>
-      <p>Отправители собраны из сохранённых переписок в твоём локальном хранилище.</p>
-    </div>
-    <div class="people-grid">
-      ${people.map(renderPersonCard).join('')}
-    </div>
-  `;
-  box.querySelectorAll('[data-person-key]').forEach(button => {
-    button.addEventListener('click', () => {
-      state.selectedPersonKey = button.dataset.personKey;
-      renderConversationList();
-      renderPeopleSection();
-    });
-  });
-  bindMediaErrorHandlers(box);
-  bindPhotoTriggers(box);
-}
-function renderPersonCard(person) {
-  const chats = Array.from(person.chats).slice(0, 3).map(cleanVisibleText).filter(Boolean).map(escapeHtml).join(', ');
-  const contextKey = `person-card-${person.key}`;
-  const photos = setPhotoContext(contextKey, person.messages);
-  const thumbs = photos.slice(0, 3).map((msg, index) => renderPhotoPreview(msg, index, {
-    context: contextKey,
-    className: 'timeline-thumb',
-    label: 'открыть фото человека',
-    caption: [cleanVisibleText(msg.chatTitle), msg.date].filter(Boolean).join(' · '),
-  })).join('');
-  return `
-    <article class="vault-card person-card">
-      <button type="button" class="card-main" data-person-key="${escapeAttr(person.key)}">
-        <span class="card-title">${escapeHtml(person.name)}</span>
-        <span class="card-meta">${person.messages.length} ${text.messages} · ${person.mediaCount} ${text.media}</span>
-        <span class="card-subtitle">${escapeHtml(person.firstDate || text.noDate)} → ${escapeHtml(person.lastDate || text.noDate)}</span>
-        <span class="card-subtitle">${chats || 'чат не указан'}</span>
-      </button>
-      ${thumbs ? `<span class="person-thumbs">${thumbs}</span>` : ''}
-    </article>
-  `;
-}
-function renderPersonDetail(box, key) {
-  const person = state.peopleList.find(item => item.key === key) || buildPeople().find(item => item.key === key);
-  if (!person) {
-    state.selectedPersonKey = null;
-    renderConversationList();
-    renderPeopleSection();
-    return;
-  }
-  $('chatTitle').textContent = person.name;
-  $('chatMeta').textContent = 'человек в сохранённых переписках локального хранилища';
-  const messages = [...person.messages].sort(compareMessagesAsc);
-  const photoContext = `person-detail-${person.key}`;
-  setPhotoContext(photoContext, messages);
-  box.innerHTML = `
-    <div class="section-heading section-heading-row">
-      <div>
-        <h3>${escapeHtml(person.name)}</h3>
-        <p>${person.messages.length} ${text.messages} · ${person.mediaCount} ${text.media} · ${person.chats.size} ${pluralRu(person.chats.size, 'чат', 'чата', 'чатов')}</p>
-      </div>
-      <button type="button" class="back-button" data-people-back>${text.backToPeople}</button>
-    </div>
-    <div class="archive-message-list">
-      ${messages.map(msg => renderArchiveMessage(msg, photoContext)).join('')}
-    </div>
-  `;
-  box.querySelector('[data-people-back]').addEventListener('click', () => {
-    state.selectedPersonKey = null;
-    renderConversationList();
-    renderPeopleSection();
-  });
-  bindMediaErrorHandlers(box);
-  bindPhotoTriggers(box);
-}
-
-function renderInsightsSection() {
-  $('chatTitle').textContent = 'Insights';
-  $('chatMeta').textContent = 'простая сводка по локальному хранилищу';
-  const box = $('insightsContent');
-  if (!state.chats.length) {
-    box.innerHTML = renderSectionEmpty('Insights появятся после добавления экспорта', 'TeleVault покажет простую сводку по сохранённым чатам, людям и дням.');
-    return;
-  }
-  const insights = buildInsights();
-  box.innerHTML = `
-    <div class="section-heading">
-      <h3>Insights</h3>
-      <p>Без графиков и внешних библиотек: только базовая сводка по хранилищу.</p>
-    </div>
-    <div class="insights-grid">
-      ${renderInsightCard('Всего чатов', insights.totalChats)}
-      ${renderInsightCard('Всего сообщений', insights.totalMessages)}
-      ${renderInsightCard('Всего медиа', insights.totalMedia)}
-      ${renderInsightCard('Первое сообщение', insights.firstMessage)}
-      ${renderInsightCard('Последнее сообщение', insights.lastMessage)}
-      ${renderInsightCard('Самый активный чат', insights.activeChat)}
-      ${renderInsightCard('Самый активный отправитель', insights.activeSender)}
-      ${renderInsightCard('Самый активный день', insights.activeDay)}
-    </div>
-  `;
-}
-
-function renderInsightCard(label, value) {
-  return `
-    <article class="insight-card">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(String(value || 'нет данных'))}</strong>
-    </article>
-  `;
-}
-
-function renderArchiveMessage(msg, photoContext = 'vault-current') {
-  const bodyText = messageVisibleText(msg);
-  const chatTitle = cleanVisibleText(msg.chatTitle) || 'чат';
-  const sender = messageSender(msg) || text.systemSender;
-  return `
-    <article class="archive-message conversation-message-card">
-      <div class="archive-message-meta">
-        <span class="archive-chat">${escapeHtml(chatTitle)}</span>
-        <span>${escapeHtml(sender)}</span>
-        <span>${escapeHtml(messageTime(msg))}</span>
-      </div>
-      ${bodyText ? `<div class="archive-message-text">${escapeHtml(bodyText)}</div>` : ''}
-      ${renderSmallMediaPreview(msg, photoContext)}
-    </article>
-  `;
-}
-
-function buildTimelineDays() {
-  const map = new Map();
-  state.allMessages.forEach(msg => {
-    const key = messageDayKey(msg);
-    if (!map.has(key)) {
-      map.set(key, { key, messages: [], chats: new Set(), mediaCount: 0, photos: [] });
-    }
-    const day = map.get(key);
-    day.messages.push(msg);
-    if (msg.chatTitle) day.chats.add(msg.chatTitle);
-    if (hasMedia(msg)) day.mediaCount += 1;
-    if (isPhoto(msg) && msg.media_url && !isMediaMissing(msg)) day.photos.push(msg);
-  });
-  return Array.from(map.values()).sort((a, b) => dateSortValue(b.key) - dateSortValue(a.key));
-}
-
-function buildPeople() {
-  const map = new Map();
-  state.allMessages.forEach(msg => {
-    const rawName = messageSender(msg);
-    const name = rawName || text.systemSender;
-    const key = rawName ? rawName.toLowerCase() : '__system__';
-    if (!map.has(key)) {
-      map.set(key, { key, name, messages: [], chats: new Set(), mediaCount: 0, firstDate: '', lastDate: '' });
-    }
-    const person = map.get(key);
-    person.messages.push(msg);
-    if (msg.chatTitle) person.chats.add(msg.chatTitle);
-    if (hasMedia(msg)) person.mediaCount += 1;
-  });
-  const people = Array.from(map.values());
-  people.forEach(person => {
-    const sorted = [...person.messages].sort(compareMessagesAsc);
-    person.firstDate = sorted[0]?.date || '';
-    person.lastDate = sorted[sorted.length - 1]?.date || '';
-  });
-  return people.sort((a, b) => b.messages.length - a.messages.length || a.name.localeCompare(b.name));
-}
-
-function buildInsights() {
-  const people = buildPeople();
-  const days = buildTimelineDays();
-  const first = state.allMessages[0];
-  const last = state.allMessages[state.allMessages.length - 1];
-  const activeChat = [...state.chats].sort((a, b) => Number(b.message_count || 0) - Number(a.message_count || 0))[0];
-  const activeSender = people[0];
-  const activeDay = [...days].sort((a, b) => b.messages.length - a.messages.length)[0];
-  return {
-    totalChats: state.chats.length,
-    totalMessages: state.allMessages.length,
-    totalMedia: state.allMessages.filter(hasMedia).length,
-    firstMessage: first ? `${first.date} · ${first.chatTitle}` : '',
-    lastMessage: last ? `${last.date} · ${last.chatTitle}` : '',
-    activeChat: activeChat ? `${activeChat.title} · ${activeChat.message_count} ${text.messages}` : '',
-    activeSender: activeSender ? `${activeSender.name} · ${activeSender.messages.length} ${text.messages}` : '',
-    activeDay: activeDay ? `${formatDayTitle(activeDay.key)} · ${activeDay.messages.length} ${text.messages}` : '',
-  };
-}
-
 function messageDateValue(msg) {
   return [msg.date, msg.date_unixtime, msg.timestamp]
     .find(value => value !== undefined && value !== null && String(value).trim()) || '';
@@ -3163,10 +2793,6 @@ function dateSortValue(value) {
   const normalized = String(value).replace(' ', 'T');
   const time = new Date(normalized).getTime();
   return Number.isNaN(time) ? 0 : time;
-}
-
-function compareMessagesAsc(a, b) {
-  return dateSortValue(messageDateValue(a)) - dateSortValue(messageDateValue(b));
 }
 
 function pluralRu(count, one, few, many) {
