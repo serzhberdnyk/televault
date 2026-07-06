@@ -48,11 +48,6 @@ if ('scrollRestoration' in history) {
 }
 
 const icons = {
-  media: `
-    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18.5v-13Zm3.2 1.2v8.6l2.8-3.2 2.1 2.5 1.4-1.5 2.3 2.7V6.7H8.2Z" />
-    </svg>
-  `,
   folder: `
     <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M3.8 6.3a2 2 0 0 1 2-2h4.4l2 2h6a2 2 0 0 1 2 2v1.2H3.8V6.3Z" />
