@@ -2050,10 +2050,6 @@ code {
   display: none !important;
 }
 
-.section-nav {
-  display: none;
-}
-
 .chat-tools {
   display: grid;
   gap: 0;
@@ -2076,20 +2072,10 @@ code {
   letter-spacing: 0;
 }
 
-.app-section {
-  min-height: 0;
-}
-
-.app-section-vault.active {
+#vaultSection {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-height: 0;
-}
-
-.section-content {
-  overflow: auto;
-  padding: 18px 22px 60px;
-  background: var(--bg);
 }
 
 .welcome {
@@ -2726,22 +2712,12 @@ code {
 }
 
 @media (max-width: 900px) {
-  .app-section-vault.active {
+  #vaultSection {
     display: block;
-  }
-
-  .section-content {
-    overflow: visible;
-    min-height: 320px;
   }
 }
 
 @media (max-width: 520px) {
-  .section-content {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
   .welcome-lockup {
     padding: 20px;
   }

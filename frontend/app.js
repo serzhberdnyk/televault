@@ -23,8 +23,6 @@ const state = {
   photoContextIndexes: {},
   mediaMode: 'all',
   isPickingFolder: false,
-  activeSection: 'vault',
-  conversationMode: 'chats',
   chatSearchQuery: '',
   chatSortMode: DEFAULT_CHAT_SORT_MODE,
   globalSearchLimit: 50,
@@ -486,27 +484,6 @@ function updateMediaTabs() {
   });
 }
 
-function updateSectionNav() {
-  document.querySelectorAll('[data-section-panel]').forEach(panel => {
-    const isActive = panel.dataset.sectionPanel === state.activeSection;
-    panel.hidden = !isActive;
-    panel.classList.toggle('active', isActive);
-  });
-}
-
-function setActiveSection(section, options = {}) {
-  // TODO: advanced sections may return later; minimal vault UI keeps only saved conversations visible.
-  if (section !== 'vault') return;
-  state.activeSection = 'vault';
-  closeLightbox();
-  if (options.render !== false) renderCurrentSection();
-}
-
-function renderCurrentSection() {
-  if (state.selectedChatId) loadMessages();
-  else renderVaultWelcome();
-}
-
 function renderConversationList() {
   renderChats();
 }
@@ -798,7 +775,6 @@ async function afterLibraryLoaded(data) {
   state.senderFilterSignature = '';
   state.messagesRequestId += 1;
   state.ownerSenderKey = '';
-  state.conversationMode = 'chats';
   state.chatSearchQuery = '';
   state.chatSortMode = DEFAULT_CHAT_SORT_MODE;
   resetGlobalMessageSearch();
@@ -810,7 +786,6 @@ async function afterLibraryLoaded(data) {
   $('chatSearch').value = '';
   updateMediaTabs();
   renderMediaOnlyButton();
-  setActiveSection('vault', { render: false });
   renderConversationList();
   setLibraryLoading(text.indexingVault, {
     root: state.vaultRoot,
@@ -856,7 +831,6 @@ async function selectChat(chatId) {
     return;
   }
   state.selectedChatId = chatId;
-  state.conversationMode = 'chats';
   closeLightbox();
   $('senderFilter').value = '';
   state.senderFilterSignature = '';
@@ -865,7 +839,6 @@ async function selectChat(chatId) {
 }
 
 async function loadMessages(options = {}) {
-  if (state.activeSection !== 'vault' || state.conversationMode !== 'chats') return;
   if (!state.selectedChatId) {
     renderVaultWelcome();
     return;
@@ -1011,7 +984,6 @@ function chatRenderId(data, options = {}) {
 }
 
 function isCurrentChatRender(data, options = {}, mediaMode = state.mediaMode) {
-  if (state.activeSection !== 'vault' || state.conversationMode !== 'chats') return false;
   if (options.requestId && options.requestId !== state.messagesRequestId) return false;
   const chatId = chatRenderId(data, options);
   if (chatId && state.selectedChatId !== chatId) return false;
@@ -1278,7 +1250,6 @@ async function openGlobalSearchResult(result) {
     clearSidebarSearch();
     clearMessageFiltersForJump();
     state.selectedChatId = chatId;
-    state.conversationMode = 'chats';
     state.senderFilterSignature = '';
     closeLightbox();
     renderConversationList();
@@ -3077,7 +3048,6 @@ async function init() {
   setFolderButtonLoading(false);
   renderMediaOnlyButton();
   updateMediaTabs();
-  updateSectionNav();
   bindControls();
   setLibraryEmpty();
   renderVaultWelcome({ mode: 'loading', lead: text.checkingStartupVault });
