@@ -16,7 +16,6 @@ const state = {
   vaultMissing: false,
   missingVaultPath: '',
   selectedChatId: null,
-  mediaOnly: false,
   lightboxPhotos: [],
   lightboxIndex: -1,
   photoContexts: {},
@@ -104,9 +103,6 @@ const text = {
   media: 'медиа',
   noDate: 'нет даты',
   allSenders: 'все отправители',
-  mediaOnly: 'только медиа',
-  on: 'вкл',
-  off: 'выкл',
   nothingFound: 'ничего не найдено',
   changeFilters: 'попробуй изменить поиск, фильтр или вкладку',
   system: 'system',
@@ -734,7 +730,6 @@ async function afterLibraryLoaded(data) {
   state.vaultMissing = false;
   state.missingVaultPath = '';
   state.selectedChatId = null;
-  state.mediaOnly = false;
   state.mediaMode = 'all';
   state.chatCache = {};
   state.senderFilterSignature = '';
@@ -750,7 +745,6 @@ async function afterLibraryLoaded(data) {
   $('senderFilter').value = '';
   $('chatSearch').value = '';
   updateMediaTabs();
-  renderMediaOnlyButton();
   renderConversationList();
   setLibraryLoading(text.indexingVault, {
     root: state.vaultRoot,
@@ -1090,12 +1084,10 @@ function clearMessageFiltersForJump() {
   pendingMessagesLoad?.cancel?.();
   $('searchBox').value = '';
   $('senderFilter').value = '';
-  state.mediaOnly = false;
   state.mediaMode = 'all';
   closeLightbox();
   updateChatFilterControls();
   updateMediaTabs();
-  renderMediaOnlyButton();
 }
 
 function resetGlobalMessageSearch() {
@@ -1375,7 +1367,7 @@ function filterMessages(messages, search, sender = '') {
   const q = search.trim().toLowerCase();
   const mode = state.mediaMode;
   const selectedSender = senderKey(sender);
-  const requireMedia = state.mediaOnly || mode !== 'all';
+  const requireMedia = mode !== 'all';
   return (messages || []).filter(msg => {
     if (selectedSender && senderKey(messageSender(msg)) !== selectedSender) return false;
     if (requireMedia && !hasMedia(msg)) return false;
@@ -2880,12 +2872,6 @@ function handleLightboxKeydown(event) {
   }
 }
 
-function renderMediaOnlyButton() {
-  const button = $('mediaOnly');
-  button.classList.toggle('is-on', state.mediaOnly);
-  button.innerHTML = `${icons.media}<span>${text.mediaOnly}: ${state.mediaOnly ? text.on : text.off}</span>`;
-}
-
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -2957,19 +2943,12 @@ function bindControls() {
     updateChatFilterControls();
     loadMessages();
   });
-  $('mediaOnly').addEventListener('click', () => {
-    state.mediaOnly = !state.mediaOnly;
-    renderMediaOnlyButton();
-    loadMessages();
-  });
   $('resetFilters').addEventListener('click', () => {
     $('searchBox').value = '';
     $('senderFilter').value = '';
-    state.mediaOnly = false;
     state.mediaMode = 'all';
     updateChatFilterControls();
     updateMediaTabs();
-    renderMediaOnlyButton();
     loadMessages();
   });
   document.querySelectorAll('[data-media-mode]').forEach(button => {
@@ -2985,7 +2964,6 @@ function bindControls() {
 async function init() {
   ensureLightbox();
   setFolderButtonLoading(false);
-  renderMediaOnlyButton();
   updateMediaTabs();
   bindControls();
   setLibraryEmpty();
