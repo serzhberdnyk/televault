@@ -38,6 +38,33 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.16 - lazy load chat messages
+
+Changed:
+- removed the frontend eager preload that requested `/api/chat` for every chat after an export opened
+- kept the conversation list based on existing chat summaries returned by the library load response
+- loaded messages only when a user opens a chat, then reused the existing in-memory `chatCache` on repeat openings
+- kept global search on the existing `/api/search` backend endpoint instead of depending on all messages being cached in the frontend
+- added a local in-chat error state for failed selected-chat message loads
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.16
+- backend parser, media endpoint, storage/library format, full export `chats.list`, wrong-folder scan guard, build scripts, release scripts, package scripts and README were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.16
+- load a single-chat export and confirm it opens
+- load a full Telegram Desktop export with `chats.list` and confirm conversations appear
+- confirm the sidebar appears after library load without frontend requests for every chat's `/api/chat`
+- open the first chat and confirm its messages render
+- switch between two chats and confirm each opens
+- reopen an already loaded chat and confirm it renders from the in-memory cache
+- confirm in-chat search works for the opened chat
+- confirm global search still returns results and clicking a result opens the target chat/message
+- confirm replies, edited metadata and service notices still render after a lazy chat load
+- confirm photo, video, audio, voice, files, stickers and missing media fallbacks still work after a lazy chat load
+
 ## 2.9.15 - replies and edited metadata
 
 Changed:

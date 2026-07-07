@@ -131,6 +131,8 @@ const text = {
   globalSearchLimitHint: 'показаны первые {limit} результатов, уточни запрос',
   openingChat: 'открываем переписку...',
   openingChatBody: 'готовим сообщения и медиа архива.',
+  chatLoadFailed: 'не удалось открыть переписку',
+  chatLoadFailedBody: 'попробуйте выбрать её ещё раз или перезапустить TeleVault.',
   chatMessagesNotFound: 'нет результатов поиска',
   chatMessagesNotFoundBody: 'в этой переписке нет совпадений',
   chatFilterNothingFoundBody: 'попробуй другой фильтр',
@@ -422,10 +424,6 @@ function cleanErrorMessage(error) {
 function folderNameFromPath(path) {
   const parts = String(path || '').split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] || text.storageFolderFallback;
-}
-
-function countMessagesFromChats(chats) {
-  return (chats || []).reduce((sum, chat) => sum + Number(chat.message_count || 0), 0);
 }
 
 function formatNumber(value) {
@@ -737,47 +735,17 @@ async function afterLibraryLoaded(data) {
   $('chatSearch').value = '';
   updateMediaTabs();
   renderConversationList();
-  setLibraryLoading(text.indexingVault, {
-    root: state.vaultRoot,
-    chats: state.chats.length,
-    messages: countMessagesFromChats(state.chats),
-    errors: state.vaultErrors.length,
-  });
-  renderVaultWelcome({ mode: 'loading', lead: text.indexingVault });
-  await preloadArchiveMessages();
-  state.ownerSenderKey = detectOwnerSenderKey();
-  renderConversationList();
   setLibraryReady(data);
   renderVaultWelcome();
-}
-
-async function preloadArchiveMessages() {
-  await Promise.all(state.chats.map(async chat => {
-    try {
-      const data = await api(`/api/chat?id=${encodeURIComponent(chat.id)}&q=&sender=&media=0`);
-      const messages = (data.messages || []).map((msg, index) => ({
-        ...msg,
-        chatId: chat.id,
-        chatTitle: chat.title,
-        sourceIndex: index,
-      }));
-      state.chatCache[chat.id] = {
-        ...data,
-        messages,
-        searchText: buildConversationSearchText(chat, messages),
-      };
-      return messages;
-    } catch (e) {
-      state.chatCache[chat.id] = { chat, messages: [], error: e.message };
-      return [];
-    }
-  }));
 }
 
 async function selectChat(chatId) {
   const chatChanged = state.selectedChatId !== chatId;
   if (!chatChanged) {
     renderConversationList();
+    if (state.chatCache[chatId]?.error) {
+      await loadMessages({ resetScroll: true });
+    }
     return;
   }
   state.selectedChatId = chatId;
@@ -836,6 +804,7 @@ async function loadMessages(options = {}) {
       searchText: buildConversationSearchText(chat, messages),
     };
     state.chatCache[selectedChatId] = cachedData;
+    state.ownerSenderKey = detectOwnerSenderKey();
     await renderSelectedChat(cachedData, search, {
       ...options,
       chatId: selectedChatId,
@@ -846,9 +815,28 @@ async function loadMessages(options = {}) {
   } catch (e) {
     clearLoadingTimer();
     if (requestId !== state.messagesRequestId) return;
-    setLibraryError(e);
+    state.chatCache[selectedChatId] = {
+      chat: state.chats.find(item => item.id === selectedChatId) || {},
+      messages: [],
+      error: e.message || text.requestFailed,
+    };
+    renderChatLoadError(selectedChatId, e);
     if (!state.vaultLoaded) renderVaultWelcome({ mode: 'error', error: e });
   }
+}
+
+function renderChatLoadError(chatId, error) {
+  const chat = state.chats.find(item => item.id === chatId) || {};
+  $('mediaTabs').hidden = true;
+  $('filters').hidden = true;
+  $('emptyState').style.display = 'none';
+  $('chatTitle').textContent = cleanVisibleText(chat.title) || text.storageFolderFallback;
+  $('chatMeta').textContent = text.chatLoadFailed;
+  const detail = cleanErrorMessage(error) || text.chatLoadFailedBody;
+  const box = $('messages');
+  box.style.display = 'block';
+  box.className = 'messages';
+  box.innerHTML = `<div class="empty in-messages">${renderEmptyState(text.chatLoadFailed, detail, { className: 'empty-state--messages' })}</div>`;
 }
 
 function renderVaultWelcome(options = {}) {
