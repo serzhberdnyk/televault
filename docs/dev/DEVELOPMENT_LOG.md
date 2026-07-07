@@ -57,6 +57,10 @@ Manual test:
 
 ## 2.9.8 - local Host guard for all requests
 
+Internal release history note:
+- v2.9.8 was an intermediate checkpoint; its GitHub Release was removed and it should not be used as a current public download target
+- user-facing changelog notes for this work are carried forward under 2.9.9
+
 Changed:
 - added a shared local `Host` guard in `app.py` before `do_GET`, `do_POST` and `do_OPTIONS` route handling
 - accepted only local app hosts for the actual server port: `127.0.0.1:<port>` or `localhost:<port>`; local host headers without a port are tolerated for simple test clients
@@ -79,9 +83,9 @@ Manual test:
 - run `git diff --check`
 - run the version sync check in `tools\build_exe_launcher.py`
 - build the main Windows 10/11 portable package with `build_exe_launcher.bat`
-- confirm `dist\TeleVault-v2.9.8.zip` contains `TeleVault-v2.9.8/TeleVault.exe`
+- historical local verification only: confirm `dist\TeleVault-v2.9.8.zip` contains `TeleVault-v2.9.8/TeleVault.exe`
 - confirm the package does not contain personal exports, cache, logs, `user_data`, `.git`, local settings or nested `dist`
-- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.8
+- historical local verification only: launch with `run_windows.bat` and confirm `/api/status` returns 2.9.8
 - confirm the app, library and chats open normally
 - confirm `GET /api/status` returns 200 for `Host: 127.0.0.1:8766` and `Host: localhost:8766`
 - confirm `Host: wrong.example` returns 403 for `/api/status`, `/api/load-folder`, `/media/...` and `/app.js`

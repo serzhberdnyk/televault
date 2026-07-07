@@ -2,27 +2,22 @@
 
 ## 2.9.9
 
-### Fixed
-
-* Made `ExportLibrary.load_folder()` transactional: a failed or malformed new export no longer clears the currently opened in-memory library.
-* Existing chat, search and media state remain backed by the previous valid export when a later folder load fails.
-
-### Changed
-
-* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.9.
-* Frontend, parser, media endpoints and storage format were not intentionally changed.
-
-## 2.9.8
-
 ### Security
 
+* Includes the local `Host` guard work from the superseded internal 2.9.8 checkpoint.
 * Added a local `Host` guard before API, static file and media routing to reject unexpected Host headers for local app requests.
 * Requests are accepted only for the local app host on the actual server port: `127.0.0.1:<port>` or `localhost:<port>`; local host headers without a port are tolerated for simple test clients.
 * Requests with an external or missing `Host` now receive an empty 403 response before business logic, POST body reading, static file serving or media file resolving.
 * The existing state-changing POST Origin/Referer/Sec-Fetch guard remains in place.
 
+### Fixed
+
+* Made `ExportLibrary.load_folder()` transactional: a failed or malformed new export no longer clears the currently opened in-memory library.
+* Existing chat, search and media state remain backed by the previous valid export when a later folder load fails.
+
 ### Documentation / public presentation
 
+* Includes the public documentation cleanup from the superseded internal 2.9.8 checkpoint.
 * Rewrote README as a Russian benefits-first public page.
 * Added privacy and local-first positioning.
 * Added public screenshots to README:
@@ -39,9 +34,12 @@
 
 ### Changed
 
-* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.8.
-* Runtime app behavior is unchanged except for the local Host guard security hardening.
-* Parser, storage, media and frontend UI behavior was not intentionally changed in this release.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.9.
+* Runtime app behavior includes the local Host guard security hardening; frontend, parser, media endpoints and storage format were not intentionally changed.
+
+## 2.9.8 (internal, superseded; GitHub Release unpublished)
+
+2.9.8 was an intermediate internal checkpoint. Its GitHub Release was removed, and the user-facing changes are documented under 2.9.9 instead of presenting 2.9.8 as a published download release.
 
 ## 2.9.7
 
