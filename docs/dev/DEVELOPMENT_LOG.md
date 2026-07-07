@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.18 - saved exports sidebar catalog
+
+Changed:
+- added `GET /api/exports` to expose saved export records as safe display data: id, label, folder display name, active state, missing state and timestamps
+- added `POST /api/exports/<id>/open` to open a saved export by id and make it active after a successful library load
+- kept failed saved-export opens transactional: the current in-memory library stays open, while the failed catalog record is marked `missing: true`
+- added a compact sidebar "Архивы" block above conversation search and the chat list
+- marked the active export visually and showed missing exports as "недоступен"
+- kept the existing folder picker flow: selecting a new export still adds/updates the catalog record, makes it active and refreshes conversations
+- changed visible sidebar status paths to folder labels so the main UI no longer shows long absolute paths
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.18
+- remove/forget export UI, parser, library chat/message storage, media endpoint, search, build/release scripts logic and README were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with old settings that only contain `lastVaultPath` and confirm one saved export appears in "Архивы"
+- choose export A, then export B, and confirm both appear with only B active
+- click export A and export B from "Архивы" and confirm conversations switch without opening the folder picker
+- choose the same export again and confirm no duplicate item appears
+- move or delete a saved export folder, click it in "Архивы" and confirm it becomes "недоступен" without clearing the currently opened archive
+- confirm full-export `chats.list`, single-chat export, media, replies/edited, service notices and search still work after switching
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.18
+
 ## 2.9.17 - export catalog settings model
 
 Changed:

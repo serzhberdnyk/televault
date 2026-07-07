@@ -22,7 +22,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.17"
+APP_VERSION = "2.9.18"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -241,6 +241,83 @@ def active_export_record(settings: dict) -> dict | None:
     return None
 
 
+def safe_export_label(record: dict) -> str:
+    folder_name = export_label_for_path(Path(str(record.get("path") or "")))
+    label = str(record.get("label") or "").strip()
+    if label and "\\" not in label and "/" not in label and ":" not in label:
+        return label
+    return folder_name or "экспорт Telegram"
+
+
+def export_catalog_item(record: dict, active_export_id: str) -> dict:
+    folder_name = export_label_for_path(Path(str(record.get("path") or "")))
+    label = safe_export_label(record)
+    return {
+        "id": str(record.get("id") or ""),
+        "label": label,
+        "folderName": folder_name or label,
+        "pathDisplay": folder_name or label,
+        "active": bool(record.get("id") and record.get("id") == active_export_id),
+        "missing": bool(record.get("missing")),
+        "addedAt": str(record.get("addedAt") or ""),
+        "lastOpenedAt": str(record.get("lastOpenedAt") or ""),
+    }
+
+
+def export_catalog_response() -> dict:
+    settings = read_catalog_settings(persist_migration=False)
+    exports = settings.get("exports")
+    if not isinstance(exports, list):
+        exports = []
+    active_export_id = str(settings.get("activeExportId") or "")
+    items = [
+        export_catalog_item(record, active_export_id)
+        for record in exports
+        if isinstance(record, dict) and record.get("id")
+    ]
+    return {"exports": items, "activeExportId": active_export_id}
+
+
+def find_export_by_id(exports: list[dict], export_id: str) -> dict | None:
+    for record in exports:
+        if isinstance(record, dict) and record.get("id") == export_id:
+            return record
+    return None
+
+
+def open_export_by_id(export_id: str) -> tuple[dict, int]:
+    settings = read_catalog_settings(persist_migration=False)
+    exports = settings.get("exports")
+    if not isinstance(exports, list):
+        exports = []
+
+    record = find_export_by_id(exports, export_id)
+    if not record:
+        return {"error": "экспорт не найден"}, 404
+
+    folder = str(record.get("path") or "").strip()
+    if not folder:
+        mark_saved_export_missing(folder, export_id)
+        return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
+
+    try:
+        path = Path(folder).expanduser()
+        if not path.exists() or not path.is_dir():
+            mark_saved_export_missing(folder, export_id)
+            return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
+    except OSError as e:
+        mark_saved_export_missing(folder, export_id)
+        return {"error": str(e) or "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
+
+    try:
+        result = load_folder_and_remember(str(path))
+        result["loaded"] = True
+        return result, 200
+    except Exception as e:
+        mark_saved_export_missing(folder, export_id)
+        return {"error": f"не удалось открыть сохранённый экспорт: {e}", "missing": True, "exportId": export_id}, 400
+
+
 def remember_vault_path(folder: str) -> dict:
     settings = read_catalog_settings()
     exports = settings.get("exports")
@@ -282,7 +359,10 @@ def mark_saved_export_missing(folder: str, active_export_id: str = "") -> None:
 
     if changed:
         settings["exports"] = exports
-        write_settings(settings)
+        try:
+            write_settings(settings)
+        except Exception:
+            pass
 
 
 def load_folder_and_remember(folder: str) -> dict:
@@ -646,6 +726,13 @@ class Handler(BaseHTTPRequestHandler):
             json_response(self, {"name": APP_NAME, "version": APP_VERSION, "ready": True, "app_root_id": APP_ROOT_ID})
             return
 
+        if path == "/api/exports":
+            try:
+                json_response(self, export_catalog_response())
+            except Exception as e:
+                json_response(self, {"error": str(e)}, 500)
+            return
+
         if path == "/api/startup-vault":
             json_response(self, load_saved_vault())
             return
@@ -712,6 +799,16 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         parsed = urlparse(self.path)
+        export_open_prefix = "/api/exports/"
+        if parsed.path.startswith(export_open_prefix) and parsed.path.endswith("/open"):
+            if not is_allowed_local_post(self):
+                json_response(self, {"error": "forbidden"}, 403)
+                return
+            export_id = unquote(parsed.path[len(export_open_prefix):-len("/open")]).strip("/")
+            result, status = open_export_by_id(export_id)
+            json_response(self, result, status)
+            return
+
         if parsed.path == "/api/pick-folder":
             if not is_allowed_local_post(self):
                 json_response(self, {"error": "forbidden"}, 403)

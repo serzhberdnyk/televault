@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.9.18
+
+### Changed
+
+* Added `GET /api/exports` for a safe saved-export catalog view with ids, labels, display folder names, active state, missing state and timestamps.
+* Added `POST /api/exports/<id>/open` to switch the active export from the saved catalog without choosing the folder again.
+* The sidebar now shows a compact "Архивы" list above conversations, marks the active export and shows unavailable saved exports without mixing them into the chat list.
+* Adding a new export through the existing folder picker still updates the catalog, makes that export active and refreshes the conversation list.
+* Visible sidebar status and export list display folder labels instead of long absolute paths; full paths remain out of the main UI.
+* Missing or broken saved exports are marked unavailable on open failure without clearing the current in-memory library.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.18.
+* Remove/forget export UI, parser, library chat/message storage, media endpoint, search and release packaging logic were not intentionally changed.
+
 ## 2.9.17
 
 ### Changed

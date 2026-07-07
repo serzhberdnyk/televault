@@ -14,6 +14,10 @@ const state = {
   vaultLoadDetail: '',
   vaultMissing: false,
   missingVaultPath: '',
+  exports: [],
+  exportsLoading: false,
+  exportsError: '',
+  activeExportOpeningId: '',
   selectedChatId: null,
   lightboxPhotos: [],
   lightboxIndex: -1,
@@ -145,6 +149,12 @@ const text = {
   forgetUnavailableExport: 'удалить недоступный экспорт из библиотеки',
   forgettingUnavailableExport: 'удаляем...',
   forgotUnavailableExport: 'недоступный экспорт удален из библиотеки',
+  exportsEmpty: 'сохранённые экспорты появятся здесь',
+  exportsLoadFailed: 'не удалось обновить список архивов',
+  activeExport: 'активен',
+  unavailableExport: 'недоступен',
+  openingExport: 'открываем архив...',
+  savedExportOpenFailed: 'не удалось открыть сохранённый архив',
   storageReady: 'архив открыт',
   storageLoading: 'открываем локальный архив...',
   storageNotSelected: 'библиотека пуста',
@@ -337,8 +347,9 @@ function setLibraryError(error, details = {}) {
 function renderLibraryStatus({ kind, title, body = '', detail = '', path = '', stats = [] }) {
   const bodyHtml = body ? `<div class="library-status__body">${escapeHtml(body)}</div>` : '';
   const detailHtml = detail ? `<div class="library-status__detail">${escapeHtml(detail)}</div>` : '';
+  const pathLabel = path ? folderNameFromPath(path) : '';
   const pathHtml = path
-    ? `<div class="library-status__path" title="${escapeAttr(path)}">${escapeHtml(path)}</div>`
+    ? `<div class="library-status__path" title="${escapeAttr(path)}">${escapeHtml(pathLabel)}</div>`
     : '';
   const statsHtml = stats.length
     ? `<div class="library-status__stats">${stats.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>`
@@ -428,6 +439,156 @@ function folderNameFromPath(path) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat('ru-RU').format(Number(value || 0));
+}
+
+function formatExportDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isFinite(date.getTime())) {
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
+  }
+  return raw.slice(0, 10);
+}
+
+function exportDisplayName(item) {
+  return cleanVisibleText(item?.label) || cleanVisibleText(item?.folderName) || text.storageFolderFallback;
+}
+
+function exportFolderDisplay(item) {
+  return cleanVisibleText(item?.pathDisplay) || cleanVisibleText(item?.folderName) || '';
+}
+
+function exportMetaText(item) {
+  const name = exportDisplayName(item);
+  const folder = exportFolderDisplay(item);
+  const parts = [];
+  if (folder && folder !== name) parts.push(folder);
+  const openedAt = formatExportDate(item?.lastOpenedAt);
+  if (openedAt) parts.push(`открыт: ${openedAt}`);
+  return parts.join(' · ');
+}
+
+async function refreshExportCatalog() {
+  if (!$('exportList')) return;
+  state.exportsLoading = true;
+  renderExportCatalog();
+  try {
+    const data = await api('/api/exports');
+    state.exports = Array.isArray(data.exports) ? data.exports : [];
+    state.exportsError = '';
+  } catch (e) {
+    state.exportsError = cleanErrorMessage(e) || text.exportsLoadFailed;
+  } finally {
+    state.exportsLoading = false;
+    renderExportCatalog();
+  }
+}
+
+function renderExportCatalog() {
+  const box = $('exportList');
+  const count = $('exportCatalogCount');
+  if (!box || !count) return;
+
+  const exports = Array.isArray(state.exports) ? state.exports : [];
+  count.textContent = exports.length ? formatNumber(exports.length) : '';
+  box.innerHTML = '';
+
+  if (state.exportsLoading && !exports.length) {
+    box.innerHTML = `<div class="export-catalog__empty">${escapeHtml(text.openingExport)}</div>`;
+    return;
+  }
+
+  if (!exports.length) {
+    box.innerHTML = `<div class="export-catalog__empty">${escapeHtml(text.exportsEmpty)}</div>`;
+  } else {
+    exports.forEach(item => box.appendChild(renderExportItem(item)));
+  }
+
+  if (state.exportsError) {
+    const error = document.createElement('div');
+    error.className = 'export-catalog__message';
+    error.textContent = state.exportsError;
+    box.appendChild(error);
+  }
+}
+
+function renderExportItem(item) {
+  const button = document.createElement('button');
+  const isOpening = state.activeExportOpeningId === item.id;
+  const isActive = item.active === true;
+  const isMissing = item.missing === true;
+  const name = exportDisplayName(item);
+  const meta = exportMetaText(item);
+  const badges = [];
+  if (isOpening) badges.push(text.openingExport);
+  if (isActive) badges.push(text.activeExport);
+  if (isMissing) badges.push(text.unavailableExport);
+
+  button.type = 'button';
+  button.className = [
+    'export-item',
+    isActive ? 'is-active' : '',
+    isMissing ? 'is-missing' : '',
+    isOpening ? 'is-opening' : '',
+  ].filter(Boolean).join(' ');
+  button.disabled = Boolean(state.activeExportOpeningId);
+  button.setAttribute('aria-pressed', String(isActive));
+  button.innerHTML = `
+    <span class="export-item__main">
+      <span class="export-item__name">${escapeHtml(name)}</span>
+      ${meta ? `<span class="export-item__meta">${escapeHtml(meta)}</span>` : ''}
+    </span>
+    ${badges.length ? `<span class="export-item__badges">${badges.map(badge => `<span>${escapeHtml(badge)}</span>`).join('')}</span>` : ''}
+  `;
+  button.addEventListener('click', () => {
+    openSavedExport(item.id);
+  });
+  return button;
+}
+
+async function openSavedExport(exportId) {
+  if (!exportId || state.activeExportOpeningId) return;
+  const current = state.exports.find(item => item.id === exportId);
+  if (current?.active && state.vaultLoaded && !current?.missing) return;
+
+  const hadOpenVault = state.vaultLoaded;
+  let failureMessage = '';
+  state.activeExportOpeningId = exportId;
+  state.exportsError = '';
+  renderExportCatalog();
+
+  if (!hadOpenVault) {
+    setLibraryLoading(text.openingExport);
+    renderVaultWelcome({ mode: 'loading', lead: text.openingExport });
+  }
+
+  try {
+    const data = await api(`/api/exports/${encodeURIComponent(exportId)}/open`, { method: 'POST' });
+    await afterLibraryLoaded(data);
+  } catch (e) {
+    const message = cleanErrorMessage(e) || text.savedExportOpenFailed;
+    failureMessage = message;
+    state.exportsError = message;
+    state.exports = state.exports.map(item => (
+      item.id === exportId ? { ...item, missing: true, active: false } : item
+    ));
+    if (!hadOpenVault) {
+      setLibraryMessage(text.savedExportOpenFailed, 'warning', message);
+      renderVaultWelcome({ mode: 'missing' });
+    }
+  } finally {
+    state.activeExportOpeningId = '';
+    await refreshExportCatalog();
+    if (failureMessage) {
+      state.exportsError = failureMessage;
+      renderExportCatalog();
+    }
+  }
 }
 
 function setFolderButtonLoading(isLoading) {
@@ -678,6 +839,7 @@ async function pickFolder() {
       return;
     }
     await afterLibraryLoaded(data);
+    await refreshExportCatalog();
   } catch (e) {
     if (isFolderPickerCancelError(e)) {
       handleFolderPickerCancelled(hadOpenVault);
@@ -695,11 +857,13 @@ async function forgetMissingExport() {
   setForgetMissingButtonLoading(true);
   try {
     await api('/api/forget-missing-vault', { method: 'POST' });
+    await refreshExportCatalog();
     setLibraryEmpty();
     setLibraryMessage(text.forgotUnavailableExport, 'empty', text.storageNotSelectedBody);
     renderConversationList();
     renderVaultWelcome({ mode: 'empty' });
   } catch (e) {
+    await refreshExportCatalog();
     const missingPath = state.missingVaultPath || state.vaultRoot;
     setLibraryMissing({ lastVaultPath: missingPath });
     setLibraryMessage(text.savedVaultMissing, 'warning', cleanErrorMessage(e));
@@ -3004,11 +3168,13 @@ async function init() {
   updateMediaTabs();
   bindControls();
   setLibraryEmpty();
+  renderExportCatalog();
   renderVaultWelcome({ mode: 'loading', lead: text.checkingStartupVault });
   try {
     const status = await api('/api/status');
     $('version').textContent = `v${status.version}`;
   } catch {}
+  await refreshExportCatalog();
   try {
     const savedVault = await api('/api/startup-vault');
     if (savedVault.loaded) {
@@ -3027,6 +3193,8 @@ async function init() {
   } catch (e) {
     setLibraryError(e);
     renderVaultWelcome({ mode: 'error', error: e });
+  } finally {
+    await refreshExportCatalog();
   }
 }
 
