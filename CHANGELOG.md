@@ -1,17 +1,5 @@
 # Changelog
 
-## 2.9.12
-
-### Improved
-
-* Added a minimal TeleVault web app manifest and PNG icon links so Chromium app-mode windows can use the TeleVault icon instead of falling back to the browser icon where supported.
-* The existing `assets/TeleVault.ico` remains the source for the native launcher resource and `frontend/favicon.ico`.
-
-### Changed
-
-* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.12.
-* Backend logic, parser, storage, media security and frontend app behavior are unchanged.
-
 ## 2.9.11
 
 ### Packaging
