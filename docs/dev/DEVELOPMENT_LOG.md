@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.14 - common Telegram service notice labels
+
+Changed:
+- added parser labels for common Telegram service actions: `edit_group_title`, `edit_group_photo`, `delete_group_photo`, `invite_members`, `remove_members`, joins by link/request, group migrations, calls, message TTL, topics, chat theme changes and clear history
+- kept `pin_message`, create chat/channel and photo service messages on the existing compact service-notice rendering path
+- aligned the existing frontend photo service fallback text with the new parser wording
+- kept unknown or rare service actions on the generic `системное событие Telegram` fallback
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.14
+- media endpoint, media playback, storage/library format, search, build scripts, release scripts, package scripts and README were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- load a single-chat export and confirm it opens
+- load a full Telegram Desktop export with `chats.list` and confirm conversations appear
+- confirm existing pin/create/photo service notices still render as compact centered notices
+- confirm `edit_group_title`, `invite_members`, `remove_members`, `phone_call`, `group_call`, `topic_created` and `topic_edit` render readable service notices
+- confirm an unknown service action still shows the generic service fallback
+- confirm ordinary text/media messages and media playback are unchanged
+
 ## 2.9.13 - guard wrong-folder recursive scan
 
 Changed:

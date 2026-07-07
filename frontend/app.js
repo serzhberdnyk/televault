@@ -1718,9 +1718,10 @@ function serviceNoticeLabel(msg) {
   if (action === 'create_chat' || action === 'create_group') return actor ? `${actor} создал(а) чат` : 'чат создан';
   if (isPhotoUpdateServiceMessage(msg)) {
     const actorId = String(msg?.actor_id || '').toLowerCase();
-    if (action === 'edit_channel_photo' || actorId.startsWith('channel')) return 'Фотография канала обновлена';
-    if (action === 'edit_chat_photo' || action === 'edit_group_photo') return 'Фотография чата обновлена';
-    return 'Фотография обновлена';
+    if (action === 'edit_channel_photo' || actorId.startsWith('channel')) return 'фото канала изменено';
+    if (action === 'edit_chat_photo') return 'фото чата изменено';
+    if (action === 'edit_group_photo') return 'фото группы изменено';
+    return 'фото изменено';
   }
 
   const body = senderName(msg?.text || '');

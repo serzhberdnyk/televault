@@ -13,6 +13,27 @@ SERVICE_PREVIEW_LIMIT = 76
 CREATE_CHANNEL_ACTIONS = {"create_channel"}
 CREATE_CHAT_ACTIONS = {"create_chat", "create_group"}
 PHOTO_UPDATE_ACTIONS = {"edit_channel_photo", "edit_chat_photo", "edit_group_photo", "update_photo"}
+PHOTO_DELETE_ACTIONS = {"delete_channel_photo", "delete_chat_photo", "delete_group_photo"}
+TITLE_UPDATE_ACTIONS = {"edit_channel_title", "edit_chat_title", "edit_group_title"}
+COMMON_SERVICE_ACTIONS = {
+    *TITLE_UPDATE_ACTIONS,
+    *PHOTO_DELETE_ACTIONS,
+    "invite_members",
+    "remove_members",
+    "join_group_by_link",
+    "join_group_by_request",
+    "migrate_to_supergroup",
+    "migrate_from_group",
+    "phone_call",
+    "group_call",
+    "invite_to_group_call",
+    "group_call_scheduled",
+    "set_messages_ttl",
+    "topic_created",
+    "topic_edit",
+    "edit_chat_theme",
+    "clear_history",
+}
 FORWARDED_FIELDS = (
     "forwarded_from",
     "forward_from",
@@ -70,6 +91,18 @@ def short_preview(value: Any, limit: int = SERVICE_PREVIEW_LIMIT) -> str:
     if len(text) <= limit:
         return text
     return text[: max(0, limit - 3)].rstrip() + "..."
+
+
+def plural_ru(count: int, one: str, few: str, many: str) -> str:
+    value = abs(count) % 100
+    last = value % 10
+    if 10 < value < 20:
+        return many
+    if last == 1:
+        return one
+    if 1 < last < 5:
+        return few
+    return many
 
 
 def normalize_date(value: Any) -> str:
@@ -350,6 +383,133 @@ def normalize_service_kind(action: str) -> str:
     return normalized or "generic_service"
 
 
+def first_service_value(message: dict[str, Any], keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = compact_text(message.get(key))
+        if value:
+            return value
+    return ""
+
+
+def service_person_name(value: Any) -> str:
+    if isinstance(value, dict):
+        for key in ("name", "title", "username", "first_name", "last_name", "id"):
+            candidate = compact_text(value.get(key))
+            if candidate:
+                return candidate
+        return compact_text(value.get("text", ""))
+    return compact_text(value)
+
+
+def service_members_text(message: dict[str, Any], limit: int = 3) -> str:
+    raw_members = message.get("members")
+    if raw_members in (None, "", [], {}):
+        raw_members = message.get("member")
+    if raw_members in (None, "", [], {}):
+        return ""
+
+    values = raw_members if isinstance(raw_members, list) else [raw_members]
+    names = [service_person_name(value) for value in values]
+    names = [name for name in names if name]
+    if not names:
+        return ""
+
+    visible = names[:limit]
+    suffix = ""
+    remaining = len(names) - len(visible)
+    if remaining > 0:
+        suffix = f" и ещё {remaining}"
+    return ", ".join(visible) + suffix
+
+
+def service_with_actor(message: dict[str, Any], text: str) -> str:
+    actor = compact_text(message.get("actor", ""))
+    return f"{actor}: {text}" if actor else text
+
+
+def service_title_text(message: dict[str, Any]) -> str:
+    return first_service_value(message, ("new_title", "title"))
+
+
+def format_duration_seconds(value: Any) -> str:
+    try:
+        seconds = int(float(value))
+    except (TypeError, ValueError):
+        return ""
+    if seconds <= 0:
+        return ""
+
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours} ч")
+    if minutes:
+        parts.append(f"{minutes} мин")
+    if not parts and seconds:
+        parts.append(f"{seconds} с")
+    return " ".join(parts)
+
+
+def format_service_period(value: Any) -> str:
+    try:
+        seconds = int(float(value))
+    except (TypeError, ValueError):
+        return ""
+    if seconds <= 0:
+        return ""
+
+    units = (
+        (24 * 60 * 60, "день", "дня", "дней"),
+        (60 * 60, "час", "часа", "часов"),
+        (60, "минуту", "минуты", "минут"),
+    )
+    for unit_seconds, one, few, many in units:
+        if seconds >= unit_seconds and seconds % unit_seconds == 0:
+            count = seconds // unit_seconds
+            return f"{count} {plural_ru(count, one, few, many)}"
+    return f"{seconds} с"
+
+
+def service_seconds(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def format_schedule_date(value: Any) -> str:
+    raw = compact_text(value)
+    if not raw:
+        return ""
+    if raw.isdigit() and len(raw) in (10, 13):
+        try:
+            timestamp = int(raw)
+            if len(raw) == 13:
+                timestamp = timestamp // 1000
+            return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
+        except (OSError, OverflowError, ValueError):
+            return raw
+    return normalize_date(raw)
+
+
+def service_notice_with_detail(label: str, detail: str) -> str:
+    return f"{label}: {detail}" if detail else label
+
+
+def phone_call_service_label(message: dict[str, Any]) -> str:
+    duration = format_duration_seconds(message.get("duration_seconds"))
+    if duration:
+        return service_notice_with_detail("звонок", duration)
+
+    discard_reason = compact_text(message.get("discard_reason", "")).lower()
+    if "miss" in discard_reason:
+        return "пропущенный звонок"
+    if "busy" in discard_reason:
+        return "звонок не принят"
+    return "звонок"
+
+
 def service_notice_text(message: dict[str, Any], service_kind: str) -> str:
     existing_text = compact_text(message.get("text", ""))
     if service_kind == "pin_message":
@@ -362,16 +522,116 @@ def service_notice_text(message: dict[str, Any], service_kind: str) -> str:
         return f"{actor} создал(а) чат" if actor else "чат создан"
     if service_kind in PHOTO_UPDATE_ACTIONS:
         return photo_update_service_text(message, service_kind)
+    if service_kind in COMMON_SERVICE_ACTIONS:
+        return common_service_text(message, service_kind)
     return existing_text or GENERIC_SERVICE_TEXT
+
+
+def common_service_text(message: dict[str, Any], service_kind: str) -> str:
+    if service_kind in TITLE_UPDATE_ACTIONS:
+        title = service_title_text(message)
+        if service_kind == "edit_channel_title":
+            prefix = "название канала изменено"
+        elif service_kind == "edit_chat_title":
+            prefix = "название чата изменено"
+        else:
+            prefix = "название группы изменено"
+        label = service_notice_with_detail(prefix, title)
+        return service_with_actor(message, label)
+
+    if service_kind in PHOTO_DELETE_ACTIONS:
+        actor_id = compact_text(message.get("actor_id", "")).lower()
+        if service_kind == "delete_channel_photo" or actor_id.startswith("channel"):
+            return service_with_actor(message, "фото канала удалено")
+        if service_kind == "delete_chat_photo":
+            return service_with_actor(message, "фото чата удалено")
+        return service_with_actor(message, "фото группы удалено")
+
+    if service_kind == "invite_members":
+        members = service_members_text(message)
+        label = service_notice_with_detail("добавлены участники", members)
+        return service_with_actor(message, label)
+
+    if service_kind == "remove_members":
+        members = service_members_text(message)
+        if not members:
+            label = "участник удалён"
+        elif "," not in members and " и ещё " not in members:
+            label = f"участник удалён: {members}"
+        else:
+            label = service_notice_with_detail("участники удалены", members)
+        return service_with_actor(message, label)
+
+    if service_kind == "join_group_by_link":
+        actor = compact_text(message.get("actor", ""))
+        return f"{actor} присоединился(ась) по ссылке" if actor else "участник присоединился по ссылке"
+
+    if service_kind == "join_group_by_request":
+        actor = compact_text(message.get("actor", ""))
+        return f"{actor} присоединился(ась) по заявке" if actor else "участник присоединился по заявке"
+
+    if service_kind == "migrate_to_supergroup":
+        return "группа преобразована в супергруппу"
+
+    if service_kind == "migrate_from_group":
+        return "история перенесена из группы"
+
+    if service_kind == "phone_call":
+        return service_with_actor(message, phone_call_service_label(message))
+
+    if service_kind == "group_call":
+        duration = format_duration_seconds(message.get("duration_seconds"))
+        return service_with_actor(message, service_notice_with_detail("групповой звонок", duration))
+
+    if service_kind == "invite_to_group_call":
+        members = service_members_text(message)
+        label = service_notice_with_detail("приглашение в групповой звонок", members)
+        return service_with_actor(message, label)
+
+    if service_kind == "group_call_scheduled":
+        schedule = format_schedule_date(message.get("schedule_date"))
+        label = service_notice_with_detail("запланирован групповой звонок", schedule)
+        return service_with_actor(message, label)
+
+    if service_kind == "set_messages_ttl":
+        seconds = service_seconds(message.get("period"))
+        if seconds is not None and seconds <= 0:
+            return service_with_actor(message, "автоудаление сообщений отключено")
+        period = format_service_period(message.get("period"))
+        if period:
+            return service_with_actor(message, f"включено автоудаление сообщений: {period}")
+        return service_with_actor(message, "включено автоудаление сообщений")
+
+    if service_kind == "topic_created":
+        title = service_title_text(message)
+        label = service_notice_with_detail("создана тема", title)
+        return service_with_actor(message, label)
+
+    if service_kind == "topic_edit":
+        title = service_title_text(message)
+        label = service_notice_with_detail("тема изменена", title)
+        return service_with_actor(message, label)
+
+    if service_kind == "edit_chat_theme":
+        emoticon = first_service_value(message, ("emoticon", "emoji"))
+        label = service_notice_with_detail("тема чата изменена", emoticon)
+        return service_with_actor(message, label)
+
+    if service_kind == "clear_history":
+        return service_with_actor(message, "история очищена")
+
+    return GENERIC_SERVICE_TEXT
 
 
 def photo_update_service_text(message: dict[str, Any], service_kind: str) -> str:
     actor_id = compact_text(message.get("actor_id", "")).lower()
     if service_kind == "edit_channel_photo" or actor_id.startswith("channel"):
-        return "Фотография канала обновлена"
-    if service_kind in {"edit_chat_photo", "edit_group_photo"}:
-        return "Фотография чата обновлена"
-    return "Фотография обновлена"
+        return service_with_actor(message, "фото канала изменено")
+    if service_kind == "edit_chat_photo":
+        return service_with_actor(message, "фото чата изменено")
+    if service_kind == "edit_group_photo":
+        return service_with_actor(message, "фото группы изменено")
+    return service_with_actor(message, "фото изменено")
 
 
 def summarize_chat_data(data: dict[str, Any], json_path: Path, chat_id: str) -> ChatSummary:

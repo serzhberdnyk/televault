@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.14
+
+### Changed
+
+* Added readable service notice labels for common Telegram actions: title/photo changes, member invites/removals, joins by link/request, migrations, calls, message TTL, topics, chat theme changes and clear history.
+* Service/system messages continue to render as compact timeline notices instead of regular user bubbles.
+* Unknown or rare Telegram service actions still use the existing generic service notice fallback.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.14.
+* Media endpoint, media playback, storage/library format, search, build scripts, release scripts and packaging were not intentionally changed.
+
 ## 2.9.13
 
 ### Fixed
