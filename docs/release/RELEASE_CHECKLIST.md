@@ -1,8 +1,10 @@
 ﻿# TeleVault: release checklist
 
-TeleVault 2.9.3 - patch-релиз для отдельной Windows 7 legacy-сборки без отката основного Windows 10/11 runtime. Это не installer и не one-file exe: launcher лежит рядом с `app.py`, `assets/`, `backend/`, `frontend/` и выбранным bundled runtime.
+Перед использованием замените `X.Y.Z` на фактическую версию релиза, например `2.9.9`.
 
-В 2.9.3 нельзя менять frontend app logic, backend logic, `/media`, `/api/search`, parser/storage/media classification. `run_windows.bat` должен сохранить прежнее поведение запуска.
+TeleVault X.Y.Z - общий checklist для подготовки Windows-комплекта, отдельного Windows 7 legacy package при необходимости и ручной проверки перед публикацией. Это не installer и не one-file exe: launcher лежит рядом с `app.py`, `assets/`, `backend/`, `frontend/` и выбранным bundled runtime.
+
+Для X.Y.Z нельзя менять frontend app logic, backend logic, `/media`, `/api/search`, parser/storage/media classification без отдельной задачи. `run_windows.bat` должен сохранить прежнее поведение запуска.
 
 ## Что должно быть в Windows-комплекте
 
@@ -32,7 +34,7 @@ TeleVault 2.9.3 - patch-релиз для отдельной Windows 7 legacy-с
 `build_portable.bat` по-прежнему создаёт clean portable folder/zip без обязательного `TeleVault.exe`.
 
 ```text
-dist/TeleVault-v2.9.3/
+dist/TeleVault-vX.Y.Z/
 - run_windows.bat
 - app.py
 - assets/
@@ -49,9 +51,9 @@ dist/TeleVault-v2.9.3/
 Проверки:
 
 1. Запустить `build_portable.bat`.
-2. Убедиться, что создана папка `dist\TeleVault-v2.9.3\`.
-3. Убедиться, что создан zip `dist\TeleVault-v2.9.3.zip`.
-4. Убедиться, что zip содержит верхнюю папку `TeleVault-v2.9.3/`.
+2. Убедиться, что создана папка `dist\TeleVault-vX.Y.Z\`.
+3. Убедиться, что создан zip `dist\TeleVault-vX.Y.Z.zip`.
+4. Убедиться, что zip содержит верхнюю папку `TeleVault-vX.Y.Z/`.
 5. Убедиться, что `build_portable.bat` не требует ручного PATH.
 6. Убедиться, что `dist/` не появляется в `git status --short`.
 
@@ -66,28 +68,28 @@ tools/launcher/TeleVaultLauncher.cpp
 в:
 
 ```text
-dist/TeleVault-v2.9.3/TeleVault.exe
+dist/TeleVault-vX.Y.Z/TeleVault.exe
 ```
 
 После добавления exe builder должен пересобрать:
 
 ```text
-dist/TeleVault-v2.9.3.zip
+dist/TeleVault-vX.Y.Z.zip
 ```
 
 Проверки:
 
 1. Запустить `build_exe_launcher.bat`.
 2. Убедиться, что MSVC `cl.exe`/`rc.exe` найдены через PATH или Visual Studio Build Tools `vcvarsall.bat`.
-3. Убедиться, что `dist\TeleVault-v2.9.3\TeleVault.exe` существует.
-4. Убедиться, что zip содержит `TeleVault-v2.9.3/TeleVault.exe`.
+3. Убедиться, что `dist\TeleVault-vX.Y.Z\TeleVault.exe` существует.
+4. Убедиться, что zip содержит `TeleVault-vX.Y.Z/TeleVault.exe`.
 5. Убедиться, что fake exe не создаётся, если MSVC C++ Build Tools не найдены.
 6. Убедиться, что builder показывает понятный blocker, если MSVC C++ Build Tools не найдены.
 7. Убедиться, что `assets\TeleVault.ico` существует.
 8. Убедиться, что builder компилирует `tools\launcher\TeleVaultLauncher.rc`.
 9. Убедиться, что `TeleVault.exe` собирается с custom TeleVault icon.
 10. Если `assets\TeleVault.ico` отсутствует, убедиться, что build не падает и сообщает, что custom icon не найден.
-11. Убедиться, что builder печатает `version sync check` и все версии равны `2.9.3`.
+11. Убедиться, что builder печатает `version sync check` и все версии равны `X.Y.Z`.
 12. Убедиться, что build падает с понятной ошибкой, если launcher `kAppVersion` отличается от package version.
 
 ## Windows 7 legacy package
@@ -95,7 +97,7 @@ dist/TeleVault-v2.9.3.zip
 `build_win7_legacy_package.bat` должен сначала подготовить официальный Python 3.8.10 embeddable x64 runtime, затем собрать отдельный package:
 
 ```text
-dist/TeleVault-v2.9.3-win7-legacy-x64/
+dist/TeleVault-vX.Y.Z-win7-legacy-x64/
 - TeleVault.exe
 - app.py
 - assets/
@@ -113,9 +115,9 @@ dist/TeleVault-v2.9.3-win7-legacy-x64/
 Проверки:
 
 1. Запустить `build_win7_legacy_package.bat`.
-2. Убедиться, что создан zip `dist\TeleVault-v2.9.3-win7-legacy-x64.zip`.
-3. Убедиться, что zip содержит `TeleVault-v2.9.3-win7-legacy-x64/runtime/python38-win7/pythonw.exe`.
-4. Убедиться, что zip содержит `TeleVault-v2.9.3-win7-legacy-x64/runtime/win7-legacy.txt`.
+2. Убедиться, что создан zip `dist\TeleVault-vX.Y.Z-win7-legacy-x64.zip`.
+3. Убедиться, что zip содержит `TeleVault-vX.Y.Z-win7-legacy-x64/runtime/python38-win7/pythonw.exe`.
+4. Убедиться, что zip содержит `TeleVault-vX.Y.Z-win7-legacy-x64/runtime/win7-legacy.txt`.
 5. Убедиться, что zip не содержит `runtime/python/pythonw.exe` как основной runtime.
 6. Убедиться, что package не содержит `api-ms-win-core-path-l1-1-0.dll`, скачанный вручную.
 7. Убедиться, что launcher log пишет selected runtime path `runtime\python38-win7\pythonw.exe`.
@@ -123,7 +125,7 @@ dist/TeleVault-v2.9.3-win7-legacy-x64/
 
 ## Запуск через TeleVault.exe
 
-1. Открыть `dist\TeleVault-v2.9.3\`.
+1. Открыть `dist\TeleVault-vX.Y.Z\`.
 2. Дважды нажать `TeleVault.exe`.
 3. Убедиться, что launcher использует папку, где лежит exe, а не current working directory.
 4. Убедиться, что launcher проверяет `runtime\python\pythonw.exe`, `app.py`, `backend\` и `frontend\`.
@@ -135,8 +137,8 @@ dist/TeleVault-v2.9.3-win7-legacy-x64/
 10. Убедиться, что при отсутствии обязательных файлов launcher показывает понятный MessageBox, а технические детали пишет в `logs\launcher.log`.
 11. Убедиться, что `logs\launcher.log` создаётся только как runtime-лог и не попадает в git/package как dev-мусор.
 12. Открыть `/api/status`.
-13. Убедиться, что JSON содержит `"version": "2.9.3"`.
-14. Убедиться, что правый верхний угол UI показывает `v2.9.3`.
+13. Убедиться, что JSON содержит `"version": "X.Y.Z"`.
+14. Убедиться, что правый верхний угол UI показывает `vX.Y.Z`.
 
 ## Launcher UX patch checks
 
@@ -151,22 +153,31 @@ dist/TeleVault-v2.9.3-win7-legacy-x64/
 
 ## Fallback run_windows.bat
 
-1. Открыть `dist\TeleVault-v2.9.3\`.
+1. Открыть `dist\TeleVault-vX.Y.Z\`.
 2. Дважды нажать `run_windows.bat`.
 3. Убедиться, что fallback всё ещё запускает TeleVault через bundled runtime.
-4. Открыть `/api/status` и убедиться, что версия `2.9.3`.
+4. Открыть `/api/status` и убедиться, что версия `X.Y.Z`.
 
 ## Zip extraction
 
-1. Распаковать `dist\TeleVault-v2.9.3.zip` в отдельную папку.
-2. Убедиться, что внутри есть верхняя папка `TeleVault-v2.9.3/`.
+1. Распаковать `dist\TeleVault-vX.Y.Z.zip` в отдельную папку.
+2. Убедиться, что внутри есть верхняя папка `TeleVault-vX.Y.Z/`.
 3. Убедиться, что распакованная копия содержит `TeleVault.exe`.
 4. Запустить распакованную копию через `TeleVault.exe`.
 5. Убедиться, что распакованная копия запускается через bundled runtime.
 6. Убедиться, что `run_windows.bat` в распакованной копии тоже работает.
-7. Убедиться, что zip содержит `TeleVault-v2.9.3/assets/TeleVault.ico`.
-8. Убедиться, что zip содержит `TeleVault-v2.9.3/frontend/favicon.ico`.
+7. Убедиться, что zip содержит `TeleVault-vX.Y.Z/assets/TeleVault.ico`.
+8. Убедиться, что zip содержит `TeleVault-vX.Y.Z/frontend/favicon.ico`.
 9. Убедиться, что zip не содержит `logs/`, `logs/launcher.log`, `user_data/` и `user_data/launcher_window.json`.
+
+## Publication gate
+
+1. До публикации подготовить package и zip локально, без создания git tag, GitHub Release и загрузки release assets.
+2. Проверить version sync, записи в `CHANGELOG.md` и `docs/dev/DEVELOPMENT_LOG.md`, README и содержимое zip.
+3. Распаковать `dist\TeleVault-vX.Y.Z.zip` в отдельную папку и проверить распакованную копию.
+4. Вручную запустить `TeleVault.exe`, закрыть окно и запустить `TeleVault.exe` повторно.
+5. Только после ручного подтверждения создать tag `vX.Y.Z`, подготовить GitHub Release и загрузить `TeleVault-vX.Y.Z.zip` как release asset.
+6. Если готовился Windows 7 legacy package, загружать `TeleVault-vX.Y.Z-win7-legacy-x64.zip` только после отдельной проверки или явной пометки о необходимости Windows 7 validation.
 
 ## App behavior checks
 
@@ -226,4 +237,4 @@ git diff --check
 - `README.md` должен объяснять запуск через `TeleVault.exe` и fallback через `run_windows.bat`.
 - `docs/dev/EXE_PACKAGING_PLAN.md` должен оставлять one-file exe и installer будущими этапами.
 - `assets/README.md` должен объяснять `assets\TeleVault.ico` и пересоздание иконки через `tools\generate_icon.py`.
-- `CHANGELOG.md` и `docs/dev/DEVELOPMENT_LOG.md` должны содержать запись 2.9.3.
+- `CHANGELOG.md` и `docs/dev/DEVELOPMENT_LOG.md` должны содержать запись X.Y.Z.
