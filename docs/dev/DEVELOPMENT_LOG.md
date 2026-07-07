@@ -38,6 +38,32 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.15 - replies and edited metadata
+
+Changed:
+- normalized Telegram `reply_to_message_id` for every message and resolved same-chat reply author/preview when the target message exists in the export
+- added a safe missing-reply fallback for replies pointing to messages absent from the export
+- rendered compact reply previews above message text/media, including media-only, audio/voice, file, sticker and service-notice layouts
+- rendered `изменено` beside message time when Telegram export data includes `edited` or `edited_unixtime`
+- kept service/system messages on the existing compact service-notice path
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.15
+- search, media endpoint, storage/library format, full export `chats.list`, wrong-folder scan guard, build scripts, release scripts, package scripts and README were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- load a single-chat export and confirm it opens
+- load a full Telegram Desktop export with `chats.list` and confirm conversations appear
+- confirm ordinary text messages render as before
+- confirm a message with `reply_to_message_id` shows a reply preview
+- confirm a reply to a missing message shows a clear missing-export fallback and the timeline continues
+- confirm an edited message shows `изменено`
+- confirm media-only replies do not break photo/video/audio/voice/file/sticker bubble layouts
+- confirm service notices from the previous patch still render as compact centered notices
+- confirm existing photo, video, audio/voice and file viewing still works
+- confirm an unknown service action still shows the generic service fallback
+
 ## 2.9.14 - common Telegram service notice labels
 
 Changed:

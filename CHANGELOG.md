@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.15
+
+### Changed
+
+* Telegram replies now keep `reply_to_message_id` in normalized message data and resolve a same-chat reply preview when the target message is present.
+* Message bubbles show a compact reply preview with the original author and short text/media fallback, or a clear missing-export fallback when the replied message is absent.
+* Edited messages now show a compact `изменено` marker next to the message time.
+* Service/system messages remain compact service notices when reply metadata is present.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.15.
+* Search, media endpoint, storage/library format, build scripts, release scripts and packaging were not intentionally changed.
+
 ## 2.9.14
 
 ### Changed

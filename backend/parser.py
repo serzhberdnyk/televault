@@ -306,6 +306,12 @@ def referenced_message_preview(message: dict[str, Any]) -> str:
     if text:
         return text
 
+    if message.get("type") == "service":
+        service_kind = normalize_service_kind(str(message.get("action") or ""))
+        service_text = short_preview(service_notice_text(message, service_kind))
+        if service_text:
+            return service_text
+
     media_field = get_media_field(message)
     filename = get_media_file(message)
     mime_type = str(message.get("mime_type") or "")
@@ -325,6 +331,14 @@ def referenced_message_preview(message: dict[str, Any]) -> str:
     return ""
 
 
+def referenced_message_author(message: dict[str, Any]) -> str:
+    for key in ("from", "actor", "sender", "author", "from_id", "actor_id"):
+        name = forwarded_field_text(message.get(key))
+        if name:
+            return name
+    return ""
+
+
 def message_id_key(value: Any) -> str:
     if value is None:
         return ""
@@ -338,6 +352,28 @@ def message_id_map(messages: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         if key:
             by_id[key] = message
     return by_id
+
+
+def normalize_reply_fields(
+    message: dict[str, Any],
+    messages_by_id: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    reply_to_message_id = message.get("reply_to_message_id")
+    fields: dict[str, Any] = {
+        "reply_to_message_id": reply_to_message_id if reply_to_message_id is not None else "",
+        "reply_to_message_found": False,
+        "reply_to_message_from": "",
+        "reply_to_message_preview": "",
+    }
+    if reply_to_message_id is None:
+        return fields
+
+    referenced = (messages_by_id or {}).get(message_id_key(reply_to_message_id))
+    fields["reply_to_message_found"] = referenced is not None
+    if referenced:
+        fields["reply_to_message_from"] = referenced_message_author(referenced)
+        fields["reply_to_message_preview"] = referenced_message_preview(referenced)
+    return fields
 
 
 def normalize_service_fields(
@@ -704,6 +740,8 @@ def normalize_message(
         "message_kind": "message",
         "date": normalize_date(message.get("date", "")),
         "date_unixtime": message.get("date_unixtime") or "",
+        "edited": message.get("edited") or "",
+        "edited_unixtime": message.get("edited_unixtime") or "",
         "from": message.get("from") or message.get("actor") or "",
         "text": text_to_string(message.get("text", "")),
         "media": media,
@@ -727,6 +765,7 @@ def normalize_message(
         "thumbnail_exists": thumbnail_ref["exists"],
     }
     normalized.update(normalize_forwarded_fields(message))
+    normalized.update(normalize_reply_fields(message, messages_by_id))
     if message.get("type") == "service":
         normalized.update(normalize_service_fields(message, messages_by_id))
     return normalized

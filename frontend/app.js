@@ -100,6 +100,9 @@ const text = {
   changeFilters: 'попробуй изменить поиск, фильтр или вкладку',
   system: 'system',
   forwardedFrom: 'переслано от',
+  edited: 'изменено',
+  replyMissing: 'ответ на сообщение, которого нет в экспорте',
+  replyMessageFallback: 'сообщение',
   pinnedMessage: 'закреплено сообщение',
   pinnedMessageFallback: 'сообщение',
   genericService: 'системное событие Telegram',
@@ -1728,32 +1731,85 @@ function serviceNoticeLabel(msg) {
   return body || text.genericService;
 }
 
+function hasReplyMetadata(msg) {
+  const value = msg?.reply_to_message_id;
+  return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
+function replyPreviewText(msg) {
+  if (!hasReplyMetadata(msg)) return '';
+  if (msg?.reply_to_message_found === false) return text.replyMissing;
+  return cleanVisibleText(msg?.reply_to_message_preview) || text.replyMessageFallback;
+}
+
+function replyPreviewAuthor(msg) {
+  if (!hasReplyMetadata(msg) || msg?.reply_to_message_found === false) return '';
+  return senderName(msg?.reply_to_message_from || msg?.reply_to_message_author || '');
+}
+
+function renderReplyPreview(msg, options = {}) {
+  const preview = replyPreviewText(msg);
+  if (!preview) return '';
+  const author = replyPreviewAuthor(msg);
+  const classes = [
+    'message-reply',
+    options.service ? 'message-reply--service' : '',
+    msg?.reply_to_message_found === false ? 'message-reply--missing' : '',
+  ].filter(Boolean).join(' ');
+  const label = author ? `${author}: ${preview}` : preview;
+  return `
+    <div class="${classes}" aria-label="${escapeAttr(label)}">
+      ${author ? `<span class="message-reply__author">${escapeHtml(author)}</span>` : ''}
+      <span class="message-reply__text">${escapeHtml(preview)}</span>
+    </div>
+  `;
+}
+
+function isEditedMessage(msg) {
+  return Boolean(cleanVisibleText(msg?.edited) || cleanVisibleText(msg?.edited_unixtime));
+}
+
+function messageTimeParts(msg) {
+  return [
+    messageTime(msg),
+    isEditedMessage(msg) ? text.edited : '',
+  ].filter(Boolean);
+}
+
+function renderServiceTimeMeta(msg) {
+  const value = messageTimeParts(msg).join(' · ');
+  return value ? `<span class="service-notice__time">${escapeHtml(value)}</span>` : '';
+}
+
 function renderPinnedServiceMessage(msg, options = {}) {
-  const time = messageTime(msg);
+  const replyPreview = renderReplyPreview(msg, { service: true });
   const serviceClasses = ['message', 'message--service', options.searchActive ? 'message--search-result' : ''].filter(Boolean).join(' ');
+  const noticeClasses = ['service-notice', 'service-notice--pin', replyPreview ? 'service-notice--with-reply' : ''].filter(Boolean).join(' ');
   return `
     <article class="${serviceClasses}" aria-label="${escapeAttr(text.pinnedMessage)}"${messageArticleAttributes(msg, options)}>
-      <div class="service-notice service-notice--pin">
+      <div class="${noticeClasses}">
+        ${replyPreview}
         <span class="service-notice__text">${escapeHtml(pinnedServiceLabel(msg))}</span>
-        ${time ? `<span class="service-notice__time">${escapeHtml(time)}</span>` : ''}
+        ${renderServiceTimeMeta(msg)}
       </div>
     </article>
   `;
 }
 
 function renderServiceMessage(msg, options = {}) {
-  const time = messageTime(msg);
   const label = serviceNoticeLabel(msg);
   const photoUpdate = isPhotoUpdateServiceMessage(msg);
-  const noticeClasses = ['service-notice', photoUpdate ? 'service-notice--photo' : ''].filter(Boolean).join(' ');
+  const replyPreview = renderReplyPreview(msg, { service: true });
+  const noticeClasses = ['service-notice', photoUpdate ? 'service-notice--photo' : '', replyPreview ? 'service-notice--with-reply' : ''].filter(Boolean).join(' ');
   const serviceClasses = ['message', 'message--service', options.searchActive ? 'message--search-result' : ''].filter(Boolean).join(' ');
   const photoPreview = photoUpdate ? renderServicePhotoPreview(msg, label) : '';
   return `
     <article class="${serviceClasses}" aria-label="${escapeAttr(label)}"${messageArticleAttributes(msg, options)}>
       <div class="${noticeClasses}">
+        ${replyPreview}
         <span class="service-notice__text">${escapeHtml(label)}</span>
         ${photoPreview}
-        ${time ? `<span class="service-notice__time">${escapeHtml(time)}</span>` : ''}
+        ${renderServiceTimeMeta(msg)}
       </div>
     </article>
   `;
@@ -1841,6 +1897,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
         ${renderMessageMeta(msg)}
       <div class="${bubbleClasses}"${bubbleStyle}>
         ${renderForwardedMeta(msg)}
+        ${renderReplyPreview(msg)}
         ${mediaFirstCaptionLayout ? inlineMedia : ''}
         ${messageHasText ? `<div class="text">${escapeHtml(messageText)}</div>` : ''}
         ${mediaFirstCaptionLayout ? '' : inlineMedia}
@@ -2205,10 +2262,12 @@ function renderMediaCaption(msg) {
 }
 
 function renderMessageMeta(msg) {
+  const time = messageTime(msg);
   return `
     <div class="message-meta">
       <span class="message-meta__sender">${escapeHtml(messageSender(msg) || text.system)}</span>
-      <span class="message-meta__time">${escapeHtml(messageTime(msg))}</span>
+      ${time ? `<span class="message-meta__time">${escapeHtml(time)}</span>` : ''}
+      ${isEditedMessage(msg) ? `<span class="message-meta__edited">${escapeHtml(text.edited)}</span>` : ''}
     </div>
   `;
 }
@@ -2278,6 +2337,7 @@ function renderProbableMediaAlbum(albumMessages, directionContext, photoContext 
       ${renderMessageMeta(first)}
       <div class="${bubbleClasses}">
         ${renderForwardedMeta(first)}
+        ${renderReplyPreview(first)}
         <div class="media media-album media-album-grid ${albumGridClass(albumMessages.length)}">
           ${albumMessages.map(msg => renderAlbumMediaItem(msg, photoContext)).join('')}
         </div>
