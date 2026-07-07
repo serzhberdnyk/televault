@@ -11,8 +11,9 @@
 
 ### Changed
 
+* Portable package builds now include the approved public README screenshots from `docs/screenshots/` by explicit allowlist.
 * Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.10.
-* Frontend rendering, parser output format, storage format, package scripts and release assets were not intentionally changed.
+* Frontend rendering, parser output format, storage format and release assets were not intentionally changed.
 
 ## 2.9.9
 

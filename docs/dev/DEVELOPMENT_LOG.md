@@ -46,14 +46,16 @@ Changed:
 - keep the previous export and previous allowlist intact when loading a new export fails
 - made `/media` reject existing files inside the selected root when their normalized relative path is not in the current allowlist
 - kept path traversal/root containment checks and existing 200/206/416 range handling for allowed media
+- updated the portable package allowlist so the four approved public README screenshots are copied into `docs/screenshots/` automatically
 - updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.10
-- frontend rendering, parser format, storage format, packaging and release assets were not intentionally changed
+- frontend rendering, parser format, storage format and release assets were not intentionally changed
 
 Manual test:
 - run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py backend\windows_folder_picker.py`
 - run `node --check frontend\app.js`
 - run `git diff --check`
 - run the version sync check in `tools\build_exe_launcher.py`
+- build the main portable package and confirm `dist\TeleVault-v2.9.10.zip` contains `docs/screenshots/01-library.png`, `02-chat-reading.png`, `03-media-viewer.png` and `04-media-in-library.png`
 - launch with `run_windows.bat` and confirm `/api/status` returns 2.9.10
 - load an export and confirm referenced photo, video/audio/voice, sticker and file media still open through `/media`
 - request a temporary in-root file that is not referenced by messages and confirm `/media` returns 403 or 404

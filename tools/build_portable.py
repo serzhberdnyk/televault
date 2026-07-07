@@ -13,6 +13,13 @@ DIST_ROOT = ROOT / "dist"
 PACKAGE_ROOT = DIST_ROOT / PACKAGE_NAME
 ZIP_PATH = DIST_ROOT / f"{PACKAGE_NAME}.zip"
 
+PUBLIC_SCREENSHOT_FILES = [
+    "docs/screenshots/01-library.png",
+    "docs/screenshots/02-chat-reading.png",
+    "docs/screenshots/03-media-viewer.png",
+    "docs/screenshots/04-media-in-library.png",
+]
+
 ALLOWLIST_FILES = [
     "app.py",
     "run_windows.bat",
@@ -21,7 +28,7 @@ ALLOWLIST_FILES = [
     "docs/release/RELEASE_CHECKLIST.md",
     "docs/dev/EXE_PACKAGING_PLAN.md",
     "docs/dev/DEVELOPMENT_LOG.md",
-]
+] + PUBLIC_SCREENSHOT_FILES
 
 ALLOWLIST_DIRS = [
     "assets",
@@ -205,7 +212,7 @@ def build() -> int:
     print()
     print("not copied by design:")
     print("- .git/, __pycache__/, .venv/, venv/, node_modules/, dist/, build/, user_data/")
-    print("- *.pyc, *.log, settings.json, launcher window state, local export folders, screenshots/cache/dev artifacts")
+    print("- *.pyc, *.log, settings.json, launcher window state, local export folders, private screenshots/cache/dev artifacts")
 
     print()
     print("package summary:")
