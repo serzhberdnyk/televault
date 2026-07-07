@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.12 - app-mode icon metadata
+
+Changed:
+- added a minimal `frontend/manifest.json` with TeleVault PNG icons for Chromium app-mode metadata
+- connected `frontend/favicon.ico`, `frontend/icons/televault-256.png` and the manifest from `frontend/index.html`
+- extended `tools/generate_icon.py` to create PNG web icons from the same standard-library TeleVault icon drawing
+- documented the generated frontend icon files in `assets/README.md`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.12
+- kept backend logic, parser, storage, `/media`, security checks, launcher browser flow and frontend app behavior unchanged
+
+Manual test:
+- run `runtime\python\python.exe tools\generate_icon.py` and confirm it creates `assets\TeleVault.ico`, `frontend\favicon.ico` and `frontend\icons\televault-*.png`
+- run `runtime\python\python.exe -m py_compile tools\generate_icon.py tools\build_exe_launcher.py`
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- rebuild the native launcher and confirm `TeleVault.exe` still links `tools\launcher\TeleVaultLauncher.rc`
+- launch TeleVault and confirm the web UI exposes `/favicon.ico`, `/manifest.json` and the PNG icon files
+
 ## 2.9.11 - package license metadata
 
 Changed:

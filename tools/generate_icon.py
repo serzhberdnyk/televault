@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 import argparse
 import struct
+import zlib
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ICON_SIZES = (16, 32, 48, 256)
+WEB_ICON_SIZES = (192, 256, 512)
 
 
 RGBA = tuple[int, int, int, int]
@@ -221,11 +223,40 @@ def build_ico() -> bytes:
     return header + bytes(entries) + bytes(payload)
 
 
+def png_chunk(chunk_type: bytes, payload: bytes) -> bytes:
+    checksum = zlib.crc32(chunk_type + payload) & 0xFFFFFFFF
+    return struct.pack(">I", len(payload)) + chunk_type + payload + struct.pack(">I", checksum)
+
+
+def rgba_to_png(rgba: bytes, width: int, height: int) -> bytes:
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    stride = width * 4
+    rows = bytearray()
+    for y in range(height):
+        row_start = y * stride
+        rows.append(0)
+        rows.extend(rgba[row_start : row_start + stride])
+
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", zlib.compress(bytes(rows), level=9))
+        + png_chunk(b"IEND", b"")
+    )
+
+
 def default_targets(include_favicon: bool) -> list[Path]:
     targets = [ROOT / "assets" / "TeleVault.ico"]
     if include_favicon:
         targets.append(ROOT / "frontend" / "favicon.ico")
     return targets
+
+
+def web_icon_targets() -> list[tuple[int, Path]]:
+    return [
+        (size, ROOT / "frontend" / "icons" / f"televault-{size}.png")
+        for size in WEB_ICON_SIZES
+    ]
 
 
 def main() -> int:
@@ -242,7 +273,13 @@ def main() -> int:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(ico)
         print(f"created {target.relative_to(ROOT)} ({len(ico)} bytes)")
+    for size, target in web_icon_targets():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        png = rgba_to_png(draw_icon(size), size, size)
+        target.write_bytes(png)
+        print(f"created {target.relative_to(ROOT)} ({len(png)} bytes)")
     print("icon sizes: " + ", ".join(f"{size}x{size}" for size in ICON_SIZES))
+    print("web icon sizes: " + ", ".join(f"{size}x{size}" for size in WEB_ICON_SIZES))
     return 0
 
 
