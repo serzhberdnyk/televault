@@ -97,6 +97,43 @@ def get_messages(data: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
+def get_full_export_sources(data: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+    sources: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for section_name in ("chats", "left_chats"):
+        section = data.get(section_name)
+        if section is None:
+            continue
+        if not isinstance(section, dict):
+            errors.append(f"{section_name} has unexpected format")
+            continue
+        items = section.get("list", [])
+        if items is None:
+            continue
+        if not isinstance(items, list):
+            errors.append(f"{section_name}.list has unexpected format")
+            continue
+        for index, item in enumerate(items):
+            if isinstance(item, dict):
+                sources.append(item)
+            else:
+                errors.append(f"{section_name}.list[{index}] skipped: expected object")
+    return sources, errors
+
+
+def get_chat_sources(data: Any) -> tuple[list[dict[str, Any]], list[str]]:
+    if not isinstance(data, dict):
+        return [], ["result.json root must be an object"]
+
+    if "messages" in data:
+        return [data], []
+
+    if "chats" in data or "left_chats" in data:
+        return get_full_export_sources(data)
+
+    return [data], []
+
+
 def get_media_field(message: dict[str, Any]) -> str:
     for key in ("file", "photo", "thumbnail"):
         if message.get(key):
@@ -337,8 +374,7 @@ def photo_update_service_text(message: dict[str, Any], service_kind: str) -> str
     return "Фотография обновлена"
 
 
-def summarize_chat(json_path: Path, chat_id: str) -> ChatSummary:
-    data = read_json(json_path)
+def summarize_chat_data(data: dict[str, Any], json_path: Path, chat_id: str) -> ChatSummary:
     messages = get_messages(data)
     dates = [str(m.get("date", "")) for m in messages if m.get("date")]
     media_count = sum(1 for m in messages if get_media_file(m))
@@ -351,6 +387,11 @@ def summarize_chat(json_path: Path, chat_id: str) -> ChatSummary:
         first_date=normalize_date(dates[0]) if dates else "",
         last_date=normalize_date(dates[-1]) if dates else "",
     )
+
+
+def summarize_chat(json_path: Path, chat_id: str) -> ChatSummary:
+    data = read_json(json_path)
+    return summarize_chat_data(data, json_path, chat_id)
 
 
 def build_media_ref(root: Path, filename: Any, library_root: Path | None = None) -> dict[str, Any]:
@@ -431,12 +472,19 @@ def normalize_message(
     return normalized
 
 
-def load_chat_messages(json_path: Path, library_root: Path | None = None) -> list[dict[str, Any]]:
-    data = read_json(json_path)
-    root = json_path.parent
+def load_chat_messages_from_data(
+    data: dict[str, Any],
+    root: Path,
+    library_root: Path | None = None,
+) -> list[dict[str, Any]]:
     messages = get_messages(data)
     messages_by_id = message_id_map(messages)
     return [normalize_message(m, i, root, library_root, messages_by_id) for i, m in enumerate(messages)]
+
+
+def load_chat_messages(json_path: Path, library_root: Path | None = None) -> list[dict[str, Any]]:
+    data = read_json(json_path)
+    return load_chat_messages_from_data(data, json_path.parent, library_root)
 
 
 def to_dict(obj: ChatSummary) -> dict[str, Any]:

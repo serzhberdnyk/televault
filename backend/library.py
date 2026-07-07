@@ -3,7 +3,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any
-from .parser import summarize_chat, load_chat_messages, to_dict
+from .parser import (
+    get_chat_sources,
+    load_chat_messages_from_data,
+    read_json,
+    summarize_chat_data,
+    to_dict,
+)
 
 
 DEFAULT_SEARCH_LIMIT = 50
@@ -134,14 +140,23 @@ class ExportLibrary:
         next_media_paths: set[str] = set()
 
         errors: list[str] = []
-        for i, path in enumerate(json_files):
-            chat_id = f"chat_{i}"
+        for path in json_files:
             try:
-                summary = summarize_chat(path, chat_id)
-                messages = load_chat_messages(path, next_root)
-                next_chats[chat_id] = to_dict(summary)
-                next_messages[chat_id] = messages
-                next_media_paths.update(collect_media_paths(next_root, path.parent, messages))
+                data = read_json(path)
+                sources, source_errors = get_chat_sources(data)
+                errors.extend(f"{path}: {error}" for error in source_errors)
+                if not sources:
+                    if not source_errors:
+                        errors.append(f"{path}: no readable chats found")
+                    continue
+
+                for source_data in sources:
+                    chat_id = f"chat_{len(next_chats)}"
+                    summary = summarize_chat_data(source_data, path, chat_id)
+                    messages = load_chat_messages_from_data(source_data, path.parent, next_root)
+                    next_chats[chat_id] = to_dict(summary)
+                    next_messages[chat_id] = messages
+                    next_media_paths.update(collect_media_paths(next_root, path.parent, messages))
             except Exception as e:
                 errors.append(f"{path}: {e}")
 

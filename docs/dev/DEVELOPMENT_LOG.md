@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.12 - full export chats.list parser support
+
+Changed:
+- added parser support for full Telegram Desktop JSON exports where conversations are stored in root `result.json` under `chats.list`
+- included valid `left_chats.list` entries as normal conversations when they are present
+- kept the existing single-chat export path for top-level `messages`
+- kept media references rooted at the export folder, so photos, videos, voice/audio, files and stickers still resolve through the existing `/media` flow
+- malformed full-export chat list sections are added to the existing load `errors` list without replacing other readable chats
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.12
+- frontend UI, media endpoint, search, build scripts, release scripts and packaging were not intentionally changed
+
+Manual test:
+- run `python -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- load an old single-chat JSON export and confirm it opens as before
+- load a full Telegram Desktop JSON export with `chats.list` and confirm each chat appears in the conversation list
+- open a full-export chat and confirm messages render
+- open a full-export chat with media and confirm media files resolve from the export root
+- confirm a service message in a full export renders through the existing fallback path
+- confirm an empty chat in a full export does not crash the import
+- confirm malformed or missing `result.json` still returns a readable load error
+
 ## 2.9.11 - package license metadata
 
 Changed:

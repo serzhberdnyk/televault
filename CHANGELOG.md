@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.9.12
+
+### Fixed
+
+* Full Telegram Desktop JSON exports are now opened as a set of conversations from `result.json` `chats.list`.
+* `left_chats.list` entries are included when present and valid.
+* Empty chats inside a full export no longer collapse the import into a fake single empty conversation.
+* Malformed full-export chat lists are reported through the existing load errors instead of breaking the whole library load.
+
+### Changed
+
+* Existing single-chat exports with top-level `messages` keep the previous parser path.
+* Media paths for full exports remain resolved relative to the export root.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.12.
+* Frontend UI, media endpoint, search, build scripts, release scripts and packaging were not intentionally changed.
+
 ## 2.9.11
 
 ### Packaging
