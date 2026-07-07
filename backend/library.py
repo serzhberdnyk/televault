@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 from .parser import summarize_chat, load_chat_messages, to_dict
@@ -7,6 +8,7 @@ from .parser import summarize_chat, load_chat_messages, to_dict
 
 DEFAULT_SEARCH_LIMIT = 50
 MAX_SEARCH_LIMIT = 100
+MEDIA_PATH_FIELDS = ("media", "photo", "thumbnail")
 
 
 def compact_value(value: Any) -> str:
@@ -72,11 +74,50 @@ def message_snippet(message: dict[str, Any]) -> str:
     return media_name or media_type or "сообщение"
 
 
+def normalize_relative_media_path(relative_path: Path | str) -> str:
+    normalized = str(relative_path).replace("\\", "/")
+    return os.path.normcase(normalized).replace("\\", "/")
+
+
+def media_path_from_reference(library_root: Path, base_root: Path, value: Any) -> str:
+    media = str(value or "")
+    if not media:
+        return ""
+
+    candidate = Path(media.replace("\\", "/"))
+    try:
+        target = candidate.resolve() if candidate.is_absolute() else (base_root / candidate).resolve()
+        relative = target.relative_to(library_root)
+    except (OSError, RuntimeError, ValueError):
+        return ""
+
+    if not target.exists() or not target.is_file():
+        return ""
+
+    normalized = normalize_relative_media_path(relative.as_posix())
+    if Path(normalized).name.lower() == "result.json":
+        return ""
+    return normalized
+
+
+def collect_media_paths(library_root: Path, base_root: Path, messages: list[dict[str, Any]]) -> set[str]:
+    paths: set[str] = set()
+    resolved_library_root = library_root.resolve()
+    resolved_base_root = base_root.resolve()
+    for message in messages:
+        for field in MEDIA_PATH_FIELDS:
+            media_path = media_path_from_reference(resolved_library_root, resolved_base_root, message.get(field))
+            if media_path:
+                paths.add(media_path)
+    return paths
+
+
 class ExportLibrary:
     def __init__(self) -> None:
         self.root: Path | None = None
         self.chats: dict[str, dict[str, Any]] = {}
         self.messages: dict[str, list[dict[str, Any]]] = {}
+        self.media_paths: set[str] = set()
 
     def load_folder(self, folder: str) -> dict[str, Any]:
         root = Path(folder).expanduser().resolve()
@@ -90,6 +131,7 @@ class ExportLibrary:
         next_root = root
         next_chats: dict[str, dict[str, Any]] = {}
         next_messages: dict[str, list[dict[str, Any]]] = {}
+        next_media_paths: set[str] = set()
 
         errors: list[str] = []
         for i, path in enumerate(json_files):
@@ -99,6 +141,7 @@ class ExportLibrary:
                 messages = load_chat_messages(path, next_root)
                 next_chats[chat_id] = to_dict(summary)
                 next_messages[chat_id] = messages
+                next_media_paths.update(collect_media_paths(next_root, path.parent, messages))
             except Exception as e:
                 errors.append(f"{path}: {e}")
 
@@ -108,6 +151,7 @@ class ExportLibrary:
         self.root = next_root
         self.chats = next_chats
         self.messages = next_messages
+        self.media_paths = next_media_paths
 
         return {
             "root": str(root),
@@ -115,6 +159,17 @@ class ExportLibrary:
             "chats": list(next_chats.values()),
             "errors": errors,
         }
+
+    def is_media_file_allowed(self, file_path: Path) -> bool:
+        if not self.root:
+            return False
+
+        try:
+            relative = file_path.resolve().relative_to(self.root.resolve())
+        except (OSError, RuntimeError, ValueError):
+            return False
+
+        return normalize_relative_media_path(relative.as_posix()) in self.media_paths
 
     def get_chat(self, chat_id: str, query: str = "", sender: str = "", media_only: bool = False) -> dict[str, Any]:
         if chat_id not in self.chats:

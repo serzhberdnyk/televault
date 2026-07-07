@@ -20,7 +20,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.9"
+APP_VERSION = "2.9.10"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -320,6 +320,10 @@ def ensure_media_inside_root(file_path: Path, root: Path) -> None:
         raise MediaForbiddenError() from exc
 
 
+def media_request_path(value: str) -> Path:
+    return Path(value.replace("\\", "/"))
+
+
 def resolve_media_request(parsed) -> Path:
     if not LIBRARY.root:
         raise MediaForbiddenError()
@@ -331,14 +335,14 @@ def resolve_media_request(parsed) -> Path:
         if not raw_path:
             raise FileNotFoundError()
         decoded_path = unquote(raw_path)
-        candidate = Path(decoded_path)
+        candidate = media_request_path(decoded_path)
         file_path = candidate.resolve() if candidate.is_absolute() else (root / candidate).resolve()
     else:
         encoded_path = parsed.path[len("/media/"):]
         if not encoded_path:
             raise FileNotFoundError()
         decoded_path = unquote(encoded_path)
-        candidate = Path(decoded_path)
+        candidate = media_request_path(decoded_path)
         if candidate.is_absolute():
             raise MediaForbiddenError()
         file_path = (root / candidate).resolve()
@@ -346,6 +350,8 @@ def resolve_media_request(parsed) -> Path:
     ensure_media_inside_root(file_path, root)
     if not file_path.exists() or not file_path.is_file():
         raise FileNotFoundError()
+    if not LIBRARY.is_media_file_allowed(file_path):
+        raise MediaForbiddenError()
     return file_path
 
 

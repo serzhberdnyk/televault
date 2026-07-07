@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.10 - restrict media serving to loaded export files
+
+Changed:
+- added transactional `ExportLibrary.media_paths` allowlist for the currently loaded export
+- build the allowlist only from existing files referenced by normalized message `media`, `photo` and `thumbnail` fields
+- keep the previous export and previous allowlist intact when loading a new export fails
+- made `/media` reject existing files inside the selected root when their normalized relative path is not in the current allowlist
+- kept path traversal/root containment checks and existing 200/206/416 range handling for allowed media
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.10
+- frontend rendering, parser format, storage format, packaging and release assets were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py backend\windows_folder_picker.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- run the version sync check in `tools\build_exe_launcher.py`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.10
+- load an export and confirm referenced photo, video/audio/voice, sticker and file media still open through `/media`
+- request a temporary in-root file that is not referenced by messages and confirm `/media` returns 403 or 404
+- request path traversal outside the root and confirm it is still forbidden
+- after a failed new folder load, confirm the old chat and old media still work
+
 ## 2.9.9 - transactional export folder loading
 
 Changed:

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.9.10
+
+### Security
+
+* Restricted `/media` serving to files referenced by the currently loaded Telegram export messages.
+* Added a transactional media allowlist built from existing `media`, `photo` and `thumbnail` files in loaded chats, without scanning the export root as a general file server.
+* `/media` keeps the existing root containment and traversal guards, then rejects existing in-root files that are not in the loaded export media allowlist.
+* Existing range responses for allowed video/audio media remain handled by the same streaming code.
+
+### Changed
+
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.10.
+* Frontend rendering, parser output format, storage format, package scripts and release assets were not intentionally changed.
+
 ## 2.9.9
 
 ### Security
