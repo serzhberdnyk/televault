@@ -46,8 +46,8 @@ Changed:
 - loaded messages only when a user opens a chat, then reused the existing in-memory `chatCache` on repeat openings
 - kept global search on the existing `/api/search` backend endpoint instead of depending on all messages being cached in the frontend
 - added a local in-chat error state for failed selected-chat message loads
-- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.16
-- backend parser, media endpoint, storage/library format, full export `chats.list`, wrong-folder scan guard, build scripts, release scripts, package scripts and README were not intentionally changed
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.16
+- backend parser, media endpoint, storage/library format, full export `chats.list`, wrong-folder scan guard, release scripts and README were not intentionally changed
 
 Manual test:
 - run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`

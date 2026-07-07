@@ -8,8 +8,8 @@
 * Messages are loaded when the user opens a specific chat, then kept in the existing in-memory `chatCache` for quick repeat openings.
 * Sidebar chat list and global search continue to use the existing chat summaries and `/api/search` endpoint.
 * Chat message load failures now show a local in-chat error state instead of marking the whole library as failed.
-* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.16.
-* Backend parser, media endpoint, storage/library format, build scripts, release scripts and packaging were not intentionally changed.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.16.
+* Backend parser, media endpoint, storage/library format and release scripts were not intentionally changed.
 
 ## 2.9.15
 
