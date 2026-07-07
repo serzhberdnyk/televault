@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.9.13
+
+### Fixed
+
+* Selecting a wrong or overly broad folder no longer triggers an unbounded recursive `result.json` scan.
+* Library loading now checks the selected folder for `result.json` first, then searches only a shallow set of nearby folders with directory and entry limits.
+* Wrong folders, empty folders and too-broad folders now return a clear Telegram Desktop export folder error instead of appearing to hang.
+
+### Changed
+
+* Correct single-chat exports with `result.json` next to the selected folder still open directly.
+* Full Telegram Desktop exports with `chats.list` keep the existing parser path.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.13.
+* Storage format, parser output, media endpoint, search, frontend design, build scripts, release scripts and packaging were not intentionally changed.
+
 ## 2.9.12
 
 ### Fixed

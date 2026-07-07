@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.13 - guard wrong-folder recursive scan
+
+Changed:
+- replaced the unbounded `root.rglob("result.json")` library scan with a bounded helper in `backend/library.py`
+- kept direct `result.json` folders on the fast path for normal Telegram Desktop exports
+- kept parent-folder support for nearby export folders, but limited the search depth, checked directories and checked entries
+- stopped descending into an export folder once its `result.json` is found, so media folders are not scanned just to discover more exports
+- wrong, empty or overly broad folders now raise a clear Telegram Desktop export folder error that the existing frontend presents without traceback
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.13
+- storage format, parser output, media endpoint, search, frontend design, build scripts, release scripts and packaging were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- load a correct single-chat export and confirm it opens as before
+- load a full Telegram Desktop export with `chats.list` and confirm conversations appear
+- choose a parent folder above an export and confirm it either loads nearby exports or fails quickly with a clear folder message
+- choose an obviously wrong broad folder such as Documents or Downloads and confirm it does not hang
+- choose an empty folder or a folder missing `result.json` and confirm the error explains to select a Telegram Desktop export folder
+- open media in a correct export and confirm existing photos, videos, voice/audio and files still resolve
+
 ## 2.9.12 - full export chats.list parser support
 
 Changed:

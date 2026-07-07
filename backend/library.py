@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 import os
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,22 @@ from .parser import (
 DEFAULT_SEARCH_LIMIT = 50
 MAX_SEARCH_LIMIT = 100
 MEDIA_PATH_FIELDS = ("media", "photo", "thumbnail")
+RESULT_JSON_NAME = "result.json"
+MAX_RESULT_JSON_SEARCH_DEPTH = 2
+MAX_RESULT_JSON_SEARCH_DIRS = 200
+MAX_RESULT_JSON_SEARCH_ENTRIES = 5000
+WRONG_EXPORT_FOLDER_MESSAGE = (
+    "Похоже, это не папка экспорта Telegram Desktop. "
+    "Выберите папку, где лежит result.json."
+)
+TOO_BROAD_EXPORT_FOLDER_MESSAGE = (
+    "Похоже, выбрана слишком широкая папка, а не экспорт Telegram Desktop. "
+    "Выберите папку, где лежит result.json."
+)
+
+
+class ResultJsonSearchLimitError(Exception):
+    pass
 
 
 def compact_value(value: Any) -> str:
@@ -118,6 +135,50 @@ def collect_media_paths(library_root: Path, base_root: Path, messages: list[dict
     return paths
 
 
+def find_result_json_files(root: Path) -> list[Path]:
+    direct_result = root / RESULT_JSON_NAME
+    if direct_result.is_file():
+        return [direct_result]
+
+    found: list[Path] = []
+    pending: deque[tuple[Path, int]] = deque([(root, 0)])
+    checked_dirs = 0
+    checked_entries = 0
+
+    while pending:
+        current, depth = pending.popleft()
+        checked_dirs += 1
+        if checked_dirs > MAX_RESULT_JSON_SEARCH_DIRS:
+            raise ResultJsonSearchLimitError()
+
+        current_results: list[Path] = []
+        child_dirs: list[Path] = []
+
+        try:
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    checked_entries += 1
+                    if checked_entries > MAX_RESULT_JSON_SEARCH_ENTRIES:
+                        raise ResultJsonSearchLimitError()
+
+                    try:
+                        if entry.is_file(follow_symlinks=False) and entry.name.casefold() == RESULT_JSON_NAME:
+                            current_results.append(Path(entry.path))
+                        elif depth < MAX_RESULT_JSON_SEARCH_DEPTH and entry.is_dir(follow_symlinks=False):
+                            child_dirs.append(Path(entry.path))
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+
+        found.extend(current_results)
+        if current_results:
+            continue
+        pending.extend((child_dir, depth + 1) for child_dir in child_dirs)
+
+    return sorted(set(found), key=lambda path: str(path).casefold())
+
+
 class ExportLibrary:
     def __init__(self) -> None:
         self.root: Path | None = None
@@ -130,9 +191,12 @@ class ExportLibrary:
         if not root.exists() or not root.is_dir():
             raise ValueError("папка не найдена")
 
-        json_files = sorted(root.rglob("result.json"))
+        try:
+            json_files = find_result_json_files(root)
+        except ResultJsonSearchLimitError:
+            raise ValueError(TOO_BROAD_EXPORT_FOLDER_MESSAGE) from None
         if not json_files:
-            raise ValueError("в выбранной папке не найден result.json")
+            raise ValueError(WRONG_EXPORT_FOLDER_MESSAGE)
 
         next_root = root
         next_chats: dict[str, dict[str, Any]] = {}
