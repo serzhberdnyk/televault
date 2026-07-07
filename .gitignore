@@ -29,6 +29,9 @@ tmp/
 temp/
 cache/
 screenshots/
+# public README screenshots
+!docs/screenshots/
+!docs/screenshots/*.png
 backup/
 backups/
 synthetic_exports/

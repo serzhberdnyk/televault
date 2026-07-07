@@ -83,7 +83,7 @@ Required public PNG files:
 - `docs/screenshots/01-library.png`
 - `docs/screenshots/02-chat-reading.png`
 - `docs/screenshots/03-media-viewer.png`
-- `docs/screenshots/04-empty-state.png`
+- `docs/screenshots/04-media-in-library.png`
 
 Before publishing, verify every screenshot:
 

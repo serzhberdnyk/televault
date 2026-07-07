@@ -1,8 +1,8 @@
 # TeleVault public screenshot capture guide
 
-Use this guide to create public PNG screenshots for GitHub, AlternativeTo and Product Hunt.
+Use this guide to create or replace public PNG screenshots for GitHub, AlternativeTo and Product Hunt.
 
-No screenshots were added automatically in this patch because the existing screenshots contained real chat content, media and a local `C:\Users\...` path. Do not publish those images.
+Committed public screenshots must be manually reviewed and approved before publishing.
 
 ## Output Files
 
@@ -11,7 +11,7 @@ Save the reviewed screenshots as:
 - `docs/screenshots/01-library.png`
 - `docs/screenshots/02-chat-reading.png`
 - `docs/screenshots/03-media-viewer.png`
-- `docs/screenshots/04-empty-state.png`
+- `docs/screenshots/04-media-in-library.png`
 
 Do not add placeholder images. Add these files only after the visible content is demo or sanitized.
 
@@ -65,13 +65,13 @@ Capture a safe media view: photo lightbox, video preview, voice/audio message or
 
 Before saving, verify that no real faces, private photos, documents, filenames or chat text are visible.
 
-### 4. Empty State
+### 4. Media In Library
 
-File: `docs/screenshots/04-empty-state.png`
+File: `docs/screenshots/04-media-in-library.png`
 
-Capture a polished empty state, such as first launch, no selected export, no selected chat, empty media tab or empty search result.
+Capture media thumbnails or media messages inside a safe demo chat. The screenshot should show that photos, videos, voice messages, audio or files are readable inside the archive.
 
-Before saving, verify that no machine path, real export name or private folder name is visible.
+Before saving, verify that no real private media, filenames, chat text, machine path, export name or private folder name is visible.
 
 ## Manual Capture Steps
 
