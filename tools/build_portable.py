@@ -5,7 +5,7 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.10"
+APP_VERSION = "2.9.11"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +23,7 @@ PUBLIC_SCREENSHOT_FILES = [
 ALLOWLIST_FILES = [
     "app.py",
     "run_windows.bat",
+    "LICENSE",
     "README.md",
     "CHANGELOG.md",
     "docs/release/RELEASE_CHECKLIST.md",
@@ -227,6 +228,7 @@ def build() -> int:
     print("- run python -m py_compile app.py backend/parser.py backend/library.py")
     print("- run python -m py_compile tools/build_portable.py")
     print("- run node --check frontend/app.js")
+    print(f"- confirm dist/{PACKAGE_NAME}/LICENSE is present")
     print(f"- open dist/{PACKAGE_NAME}/ and confirm only allowlisted project files are present")
     print(f"- open dist/{PACKAGE_NAME}.zip and confirm it contains {PACKAGE_NAME}/ at the top level")
     print(f"- run dist/{PACKAGE_NAME}/run_windows.bat if Windows Python is available")

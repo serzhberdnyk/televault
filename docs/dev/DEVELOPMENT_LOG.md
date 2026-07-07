@@ -38,6 +38,21 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.11 - package license metadata
+
+Changed:
+- included the root MIT `LICENSE` file in the portable package build allowlist
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.11
+- app behavior, backend logic, frontend logic, parser, storage, security logic, screenshots and README were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py backend\windows_folder_picker.py`
+- run `runtime\python\python.exe -m py_compile tools\build_portable.py tools\build_exe_launcher.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- build the main portable package and confirm `dist\TeleVault-v2.9.11.zip` contains `LICENSE`, `README.md`, `CHANGELOG.md`, `TeleVault.exe`, `backend`, `frontend`, `runtime` and approved public screenshots
+- extract the zip into a clean temporary folder, launch `TeleVault.exe` and confirm `/api/status` returns 2.9.11
+
 ## 2.9.10 - restrict media serving to loaded export files
 
 Changed:

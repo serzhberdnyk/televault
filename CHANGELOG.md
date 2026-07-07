@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.9.11
+
+### Packaging
+
+* Portable package builds now include the root MIT `LICENSE` file.
+* No app behavior changes.
+
 ## 2.9.10
 
 ### Security
