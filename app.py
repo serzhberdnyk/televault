@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse, unquote
+import hashlib
 import json
 import mimetypes
 import os
@@ -20,7 +22,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.16"
+APP_VERSION = "2.9.17"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -102,16 +104,193 @@ def write_settings(data: dict) -> None:
     tmp.replace(path)
 
 
-def remember_vault_path(folder: str) -> None:
-    settings = read_settings()
-    settings["lastVaultPath"] = str(Path(folder).expanduser().resolve())
+def utc_now_text() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def resolved_export_path(folder: str) -> Path:
+    path = Path(folder).expanduser()
+    try:
+        return path.resolve(strict=False)
+    except (OSError, RuntimeError, ValueError):
+        return path.absolute()
+
+
+def export_path_key(folder: str) -> str:
+    try:
+        value = str(resolved_export_path(folder))
+    except (OSError, RuntimeError):
+        value = str(Path(folder).expanduser())
+    return os.path.normcase(os.path.normpath(value))
+
+
+def export_id_for_path(folder: str) -> str:
+    digest = hashlib.sha256(export_path_key(folder).encode("utf-8")).hexdigest()[:16]
+    return f"exp_{digest}"
+
+
+def export_label_for_path(path: Path) -> str:
+    return path.name or str(path)
+
+
+def export_record_for_path(folder: str, opened_at: str | None = None, previous: dict | None = None, missing: bool = False) -> dict:
+    path = resolved_export_path(folder)
+    timestamp = opened_at or utc_now_text()
+    previous = previous if isinstance(previous, dict) else {}
+    added_at = str(previous.get("addedAt") or timestamp)
+    last_opened_at = str(previous.get("lastOpenedAt") or added_at)
+    if opened_at:
+        last_opened_at = opened_at
+    label = str(previous.get("label") or "").strip() or export_label_for_path(path)
+    return {
+        "id": export_id_for_path(str(path)),
+        "path": str(path),
+        "label": label,
+        "addedAt": added_at,
+        "lastOpenedAt": last_opened_at,
+        "missing": bool(missing),
+    }
+
+
+def normalize_export_catalog(settings: dict) -> tuple[dict, bool]:
+    if not isinstance(settings, dict):
+        settings = {}
+
+    changed = False
+    raw_exports = settings.get("exports")
+    exports: list[dict] = []
+    seen_paths: set[str] = set()
+
+    if isinstance(raw_exports, list):
+        for item in raw_exports:
+            if not isinstance(item, dict):
+                changed = True
+                continue
+            folder = str(item.get("path") or "").strip()
+            if not folder:
+                changed = True
+                continue
+            key = export_path_key(folder)
+            if key in seen_paths:
+                changed = True
+                continue
+            record = export_record_for_path(folder, previous=item, missing=bool(item.get("missing")))
+            exports.append(record)
+            seen_paths.add(key)
+            if record != item:
+                changed = True
+    elif raw_exports is not None:
+        changed = True
+
+    last_vault_path = str(settings.get("lastVaultPath") or "").strip()
+    if not exports and last_vault_path:
+        record = export_record_for_path(last_vault_path)
+        exports.append(record)
+        settings["activeExportId"] = record["id"]
+        settings["lastVaultPath"] = record["path"]
+        changed = True
+
+    if exports or isinstance(raw_exports, list) or raw_exports is not None:
+        if settings.get("exports") != exports:
+            settings["exports"] = exports
+            changed = True
+
+        active_export_id = str(settings.get("activeExportId") or "").strip()
+        active_ids = {record["id"] for record in exports}
+        if active_export_id and active_export_id not in active_ids:
+            settings.pop("activeExportId", None)
+            changed = True
+            active_export_id = ""
+
+        if not active_export_id and last_vault_path:
+            match = find_export_by_path(exports, last_vault_path)
+            if match:
+                settings["activeExportId"] = match["id"]
+                changed = True
+
+    return settings, changed
+
+
+def read_catalog_settings(persist_migration: bool = False) -> dict:
+    settings, changed = normalize_export_catalog(read_settings())
+    if persist_migration and changed:
+        write_settings(settings)
+    return settings
+
+
+def find_export_by_path(exports: list[dict], folder: str) -> dict | None:
+    key = export_path_key(folder)
+    for record in exports:
+        if export_path_key(str(record.get("path") or "")) == key:
+            return record
+    return None
+
+
+def active_export_record(settings: dict) -> dict | None:
+    exports = settings.get("exports")
+    if not isinstance(exports, list):
+        return None
+
+    active_export_id = str(settings.get("activeExportId") or "").strip()
+    if not active_export_id:
+        return None
+
+    for record in exports:
+        if isinstance(record, dict) and record.get("id") == active_export_id and record.get("path"):
+            return record
+    return None
+
+
+def remember_vault_path(folder: str) -> dict:
+    settings = read_catalog_settings()
+    exports = settings.get("exports")
+    if not isinstance(exports, list):
+        exports = []
+
+    opened_at = utc_now_text()
+    existing = find_export_by_path(exports, folder)
+    if existing:
+        record = export_record_for_path(folder, opened_at=opened_at, previous=existing, missing=False)
+        exports[exports.index(existing)] = record
+    else:
+        record = export_record_for_path(folder, opened_at=opened_at, missing=False)
+        exports.append(record)
+
+    settings["exports"] = exports
+    settings["activeExportId"] = record["id"]
+    settings["lastVaultPath"] = record["path"]
     write_settings(settings)
+    return record
+
+
+def mark_saved_export_missing(folder: str, active_export_id: str = "") -> None:
+    settings = read_catalog_settings()
+    exports = settings.get("exports")
+    if not isinstance(exports, list):
+        return
+
+    changed = False
+    for record in exports:
+        if not isinstance(record, dict):
+            continue
+        is_active = active_export_id and record.get("id") == active_export_id
+        is_same_path = folder and export_path_key(str(record.get("path") or "")) == export_path_key(folder)
+        if is_active or is_same_path:
+            if not record.get("missing"):
+                record["missing"] = True
+                changed = True
+
+    if changed:
+        settings["exports"] = exports
+        write_settings(settings)
 
 
 def load_folder_and_remember(folder: str) -> dict:
     result = LIBRARY.load_folder(folder)
     try:
-        remember_vault_path(folder)
+        record = remember_vault_path(folder)
+        result["lastVaultPath"] = record["path"]
+        result["activeExportId"] = record["id"]
     except Exception as e:
         result["settings_error"] = str(e)
     return result
@@ -130,29 +309,59 @@ def missing_saved_vault_response(folder: str, error: str = "") -> dict:
 
 
 def forget_saved_vault_path() -> dict:
-    settings = read_settings()
+    settings = read_catalog_settings()
     removed_path = str(settings.pop("lastVaultPath", "") or "")
-    if removed_path:
+    removed_export_id = str(settings.pop("activeExportId", "") or "")
+    exports = settings.get("exports")
+    changed = bool(removed_path or removed_export_id)
+    if isinstance(exports, list):
+        for record in exports:
+            if not isinstance(record, dict):
+                continue
+            is_removed_export = removed_export_id and record.get("id") == removed_export_id
+            is_removed_path = removed_path and export_path_key(str(record.get("path") or "")) == export_path_key(removed_path)
+            if is_removed_export or is_removed_path:
+                if not record.get("missing"):
+                    record["missing"] = True
+                    changed = True
+        settings["exports"] = exports
+    if changed:
         write_settings(settings)
-    return {"ok": True, "removed": bool(removed_path), "lastVaultPath": removed_path}
+    return {"ok": True, "removed": bool(removed_path or removed_export_id), "lastVaultPath": removed_path}
 
 
 def load_saved_vault() -> dict:
-    folder = str(read_settings().get("lastVaultPath") or "").strip()
+    try:
+        settings = read_catalog_settings(persist_migration=True)
+    except Exception:
+        settings = read_settings()
+
+    active_record = active_export_record(settings)
+    folder = str((active_record or {}).get("path") or settings.get("lastVaultPath") or "").strip()
     if not folder:
         return {"loaded": False}
+    active_export_id = str((active_record or {}).get("id") or settings.get("activeExportId") or "")
     try:
         path = Path(folder).expanduser()
         if not path.exists() or not path.is_dir():
+            mark_saved_export_missing(folder, active_export_id)
             return missing_saved_vault_response(folder)
     except OSError as e:
+        mark_saved_export_missing(folder, active_export_id)
         return missing_saved_vault_response(folder, str(e))
     try:
         result = LIBRARY.load_folder(str(path))
         result["loaded"] = True
-        result["lastVaultPath"] = str(path.resolve())
+        try:
+            record = remember_vault_path(str(path))
+            result["lastVaultPath"] = record["path"]
+            result["activeExportId"] = record["id"]
+        except Exception as e:
+            result["lastVaultPath"] = str(path.resolve())
+            result["settings_error"] = str(e)
         return result
     except OSError as e:
+        mark_saved_export_missing(folder, active_export_id)
         return missing_saved_vault_response(folder, str(e))
     except Exception as e:
         return {"loaded": False, "lastVaultPath": folder, "error": str(e)}

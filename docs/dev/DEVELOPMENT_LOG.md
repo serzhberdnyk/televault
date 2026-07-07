@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.17 - export catalog settings model
+
+Changed:
+- added an internal settings catalog with `exports`, `activeExportId` and transitional `lastVaultPath`
+- migrated old settings that only contain `lastVaultPath` into one active export record
+- generated stable `exp_...` export ids from normalized resolved paths without storing raw paths in the id
+- updated existing export records on repeat selection instead of appending duplicates
+- updated catalog records only after `ExportLibrary.load_folder` succeeds, so wrong-folder selections do not become saved exports
+- kept `/api/startup-vault` compatible: active export first, old `lastVaultPath` fallback, and a missing-export response instead of traceback
+- kept `lastVaultPath` synchronized after successful loads for transitional compatibility
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.17
+- UI, parser, library chat/message storage, media endpoint, search, release packaging logic and README were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- smoke old settings with only `lastVaultPath` and confirm it migrates to one active export
+- smoke export A, export B, and export A again to confirm no duplicate catalog record is created
+- smoke a wrong folder and confirm it is not added to `exports`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.17
+- load a full Telegram Desktop export with `chats.list` and confirm conversations appear
+- load a single-chat export and confirm it opens
+- confirm media still plays from the active export
+
 ## 2.9.16 - lazy load chat messages
 
 Changed:

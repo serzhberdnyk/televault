@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.17
+
+### Changed
+
+* Added an internal export catalog settings model with `exports`, `activeExportId` and transitional `lastVaultPath`.
+* Old settings that only contain `lastVaultPath` now migrate to a single active export record while keeping startup behavior compatible.
+* Loading an export updates the existing catalog record instead of creating duplicates, using a normalized resolved path for comparison.
+* Startup now opens the active export record first, then falls back to `lastVaultPath` for older settings.
+* Missing saved exports are marked in the catalog without crashing startup, while wrong-folder loads are not added to settings.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.17.
+* UI, parser, library chat/message storage, media endpoint, search and release packaging logic were not intentionally changed.
+
 ## 2.9.16
 
 ### Changed
