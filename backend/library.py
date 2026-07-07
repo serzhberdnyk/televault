@@ -87,27 +87,32 @@ class ExportLibrary:
         if not json_files:
             raise ValueError("в выбранной папке не найден result.json")
 
-        self.root = root
-        self.chats.clear()
-        self.messages.clear()
+        next_root = root
+        next_chats: dict[str, dict[str, Any]] = {}
+        next_messages: dict[str, list[dict[str, Any]]] = {}
 
         errors: list[str] = []
         for i, path in enumerate(json_files):
             chat_id = f"chat_{i}"
             try:
                 summary = summarize_chat(path, chat_id)
-                self.chats[chat_id] = to_dict(summary)
-                self.messages[chat_id] = load_chat_messages(path, root)
+                messages = load_chat_messages(path, next_root)
+                next_chats[chat_id] = to_dict(summary)
+                next_messages[chat_id] = messages
             except Exception as e:
                 errors.append(f"{path}: {e}")
 
-        if not self.chats:
+        if not next_chats:
             raise ValueError("result.json найдены, но не удалось прочитать ни один экспорт")
+
+        self.root = next_root
+        self.chats = next_chats
+        self.messages = next_messages
 
         return {
             "root": str(root),
-            "count": len(self.chats),
-            "chats": list(self.chats.values()),
+            "count": len(next_chats),
+            "chats": list(next_chats.values()),
             "errors": errors,
         }
 

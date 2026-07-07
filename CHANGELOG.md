@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.9
+
+### Fixed
+
+* Made `ExportLibrary.load_folder()` transactional: a failed or malformed new export no longer clears the currently opened in-memory library.
+* Existing chat, search and media state remain backed by the previous valid export when a later folder load fails.
+
+### Changed
+
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` to 2.9.9.
+* Frontend, parser, media endpoints and storage format were not intentionally changed.
+
 ## 2.9.8
 
 ### Security

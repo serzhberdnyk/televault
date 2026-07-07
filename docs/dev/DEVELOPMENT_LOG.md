@@ -38,6 +38,23 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.9 - transactional export folder loading
+
+Changed:
+- made `ExportLibrary.load_folder()` build the next export library in temporary local structures before replacing the current in-memory library
+- failed or malformed new exports no longer clear the previously opened valid export
+- existing chat open, search and media resolution continue to use the previous library after a failed load
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.9
+- frontend, parser, media endpoints and storage format were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py backend\windows_folder_picker.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- run the version sync check in `tools\build_exe_launcher.py`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.9
+- open a valid export, open a chat, then try loading a malformed or unsuitable folder and confirm the error is shown while the old chat, search and media still work
+
 ## 2.9.8 - local Host guard for all requests
 
 Changed:
