@@ -120,6 +120,14 @@ TeleVault читает локальные Telegram Desktop exports, которы
 
 ---
 
+## лицензия
+
+TeleVault распространяется по MIT License.
+
+см. [LICENSE](LICENSE).
+
+---
+
 ## english
 
 TeleVault is a local offline reader for Telegram Desktop exports.

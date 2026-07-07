@@ -55,6 +55,10 @@ TeleVault — локальный offline reader для экспортов Telegr
 - does not recover deleted Telegram chats
 - opens only files that are present in the selected export folder
 
+## License
+
+TeleVault is released under the MIT License.
+
 ## Product Hunt Checklist
 
 - product name: `TeleVault`
@@ -70,7 +74,7 @@ TeleVault — локальный offline reader для экспортов Telegr
 
 - category: Telegram export viewer, offline archive reader or local archive viewer
 - platform: Windows
-- license/source information: use the current repository metadata
+- license/source information: MIT License / Free and Open Source
 - short description should mention Telegram Desktop exports
 - mark cloud/sync/login features as not included
 - use only reviewed demo screenshots
