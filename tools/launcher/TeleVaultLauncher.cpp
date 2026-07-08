@@ -36,7 +36,7 @@
 namespace {
 
 constexpr wchar_t kAppName[] = L"TeleVault";
-constexpr wchar_t kAppVersion[] = L"2.9.24";
+constexpr wchar_t kAppVersion[] = L"2.9.25";
 constexpr wchar_t kNoAutoBrowserEnv[] = L"TELEVAULT_NO_AUTO_BROWSER";
 constexpr wchar_t kWindowStateDirectoryName[] = L"user_data";
 constexpr wchar_t kWindowStateFileName[] = L"launcher_window.json";

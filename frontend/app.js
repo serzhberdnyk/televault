@@ -247,6 +247,38 @@ function cleanVisibleText(value) {
     .trim();
 }
 
+function basenameFromPath(value) {
+  const clean = String(value || '').trim().replace(/^["'`]+|["'`]+$/g, '');
+  if (!clean) return '';
+  const parts = clean.split(/[\\/]+/).filter(Boolean);
+  const name = parts[parts.length - 1] || clean;
+  return /^[A-Za-z]:$/.test(name) ? '' : name;
+}
+
+function safePathLabel(path) {
+  return basenameFromPath(path) || text.storageFolderFallback;
+}
+
+function redactLocalPaths(value) {
+  return String(value || '')
+    .replace(/(^|\s)([A-Za-z]:[\\/][^\r\n]*?)(?=:\s|$)/g, (_match, prefix, localPath) => `${prefix}${basenameFromPath(localPath)}`)
+    .replace(/(^|\s)(\\\\[^\r\n]*?)(?=:\s|$)/g, (_match, prefix, localPath) => `${prefix}${basenameFromPath(localPath)}`)
+    .replace(/(["'`])([A-Za-z]:[\\/][^"'`\r\n]+)\1/g, (_match, quote, localPath) => `${quote}${basenameFromPath(localPath)}${quote}`)
+    .replace(/(["'`])(\\\\[^"'`\r\n]+)\1/g, (_match, quote, localPath) => `${quote}${basenameFromPath(localPath)}${quote}`)
+    .replace(/\b[A-Za-z]:[\\/][^\s"'<>|]+/g, localPath => basenameFromPath(localPath))
+    .replace(/\\\\[^\s"'<>|]+/g, localPath => basenameFromPath(localPath));
+}
+
+function safeUiText(value) {
+  return redactLocalPaths(cleanVisibleText(value)).trim();
+}
+
+function safeFileName(value) {
+  const clean = cleanVisibleText(value);
+  if (!clean) return '';
+  return redactLocalPaths(/[\\/]/.test(clean) ? basenameFromPath(clean) : clean).trim();
+}
+
 async function api(path, options = {}) {
   const res = await fetch(path, options);
   const data = await res.json();
@@ -358,20 +390,23 @@ function setLibraryError(error, details = {}) {
 }
 
 function renderLibraryStatus({ kind, title, body = '', detail = '', path = '', stats = [] }) {
-  const bodyHtml = body ? `<div class="library-status__body">${escapeHtml(body)}</div>` : '';
-  const detailHtml = detail ? `<div class="library-status__detail">${escapeHtml(detail)}</div>` : '';
-  const pathLabel = path ? folderNameFromPath(path) : '';
-  const pathHtml = path
-    ? `<div class="library-status__path" title="${escapeAttr(path)}">${escapeHtml(pathLabel)}</div>`
+  const titleText = safeUiText(title);
+  const bodyText = safeUiText(body);
+  const detailText = safeUiText(detail);
+  const bodyHtml = bodyText ? `<div class="library-status__body">${escapeHtml(bodyText)}</div>` : '';
+  const detailHtml = detailText ? `<div class="library-status__detail">${escapeHtml(detailText)}</div>` : '';
+  const pathLabel = path ? safePathLabel(path) : '';
+  const pathHtml = pathLabel
+    ? `<div class="library-status__path">${escapeHtml(pathLabel)}</div>`
     : '';
   const statsHtml = stats.length
-    ? `<div class="library-status__stats">${stats.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>`
+    ? `<div class="library-status__stats">${stats.map(item => `<span>${escapeHtml(safeUiText(item))}</span>`).join('')}</div>`
     : '';
   return `
     <div class="library-status library-status--${escapeAttr(kind)}">
       <div class="library-status__top">
         <span class="library-status__dot" aria-hidden="true"></span>
-        <span class="library-status__title">${escapeHtml(title)}</span>
+        <span class="library-status__title">${escapeHtml(titleText)}</span>
       </div>
       ${bodyHtml}
       ${pathHtml}
@@ -442,12 +477,11 @@ function cleanErrorMessage(error) {
     .map(line => line.trim())
     .filter(Boolean)
     .filter(line => !line.startsWith('Traceback') && !line.startsWith('File "'));
-  return shortText((lines[0] || text.requestFailed).replace(/\s+/g, ' '));
+  return shortText(redactLocalPaths((lines[0] || text.requestFailed).replace(/\s+/g, ' ')));
 }
 
 function folderNameFromPath(path) {
-  const parts = String(path || '').split(/[\\/]/).filter(Boolean);
-  return parts[parts.length - 1] || text.storageFolderFallback;
+  return safePathLabel(path);
 }
 
 function formatNumber(value) {
@@ -455,7 +489,7 @@ function formatNumber(value) {
 }
 
 function exportDisplayName(item) {
-  return cleanVisibleText(item?.label) || cleanVisibleText(item?.folderName) || text.storageFolderFallback;
+  return safeUiText(item?.label) || safeUiText(item?.folderName) || text.storageFolderFallback;
 }
 
 async function refreshExportCatalog() {
@@ -650,7 +684,7 @@ function renderChatCard(chat) {
   div.type = 'button';
   div.className = 'chat-card' + (chat.id === state.selectedChatId ? ' active' : '');
   const range = [chat.first_date, chat.last_date].filter(Boolean).join(' → ');
-  const title = cleanVisibleText(chat.title) || text.storageFolderFallback;
+  const title = safeUiText(chat.title) || text.storageFolderFallback;
   div.innerHTML = `
     <span class="chat-card__title">${escapeHtml(title)}</span>
     <span class="chat-card__stats">${chat.message_count} ${text.messages} · ${chat.media_count} ${text.media}</span>
@@ -707,7 +741,7 @@ function renderGlobalMessageResult(result) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'global-message-card';
-  const snippet = cleanVisibleText(result.snippet) || cleanVisibleText(result.media_type) || 'сообщение';
+  const snippet = safeUiText(result.snippet) || safeUiText(result.media_type) || 'сообщение';
   const meta = buildGlobalSearchResultMeta(result);
   button.innerHTML = `
     <span class="global-message-card__snippet">${renderHighlightedSearchSnippet(snippet, state.globalSearchQuery || state.chatSearchQuery)}</span>
@@ -720,7 +754,7 @@ function renderGlobalMessageResult(result) {
 }
 
 function normalizeSearchMetaValue(value) {
-  return cleanVisibleText(value).replace(/\s+/g, ' ').trim();
+  return safeUiText(value).replace(/\s+/g, ' ').trim();
 }
 
 function sameSearchMetaValue(a, b) {
@@ -786,7 +820,7 @@ function conversationSearchText(chat) {
 
 function buildConversationSearchText(chat, messages = []) {
   const senders = uniqueSenderNames(messages.map(messageSender)).join(' ');
-  return joinSearchText([chat.title, chat.path, senders]);
+  return joinSearchText([chat.title, chat.path ? safePathLabel(chat.path) : '', senders]);
 }
 
 function compareChatsNewestFirst(a, b) {
@@ -976,7 +1010,7 @@ function renderChatLoadError(chatId, error) {
   $('mediaTabs').hidden = true;
   $('filters').hidden = true;
   $('emptyState').style.display = 'none';
-  $('chatTitle').textContent = cleanVisibleText(chat.title) || text.storageFolderFallback;
+  $('chatTitle').textContent = safeUiText(chat.title) || text.storageFolderFallback;
   $('chatMeta').textContent = text.chatLoadFailed;
   const detail = cleanErrorMessage(error) || text.chatLoadFailedBody;
   const box = $('messages');
@@ -1035,7 +1069,7 @@ function renderVaultWelcome(options = {}) {
     title.textContent = text.savedVaultMissing;
     lead.textContent = text.savedVaultMissingBody;
     body.textContent = text.savedVaultMissingDetail;
-    note.textContent = state.missingVaultPath || text.storageTryAnotherFolder;
+    note.textContent = state.missingVaultPath ? safePathLabel(state.missingVaultPath) : text.storageTryAnotherFolder;
     if (actionLabel) actionLabel.textContent = text.chooseExportFolder;
     body.hidden = false;
     action.hidden = false;
@@ -1100,7 +1134,7 @@ async function renderSelectedChat(data, search = '', options = {}) {
   $('filters').hidden = false;
   $('emptyState').style.display = 'none';
   $('messages').style.display = 'block';
-  $('chatTitle').textContent = cleanVisibleText(chat.title) || text.storageFolderFallback;
+  $('chatTitle').textContent = safeUiText(chat.title) || text.storageFolderFallback;
   $('chatMeta').textContent = 'сохранённая переписка в локальном хранилище';
   const senderNames = fillSenders(data.senders || []);
   updateChatFilterControls(senderNames);
@@ -1540,9 +1574,9 @@ function messageReplySearchFields(msg) {
 
 function messageMediaSearchFields(msg) {
   return [
-    msg?.media,
     mediaName(msg),
-    msg?.media_name,
+    safeFileName(msg?.media_name),
+    safeFileName(msg?.file_name),
     msg?.media_kind,
     msg?.media_type,
     msg?.mime_type,
@@ -2592,8 +2626,8 @@ function renderAudioLabel(msg) {
 }
 
 function audioMetadataLabel(msg) {
-  const performer = cleanVisibleText(msg?.performer).replace(/\s+/g, ' ').trim();
-  const title = cleanVisibleText(msg?.title).replace(/\s+/g, ' ').trim();
+  const performer = safeUiText(msg?.performer).replace(/\s+/g, ' ').trim();
+  const title = safeUiText(msg?.title).replace(/\s+/g, ' ').trim();
   if (performer && title) return `${performer} — ${title}`;
   return title || performer;
 }
@@ -3047,17 +3081,23 @@ function canPlayVideo(msg) {
 
 function mediaName(msg) {
   const mediaPath = cleanVisibleText(msg?.media || msg?.file || '');
-  const pathName = mediaPath ? mediaPath.split(/[\\/]/).pop() : '';
-  const candidates = [
+  const pathName = mediaPath ? basenameFromPath(mediaPath) : '';
+  const fileCandidates = [
     msg?.media_name,
     msg?.file_name,
     pathName,
+  ];
+  for (const candidate of fileCandidates) {
+    const name = safeFileName(candidate);
+    if (name) return name;
+  }
+  const labelCandidates = [
     msg?.name,
     msg?.title,
     msg?.description,
   ];
-  for (const candidate of candidates) {
-    const name = cleanVisibleText(candidate);
+  for (const candidate of labelCandidates) {
+    const name = safeUiText(candidate);
     if (name) return name;
   }
   return '';
@@ -3285,7 +3325,7 @@ function renderLightboxPhoto() {
   const media = lightbox.querySelector('.lightbox-media');
   const original = lightbox.querySelector('.lightbox-original');
   const captionText = lightbox.querySelector('.lightbox-text');
-  const senderLabel = [cleanVisibleText(msg.chatTitle), messageSender(msg) || text.system].filter(Boolean).join(' · ');
+  const senderLabel = [safeUiText(msg.chatTitle), messageSender(msg) || text.system].filter(Boolean).join(' · ');
   const caption = messageVisibleText(msg);
   lightbox.querySelector('.sender').textContent = senderLabel;
   lightbox.querySelector('.date').textContent = msg.date || '';

@@ -53,6 +53,20 @@ def compact_values(values: tuple[Any, ...]) -> str:
     return " ".join(part for part in (compact_value(value) for value in values) if part)
 
 
+def path_basename(value: Any) -> str:
+    raw = compact_value(value)
+    if not raw:
+        return ""
+    return Path(raw.replace("\\", "/")).name or raw
+
+
+def error_without_local_path(error: Any, path: Path) -> str:
+    text = compact_value(error)
+    if not text:
+        return ""
+    return text.replace(str(path), path.name)
+
+
 def audio_metadata_label(message: dict[str, Any]) -> str:
     performer = compact_value(message.get("performer"))
     title = compact_value(message.get("title"))
@@ -92,8 +106,8 @@ def message_search_text(message: dict[str, Any]) -> str:
         message.get("reply_to_message_from"),
         message.get("reply_to_message_author"),
         message.get("reply_to_message_preview"),
-        message.get("media"),
-        message.get("media_name"),
+        path_basename(message.get("media")),
+        path_basename(message.get("media_name")),
         message.get("media_kind"),
         message.get("media_type"),
         message.get("mime_type"),
@@ -132,7 +146,7 @@ def message_snippet(message: dict[str, Any]) -> str:
     audio_label = audio_metadata_label(message)
     if audio_label:
         return audio_label
-    media_name = compact_value(message.get("media_name") or Path(str(message.get("media") or "")).name)
+    media_name = path_basename(message.get("media_name") or message.get("media"))
     if media_type and media_name:
         return f"{media_type}: {media_name}"
     return media_name or media_type or "сообщение"
@@ -249,10 +263,10 @@ class ExportLibrary:
             try:
                 data = read_json(path)
                 sources, source_errors = get_chat_sources(data)
-                errors.extend(f"{path}: {error}" for error in source_errors)
+                errors.extend(f"{path.name}: {error}" for error in source_errors)
                 if not sources:
                     if not source_errors:
-                        errors.append(f"{path}: no readable chats found")
+                        errors.append(f"{path.name}: no readable chats found")
                     continue
 
                 for source_data in sources:
@@ -263,7 +277,7 @@ class ExportLibrary:
                     next_messages[chat_id] = messages
                     next_media_paths.update(collect_media_paths(next_root, path.parent, messages))
             except Exception as e:
-                errors.append(f"{path}: {e}")
+                errors.append(f"{path.name}: {error_without_local_path(e, path)}")
 
         if not next_chats:
             raise ValueError("result.json найдены, но не удалось прочитать ни один экспорт")

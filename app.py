@@ -22,7 +22,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.24"
+APP_VERSION = "2.9.25"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -130,7 +130,7 @@ def export_id_for_path(folder: str) -> str:
 
 
 def export_label_for_path(path: Path) -> str:
-    return path.name or str(path)
+    return path.name or "экспорт Telegram"
 
 
 def export_record_for_path(folder: str, opened_at: str | None = None, previous: dict | None = None, missing: bool = False) -> dict:
@@ -329,17 +329,17 @@ def open_export_by_id(export_id: str) -> tuple[dict, int]:
         if not path.exists() or not path.is_dir():
             mark_saved_export_missing(folder, export_id)
             return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
-    except OSError as e:
+    except OSError:
         mark_saved_export_missing(folder, export_id)
-        return {"error": str(e) or "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
+        return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
 
     try:
         result = load_folder_and_remember(str(path))
         result["loaded"] = True
         return result, 200
-    except Exception as e:
+    except Exception:
         mark_saved_export_missing(folder, export_id)
-        return {"error": f"не удалось открыть сохранённый экспорт: {e}", "missing": True, "exportId": export_id}, 400
+        return {"error": "не удалось открыть сохранённый экспорт", "missing": True, "exportId": export_id}, 400
 
 
 def remember_vault_path(folder: str) -> dict:
@@ -502,9 +502,9 @@ def load_saved_vault() -> dict:
         if not path.exists() or not path.is_dir():
             mark_saved_export_missing(folder, active_export_id)
             return missing_saved_vault_response(folder)
-    except OSError as e:
+    except OSError:
         mark_saved_export_missing(folder, active_export_id)
-        return missing_saved_vault_response(folder, str(e))
+        return missing_saved_vault_response(folder)
     try:
         result = LIBRARY.load_folder(str(path))
         result["loaded"] = True
@@ -516,11 +516,11 @@ def load_saved_vault() -> dict:
             result["lastVaultPath"] = str(path.resolve())
             result["settings_error"] = str(e)
         return result
-    except OSError as e:
+    except OSError:
         mark_saved_export_missing(folder, active_export_id)
-        return missing_saved_vault_response(folder, str(e))
-    except Exception as e:
-        return {"loaded": False, "lastVaultPath": folder, "error": str(e)}
+        return missing_saved_vault_response(folder)
+    except Exception:
+        return {"loaded": False, "lastVaultPath": folder, "error": "не удалось открыть архив"}
 
 
 def json_response(handler: BaseHTTPRequestHandler, data: dict, status: int = 200) -> None:
@@ -530,6 +530,22 @@ def json_response(handler: BaseHTTPRequestHandler, data: dict, status: int = 200
     handler.send_header("Content-Length", str(len(raw)))
     handler.end_headers()
     handler.wfile.write(raw)
+
+
+def safe_api_error(error: Exception, fallback: str) -> str:
+    message = str(error or "").strip()
+    if not message:
+        return fallback
+    lowered = message.lower()
+    looks_like_path = (
+        ":\\" in message
+        or ":/" in message
+        or "\\\\" in message
+        or message.startswith("/")
+        or "/users/" in lowered
+        or lowered.startswith("traceback")
+    )
+    return fallback if looks_like_path else message
 
 
 def read_body(handler: BaseHTTPRequestHandler) -> dict:
@@ -747,7 +763,7 @@ def windows_picker_python_executable() -> str:
 def choose_folder_with_windows_helper() -> str:
     helper = ROOT / "backend" / "windows_folder_picker.py"
     if not helper.is_file():
-        raise FolderPickerError(f"Windows folder picker helper is missing: {helper}")
+        raise FolderPickerError("Windows folder picker helper is missing")
 
     output_path = Path(tempfile.gettempdir()) / f"televault-folder-picker-{os.getpid()}-{threading.get_ident()}.json"
     try:
@@ -806,7 +822,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 json_response(self, export_catalog_response())
             except Exception as e:
-                json_response(self, {"error": str(e)}, 500)
+                json_response(self, {"error": safe_api_error(e, "не удалось прочитать библиотеку")}, 500)
             return
 
         if path == "/api/startup-vault":
@@ -822,7 +838,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 json_response(self, LIBRARY.get_chat(chat_id, query, sender, media_only))
             except Exception as e:
-                json_response(self, {"error": str(e)}, 400)
+                json_response(self, {"error": safe_api_error(e, "не удалось открыть переписку")}, 400)
             return
 
         if path == "/api/search":
@@ -901,7 +917,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 folder = choose_folder_dialog()
             except FolderPickerError as e:
-                json_response(self, {"error": str(e)}, 500)
+                json_response(self, {"error": safe_api_error(e, "не удалось выбрать папку")}, 500)
                 return
             if not folder:
                 json_response(self, {"status": "cancelled", "cancelled": True, "canceled": True})
@@ -910,7 +926,7 @@ class Handler(BaseHTTPRequestHandler):
                 result = load_folder_and_remember(folder)
                 json_response(self, result)
             except Exception as e:
-                json_response(self, {"error": str(e)}, 400)
+                json_response(self, {"error": safe_api_error(e, "не удалось открыть архив")}, 400)
             return
 
         if parsed.path == "/api/load-folder":
@@ -923,7 +939,7 @@ class Handler(BaseHTTPRequestHandler):
                 result = load_folder_and_remember(folder)
                 json_response(self, result)
             except Exception as e:
-                json_response(self, {"error": str(e)}, 400)
+                json_response(self, {"error": safe_api_error(e, "не удалось открыть архив")}, 400)
             return
 
         if parsed.path == "/api/forget-missing-vault":
@@ -933,7 +949,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 json_response(self, forget_saved_vault_path())
             except Exception as e:
-                json_response(self, {"error": str(e)}, 500)
+                json_response(self, {"error": safe_api_error(e, "не удалось забыть архив")}, 500)
             return
 
         json_response(self, {"error": "not found"}, 404)

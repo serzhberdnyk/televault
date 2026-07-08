@@ -38,6 +38,26 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.25 - hide local paths in visible UI
+
+Changed:
+- hid absolute local paths from visible library status text/tooltips, missing-export welcome notes, user-facing error details and global search result snippets
+- kept internal `state.vaultRoot`, `state.missingVaultPath`, backend settings paths, export catalog paths and media URL logic intact
+- changed media/file fallback labels to use safe filenames/basenames or neutral unavailable text, not directory paths
+- kept media search working by filename/basename while avoiding full `msg.media` path as visible/search snippet text
+- returned backend partial load errors with `result.json` basenames instead of absolute result paths
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.25
+- storage settings format, export catalog model, `/api/exports`, `/open`, `/forget`, `/media`, media allowlist/root containment/range requests, sidebar archive cards, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.25
+- confirm the sidebar still does not show the archive catalog block, export cards, badges, opened dates, archive count or per-card forget buttons
+- confirm active archive status, wrong-folder errors, missing export/media states, search snippets and media fallbacks do not show full local paths such as `C:\Users\...`
+- confirm full export `chats.list`, single-chat export, media playback, search, service notices, replies/entities/audio metadata and special content fallbacks still work
+
 ## 2.9.24 - remove archive cards from sidebar
 
 Changed:

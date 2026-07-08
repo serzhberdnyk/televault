@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.25
+
+### Changed
+
+* Hid absolute local export/media paths from visible UI status text, library tooltips, missing-export welcome notes, user-facing error details and global search result snippets.
+* Kept media/file fallbacks and lightbox missing states on safe filenames or neutral unavailable text instead of full local paths.
+* Search still finds media by filename/basename, while frontend and backend search text no longer rely on full media paths for visible results.
+* Backend partial load errors now report `result.json` basenames instead of absolute `result.json` paths.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.25.
+* Storage settings, export catalog internals, `/api/exports`, `/open`, `/forget`, media endpoint, media security model, sidebar archive cards, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed.
+
 ## 2.9.24
 
 ### Changed
