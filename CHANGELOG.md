@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.28
+
+### Changed
+
+* Removed the visible sidebar `архивы` entry and its archive manager modal markup from the UI.
+* Removed the visible sidebar archive status card, including the `архив открыт` state, indicator dot and current archive folder label.
+* Kept the existing add-export flow, startup active-export restore and internal export catalog refresh behavior intact.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.28.
+* Backend parser/library/storage format, export catalog API/model, `/api/exports`, `/open`, `/forget`, media endpoint/security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed.
+
 ## 2.9.27
 
 ### Changed

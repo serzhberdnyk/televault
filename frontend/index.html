@@ -29,16 +29,6 @@
       <span>добавить экспорт</span>
     </button>
 
-    <button id="archiveManagerOpen" class="archive-manager-trigger" type="button" data-archive-manager-open aria-haspopup="dialog" aria-controls="archiveManager">
-      <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M4.5 5.5a2 2 0 0 1 2-2h3.7l1.8 2h5.5a2 2 0 0 1 2 2v1H4.5v-3Z" />
-        <path d="M3.8 9.8h16.4v7.7a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V9.8Zm3.2 3v1.6h10v-1.6H7Zm0 3.4v1.5h6.8v-1.5H7Z" />
-      </svg>
-      <span>архивы</span>
-    </button>
-
-    <div id="libraryInfo" class="hint">локальный оффлайн-архив переписок</div>
-
     <div class="chat-tools" aria-label="поиск переписок">
       <label class="search-field chat-search-field" for="chatSearch">
         <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -59,7 +49,7 @@
         <h2 id="chatTitle">TeleVault</h2>
         <p id="chatMeta">локальный оффлайн-архив Telegram-переписок</p>
       </div>
-      <div class="version" id="version">v2.9.27</div>
+      <div class="version" id="version">v2.9.28</div>
     </header>
 
     <section id="vaultSection">
@@ -116,24 +106,6 @@
       <section id="messages" class="messages"></section>
     </section>
   </main>
-
-  <div id="archiveManager" class="archive-manager" hidden>
-    <div class="archive-manager__backdrop" data-archive-manager-close></div>
-    <section class="archive-manager__dialog" role="dialog" aria-modal="true" aria-labelledby="archiveManagerTitle">
-      <header class="archive-manager__header">
-        <div>
-          <h2 id="archiveManagerTitle">Архивы</h2>
-          <p>сохранённые экспорты Telegram Desktop</p>
-        </div>
-        <button type="button" class="archive-manager__close" data-archive-manager-close aria-label="закрыть">
-          <svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M7 7l10 10M17 7 7 17" />
-          </svg>
-        </button>
-      </header>
-      <div id="archiveManagerBody" class="archive-manager__body"></div>
-    </section>
-  </div>
 
   <script src="/app.js"></script>
 </body>

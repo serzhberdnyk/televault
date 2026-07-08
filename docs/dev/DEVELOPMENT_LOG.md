@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.28 - hide archive controls in sidebar
+
+Changed:
+- removed the visible sidebar `архивы` entry below the export picker
+- removed the archive manager modal markup and its visible CSS so no archive manager UI can take sidebar or overlay space
+- removed the sidebar archive status card, including `архив открыт`, the status indicator dot and the current archive folder label
+- kept the add-export flow, startup active-export restore, `refreshExportCatalog()` calls and backend export catalog API/model intact
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.28
+- backend parser/library/storage format, `/api/exports`, `/api/exports/<id>/open`, `/api/exports/<id>/forget`, `/media`, media security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.28
+- confirm the sidebar no longer shows `архивы`
+- confirm the sidebar no longer shows `архив открыт`, a status dot or the current archive name
+- confirm the add-export flow still loads an export and refreshes the conversation list
+- confirm startup still opens the active saved export when its folder is available
+- confirm conversation search, chat reading and media playback still work
+
 ## 2.9.27 - compact archive manager
 
 Changed:
