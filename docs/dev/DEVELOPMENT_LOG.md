@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.26 - friendly corrupted result.json errors
+
+Changed:
+- added explicit parser errors for corrupted and unreadable `result.json` files with user-facing text
+- kept bounded wrong-folder scanning and partial full-export errors working while avoiding raw Python exception text in normal UI/API errors
+- made saved export startup/open failures keep safe parser/library messages instead of marking an existing folder as missing when `result.json` is damaged
+- added frontend handling for corrupted and unreadable `result.json` so those cases no longer look like a missing export folder
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.26
+- storage format, export catalog API/model, `/media`, media security, search logic, sidebar archive cards, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.26
+- open a valid single-chat export and a valid full export with `chats.list`
+- choose a wrong folder and confirm the existing friendly `result.json` folder guidance appears
+- open a folder with corrupted `result.json` and confirm the UI says `result.json повреждён` without traceback or `C:\Users\...`
+- open a folder with unreadable `result.json`, if safe to simulate, and confirm the UI says `result.json не удалось прочитать` without traceback or `C:\Users\...`
+- confirm sidebar archive cards did not return and media/search/service/replies/entities/special fallbacks still behave normally
+
 ## 2.9.25 - hide local paths in visible UI
 
 Changed:

@@ -5,6 +5,9 @@ import os
 from pathlib import Path
 from typing import Any
 from .parser import (
+    RESULT_JSON_CORRUPTED_MESSAGE,
+    RESULT_JSON_UNREADABLE_MESSAGE,
+    ResultJsonError,
     get_chat_sources,
     load_chat_messages_from_data,
     read_json,
@@ -27,6 +30,11 @@ WRONG_EXPORT_FOLDER_MESSAGE = (
 TOO_BROAD_EXPORT_FOLDER_MESSAGE = (
     "Похоже, выбрана слишком широкая папка, а не экспорт Telegram Desktop. "
     "Выберите папку, где лежит result.json."
+)
+NO_READABLE_EXPORTS_MESSAGE = "result.json найдены, но не удалось прочитать ни один экспорт"
+USER_FACING_RESULT_JSON_ERRORS = (
+    RESULT_JSON_CORRUPTED_MESSAGE,
+    RESULT_JSON_UNREADABLE_MESSAGE,
 )
 
 
@@ -65,6 +73,24 @@ def error_without_local_path(error: Any, path: Path) -> str:
     if not text:
         return ""
     return text.replace(str(path), path.name)
+
+
+def load_error_message(error: Exception, path: Path) -> str:
+    text = error_without_local_path(error, path)
+    if not text:
+        return f"{path.name}: не удалось прочитать"
+    if isinstance(error, ResultJsonError) or text.casefold().startswith(RESULT_JSON_NAME):
+        return text
+    return f"{path.name}: {text}"
+
+
+def no_readable_exports_message(errors: list[str]) -> str:
+    for error in errors:
+        text = compact_value(error)
+        for message in USER_FACING_RESULT_JSON_ERRORS:
+            if message in text:
+                return message
+    return NO_READABLE_EXPORTS_MESSAGE
 
 
 def audio_metadata_label(message: dict[str, Any]) -> str:
@@ -277,10 +303,10 @@ class ExportLibrary:
                     next_messages[chat_id] = messages
                     next_media_paths.update(collect_media_paths(next_root, path.parent, messages))
             except Exception as e:
-                errors.append(f"{path.name}: {error_without_local_path(e, path)}")
+                errors.append(load_error_message(e, path))
 
         if not next_chats:
-            raise ValueError("result.json найдены, но не удалось прочитать ни один экспорт")
+            raise ValueError(no_readable_exports_message(errors)) from None
 
         self.root = next_root
         self.chats = next_chats

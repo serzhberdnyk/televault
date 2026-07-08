@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.26
+
+### Changed
+
+* Corrupted `result.json` now returns a dedicated friendly message asking the user to export from Telegram Desktop again.
+* Unreadable `result.json` due to file access, encoding or I/O errors now returns a separate friendly message without traceback, Python exception text or absolute local paths.
+* Missing/wrong-folder `result.json` handling and bounded export scanning were kept intact.
+* Saved-export startup/open failures now preserve safe parser/library messages instead of collapsing readable `result.json` problems into a missing-folder state.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.26.
+* Storage format, export catalog API/model, `/media`, media security, search logic, sidebar archive cards, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed.
+
 ## 2.9.25
 
 ### Changed

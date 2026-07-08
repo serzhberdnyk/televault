@@ -90,6 +90,26 @@ REGULAR_MEDIA_TYPE_PREFIXES = (
     "file",
     "document",
 )
+RESULT_JSON_CORRUPTED_MESSAGE = (
+    "result.json повреждён или не читается. "
+    "Попробуйте заново сделать экспорт из Telegram Desktop."
+)
+RESULT_JSON_UNREADABLE_MESSAGE = (
+    "result.json не удалось прочитать. "
+    "Проверьте, что файл доступен, или сделайте экспорт заново."
+)
+
+
+class ResultJsonError(ValueError):
+    pass
+
+
+class ResultJsonCorruptedError(ResultJsonError):
+    pass
+
+
+class ResultJsonUnreadableError(ResultJsonError):
+    pass
 
 
 @dataclass
@@ -102,10 +122,16 @@ class ChatSummary:
     first_date: str
     last_date: str
 
+def read_json(path: Path) -> Any:
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ResultJsonUnreadableError(RESULT_JSON_UNREADABLE_MESSAGE) from exc
 
-def read_json(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ResultJsonCorruptedError(RESULT_JSON_CORRUPTED_MESSAGE) from exc
 
 
 def text_to_string(value: Any) -> str:

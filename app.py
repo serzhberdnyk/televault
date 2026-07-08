@@ -22,7 +22,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.25"
+APP_VERSION = "2.9.26"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -337,9 +337,8 @@ def open_export_by_id(export_id: str) -> tuple[dict, int]:
         result = load_folder_and_remember(str(path))
         result["loaded"] = True
         return result, 200
-    except Exception:
-        mark_saved_export_missing(folder, export_id)
-        return {"error": "не удалось открыть сохранённый экспорт", "missing": True, "exportId": export_id}, 400
+    except Exception as e:
+        return {"error": safe_api_error(e, "не удалось открыть сохранённый экспорт"), "exportId": export_id}, 400
 
 
 def remember_vault_path(folder: str) -> dict:
@@ -519,8 +518,8 @@ def load_saved_vault() -> dict:
     except OSError:
         mark_saved_export_missing(folder, active_export_id)
         return missing_saved_vault_response(folder)
-    except Exception:
-        return {"loaded": False, "lastVaultPath": folder, "error": "не удалось открыть архив"}
+    except Exception as e:
+        return {"loaded": False, "lastVaultPath": folder, "error": safe_api_error(e, "не удалось открыть архив")}
 
 
 def json_response(handler: BaseHTTPRequestHandler, data: dict, status: int = 200) -> None:
@@ -545,7 +544,17 @@ def safe_api_error(error: Exception, fallback: str) -> str:
         or "/users/" in lowered
         or lowered.startswith("traceback")
     )
-    return fallback if looks_like_path else message
+    looks_technical = any(marker in lowered for marker in (
+        "jsondecodeerror",
+        "permissionerror",
+        "unicodedecodeerror",
+        "filenotfounderror",
+        "traceback",
+        "line ",
+        "column ",
+        "char ",
+    ))
+    return fallback if looks_like_path or looks_technical else message
 
 
 def read_body(handler: BaseHTTPRequestHandler) -> dict:

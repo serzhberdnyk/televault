@@ -161,6 +161,10 @@ const text = {
   storageLoadFailed: 'не удалось открыть архив',
   storageLoadFailedBody: 'Проверь, что выбрана папка экспорта Telegram.',
   storageTryAnotherFolder: 'Попробуй выбрать другую папку экспорта.',
+  resultJsonCorrupted: 'result.json повреждён',
+  resultJsonCorruptedBody: 'Попробуйте заново сделать экспорт из Telegram Desktop.',
+  resultJsonUnreadable: 'result.json не удалось прочитать',
+  resultJsonUnreadableBody: 'Проверьте, что файл доступен, или сделайте экспорт заново.',
   storagePartialErrors: 'часть переписок не загрузилась',
   storageFolderFallback: 'папка архива',
   chooseConversationTitle: 'выберите переписку',
@@ -433,6 +437,27 @@ function formatLibraryError(error) {
       detail: clean,
     };
   }
+  if (lower.includes('result.json повреждён')) {
+    return {
+      title: text.resultJsonCorrupted,
+      body: text.resultJsonCorruptedBody,
+      detail: '',
+    };
+  }
+  if (lower.includes('result.json не удалось прочитать')) {
+    return {
+      title: text.resultJsonUnreadable,
+      body: text.resultJsonUnreadableBody,
+      detail: '',
+    };
+  }
+  if (lower.includes('result.json найдены') || lower.includes('ни один экспорт')) {
+    return {
+      title: 'архив не прочитан',
+      body: 'TeleVault не распознал структуру папки или часть файлов повреждена.',
+      detail: '',
+    };
+  }
   if (lower.includes('result.json')) {
     return {
       title: 'папка экспорта не найдена',
@@ -440,7 +465,7 @@ function formatLibraryError(error) {
       detail: '',
     };
   }
-  if (lower.includes('не удалось прочитать') || lower.includes('ни один экспорт')) {
+  if (lower.includes('не удалось прочитать')) {
     return {
       title: 'архив не прочитан',
       body: 'TeleVault не распознал структуру папки или часть файлов повреждена.',
