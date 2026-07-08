@@ -53,6 +53,14 @@ def compact_values(values: tuple[Any, ...]) -> str:
     return " ".join(part for part in (compact_value(value) for value in values) if part)
 
 
+def audio_metadata_label(message: dict[str, Any]) -> str:
+    performer = compact_value(message.get("performer"))
+    title = compact_value(message.get("title"))
+    if performer and title:
+        return f"{performer} — {title}"
+    return title or performer
+
+
 def clamp_search_limit(value: int) -> int:
     try:
         limit = int(value)
@@ -84,6 +92,8 @@ def message_search_text(message: dict[str, Any]) -> str:
         message.get("media_kind"),
         message.get("media_type"),
         message.get("mime_type"),
+        message.get("performer"),
+        message.get("title"),
         message.get("sticker_emoji"),
         message.get("forwarded_from"),
         message.get("forward_from"),
@@ -114,6 +124,9 @@ def message_snippet(message: dict[str, Any]) -> str:
             return value[:117].rstrip() + "..." if len(value) > 120 else value
 
     media_type = message_media_type(message)
+    audio_label = audio_metadata_label(message)
+    if audio_label:
+        return audio_label
     media_name = compact_value(message.get("media_name") or Path(str(message.get("media") or "")).name)
     if media_type and media_name:
         return f"{media_type}: {media_name}"

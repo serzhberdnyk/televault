@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.21 - show audio metadata
+
+Changed:
+- preserved normalized `performer` and `title` metadata for parsed audio messages when Telegram Desktop exports include those fields
+- kept existing `duration_seconds` passthrough and used it as a compact duration next to performer/title in regular audio UI
+- kept voice messages on the existing compact audio player without the music-track metadata row
+- added performer/title to shared backend and frontend searchable message text
+- added constrained audio metadata styling so long performer/title text does not stretch the message bubble
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.21
+- media endpoint, playback/range request logic, storage settings format, export catalog/forget behavior, search UI, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.21
+- open a single-chat export and a full export with `chats.list`
+- confirm ordinary audio without performer/title looks like before
+- confirm audio with performer/title shows the compact metadata row and searchable title/performer
+- confirm long performer/title text stays inside the audio bubble
+- confirm voice messages, audio playback, photos, videos, files, stickers, export switching and forget export still work
+
 ## 2.9.20 - align searchable text
 
 Changed:

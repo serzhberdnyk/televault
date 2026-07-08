@@ -1677,6 +1677,8 @@ function messageMediaSearchFields(msg) {
     msg?.media_kind,
     msg?.media_type,
     msg?.mime_type,
+    msg?.performer,
+    msg?.title,
     msg?.sticker_emoji,
   ];
 }
@@ -1821,6 +1823,29 @@ function isAudio(msg) {
   const mediaType = String(msg.media_type || '').toLowerCase();
   const mime = String(msg.mime_type || '').toLowerCase();
   return kind === 'audio' || mime.startsWith('audio/') || mediaType.includes('audio') || mediaType.includes('voice');
+}
+
+function normalizedMediaToken(value) {
+  return String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function isVoiceMessage(msg) {
+  const flagValues = [
+    msg?.voice,
+    msg?.voice_message,
+    msg?.is_voice,
+    msg?.is_voice_message,
+  ];
+  if (flagValues.some(value => value === true || String(value || '').toLowerCase() === 'true')) return true;
+
+  const typeValues = [
+    msg?.media_type,
+    msg?.type,
+  ].map(normalizedMediaToken);
+  if (typeValues.some(value => value.split('_').includes('voice'))) return true;
+
+  const mediaPathParts = String(msg?.media || '').replace(/\\/g, '/').toLowerCase().split('/');
+  return mediaPathParts.includes('voice_messages') || mediaPathParts.includes('voice');
 }
 
 function positiveDimension(value) {
@@ -2512,9 +2537,41 @@ function renderAudioLabel(msg) {
   `;
 }
 
+function audioMetadataLabel(msg) {
+  const performer = cleanVisibleText(msg?.performer).replace(/\s+/g, ' ').trim();
+  const title = cleanVisibleText(msg?.title).replace(/\s+/g, ' ').trim();
+  if (performer && title) return `${performer} — ${title}`;
+  return title || performer;
+}
+
+function formatAudioDuration(value) {
+  const seconds = Math.floor(Number(value));
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+  return `${minutes}:${String(rest).padStart(2, '0')}`;
+}
+
+function renderAudioMetadata(msg) {
+  if (!isAudio(msg) || isVoiceMessage(msg)) return '';
+  const label = audioMetadataLabel(msg);
+  if (!label) return '';
+  const duration = formatAudioDuration(msg?.duration_seconds);
+  const title = duration ? `${label} · ${duration}` : label;
+  return `
+    <div class="audio-card-metadata" title="${escapeAttr(title)}">
+      <span class="audio-card-track">${escapeHtml(label)}</span>
+      ${duration ? `<span class="audio-card-duration">${escapeHtml(duration)}</span>` : ''}
+    </div>
+  `;
+}
+
 function renderAudioPlayer(msg, options = {}) {
   return `
     <div class="audio-card-body" data-media-container>
+      ${renderAudioMetadata(msg)}
       ${options.showLabel ? renderAudioLabel(msg) : ''}
       <audio controls preload="none" data-media-src="${escapeAttr(msg.media_url)}" data-media-element></audio>
       ${renderMissingNotice('audio', msg)}

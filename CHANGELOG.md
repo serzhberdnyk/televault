@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.21
+
+### Changed
+
+* Audio exports now preserve normalized `performer` and `title` metadata for audio messages when Telegram Desktop includes those fields.
+* Regular audio players show a compact track metadata row with `performer — title` and duration when performer/title metadata exists.
+* Voice messages keep the existing compact audio player and do not get the music-track metadata row.
+* Shared backend/frontend search text now includes audio `performer` and `title` metadata.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.21.
+* Media endpoint, playback/range request logic, storage settings format, export catalog/forget behavior, search UI, README and release packaging logic were not intentionally changed.
+
 ## 2.9.20
 
 ### Changed

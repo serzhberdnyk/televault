@@ -181,6 +181,18 @@ def get_media_file(message: dict[str, Any]) -> str:
     return str(message.get(field) or "")
 
 
+def normalize_audio_metadata(message: dict[str, Any], kind: str) -> dict[str, Any]:
+    if kind != "audio":
+        return {}
+
+    fields: dict[str, Any] = {}
+    for key in ("performer", "title"):
+        value = compact_text(message.get(key))
+        if value:
+            fields[key] = value
+    return fields
+
+
 def metadata_text(value: Any) -> str:
     if value is None:
         return ""
@@ -764,6 +776,7 @@ def normalize_message(
         "thumbnail_url": thumbnail_ref["url"],
         "thumbnail_exists": thumbnail_ref["exists"],
     }
+    normalized.update(normalize_audio_metadata(message, kind))
     normalized.update(normalize_forwarded_fields(message))
     normalized.update(normalize_reply_fields(message, messages_by_id))
     if message.get("type") == "service":
