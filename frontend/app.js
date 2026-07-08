@@ -15,10 +15,6 @@ const state = {
   vaultMissing: false,
   missingVaultPath: '',
   exports: [],
-  exportsLoading: false,
-  exportsError: '',
-  activeExportOpeningId: '',
-  activeExportForgettingId: '',
   selectedChatId: null,
   lightboxPhotos: [],
   lightboxIndex: -1,
@@ -151,11 +147,6 @@ const text = {
   forgetUnavailableExport: 'забыть недоступный архив',
   forgettingUnavailableExport: 'забываем...',
   forgotUnavailableExport: 'недоступный архив убран из библиотеки',
-  exportsEmpty: 'сохранённые экспорты появятся здесь',
-  exportsLoadFailed: 'не удалось обновить список архивов',
-  activeExport: 'активен',
-  unavailableExport: 'недоступен',
-  forgetExport: 'забыть из библиотеки',
   forgetExportFailed: 'не удалось забыть архив',
   forgetExportConfirm: 'Убрать этот архив из библиотеки TeleVault?\n\nФайлы на диске останутся на месте.',
   forgetExportConfirmNamed: 'Убрать архив «{name}» из библиотеки TeleVault?\n\nФайлы на диске останутся на месте.',
@@ -463,150 +454,26 @@ function formatNumber(value) {
   return new Intl.NumberFormat('ru-RU').format(Number(value || 0));
 }
 
-function formatExportDate(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  const date = new Date(raw);
-  if (Number.isFinite(date.getTime())) {
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(date);
-  }
-  return raw.slice(0, 10);
-}
-
 function exportDisplayName(item) {
   return cleanVisibleText(item?.label) || cleanVisibleText(item?.folderName) || text.storageFolderFallback;
 }
 
-function exportFolderDisplay(item) {
-  return cleanVisibleText(item?.pathDisplay) || cleanVisibleText(item?.folderName) || '';
-}
-
-function exportMetaText(item) {
-  const name = exportDisplayName(item);
-  const folder = exportFolderDisplay(item);
-  const parts = [];
-  if (folder && folder !== name) parts.push(folder);
-  const openedAt = formatExportDate(item?.lastOpenedAt);
-  if (openedAt) parts.push(`открыт: ${openedAt}`);
-  return parts.join(' · ');
-}
-
 async function refreshExportCatalog() {
-  if (!$('exportList')) return;
-  state.exportsLoading = true;
-  renderExportCatalog();
   try {
     const data = await api('/api/exports');
     state.exports = Array.isArray(data.exports) ? data.exports : [];
-    state.exportsError = '';
   } catch (e) {
-    state.exportsError = cleanErrorMessage(e) || text.exportsLoadFailed;
-  } finally {
-    state.exportsLoading = false;
-    renderExportCatalog();
+    state.exports = Array.isArray(state.exports) ? state.exports : [];
+    console.warn('TeleVault: failed to refresh export catalog', e);
   }
-}
-
-function renderExportCatalog() {
-  const box = $('exportList');
-  const count = $('exportCatalogCount');
-  if (!box || !count) return;
-
-  const exports = Array.isArray(state.exports) ? state.exports : [];
-  count.textContent = exports.length ? formatNumber(exports.length) : '';
-  box.innerHTML = '';
-
-  if (state.exportsLoading && !exports.length) {
-    box.innerHTML = `<div class="export-catalog__empty">${escapeHtml(text.openingExport)}</div>`;
-    return;
-  }
-
-  if (!exports.length) {
-    box.innerHTML = `<div class="export-catalog__empty">${escapeHtml(text.exportsEmpty)}</div>`;
-  } else {
-    exports.forEach(item => box.appendChild(renderExportItem(item)));
-  }
-
-  if (state.exportsError) {
-    const error = document.createElement('div');
-    error.className = 'export-catalog__message';
-    error.textContent = state.exportsError;
-    box.appendChild(error);
-  }
-}
-
-function renderExportItem(item) {
-  const isOpening = state.activeExportOpeningId === item.id;
-  const isForgetting = state.activeExportForgettingId === item.id;
-  const isActive = item.active === true;
-  const isMissing = item.missing === true;
-  const name = exportDisplayName(item);
-  const meta = exportMetaText(item);
-  const badges = [];
-  if (isOpening) badges.push(text.openingExport);
-  if (isForgetting) badges.push(text.forgettingUnavailableExport);
-  if (isActive) badges.push(text.activeExport);
-  if (isMissing) badges.push(text.unavailableExport);
-  const isBusy = Boolean(state.activeExportOpeningId || state.activeExportForgettingId);
-
-  const row = document.createElement('div');
-  row.className = [
-    'export-item',
-    isActive ? 'is-active' : '',
-    isMissing ? 'is-missing' : '',
-    isOpening ? 'is-opening' : '',
-    isForgetting ? 'is-forgetting' : '',
-  ].filter(Boolean).join(' ');
-
-  const openButton = document.createElement('button');
-  openButton.type = 'button';
-  openButton.className = 'export-item__open';
-  openButton.disabled = isBusy;
-  openButton.setAttribute('aria-pressed', String(isActive));
-  openButton.innerHTML = `
-    <span class="export-item__main">
-      <span class="export-item__name">${escapeHtml(name)}</span>
-      ${meta ? `<span class="export-item__meta">${escapeHtml(meta)}</span>` : ''}
-    </span>
-    ${badges.length ? `<span class="export-item__badges">${badges.map(badge => `<span>${escapeHtml(badge)}</span>`).join('')}</span>` : ''}
-  `;
-  openButton.addEventListener('click', () => {
-    openSavedExport(item.id);
-  });
-
-  const forgetButton = document.createElement('button');
-  forgetButton.type = 'button';
-  forgetButton.className = 'export-item__forget';
-  forgetButton.disabled = isBusy;
-  forgetButton.title = text.forgetExport;
-  forgetButton.setAttribute('aria-label', `${text.forgetExport}: ${name}`);
-  forgetButton.innerHTML = icons.close;
-  forgetButton.addEventListener('click', event => {
-    event.preventDefault();
-    event.stopPropagation();
-    forgetSavedExport(item.id);
-  });
-
-  row.appendChild(openButton);
-  row.appendChild(forgetButton);
-  return row;
 }
 
 async function openSavedExport(exportId, options = {}) {
-  if (!exportId || state.activeExportOpeningId || state.activeExportForgettingId) return;
+  if (!exportId) return;
   const current = state.exports.find(item => item.id === exportId);
   if (!options.force && current?.active && state.vaultLoaded && !current?.missing) return;
 
   const hadOpenVault = state.vaultLoaded;
-  let failureMessage = '';
-  state.activeExportOpeningId = exportId;
-  state.exportsError = '';
-  renderExportCatalog();
-
   if (!hadOpenVault) {
     setLibraryLoading(text.openingExport);
     renderVaultWelcome({ mode: 'loading', lead: text.openingExport });
@@ -617,8 +484,6 @@ async function openSavedExport(exportId, options = {}) {
     await afterLibraryLoaded(data);
   } catch (e) {
     const message = cleanErrorMessage(e) || text.savedExportOpenFailed;
-    failureMessage = message;
-    state.exportsError = message;
     state.exports = state.exports.map(item => (
       item.id === exportId ? { ...item, missing: true, active: false } : item
     ));
@@ -627,12 +492,7 @@ async function openSavedExport(exportId, options = {}) {
       renderVaultWelcome({ mode: 'missing' });
     }
   } finally {
-    state.activeExportOpeningId = '';
     await refreshExportCatalog();
-    if (failureMessage) {
-      state.exportsError = failureMessage;
-      renderExportCatalog();
-    }
   }
 }
 
@@ -662,21 +522,17 @@ function clearCurrentLibraryForSwitch(message = text.openingExport) {
 }
 
 async function forgetSavedExport(exportId, options = {}) {
-  if (!exportId || state.activeExportOpeningId || state.activeExportForgettingId) return;
+  if (!exportId) return;
   const item = state.exports.find(exportItem => exportItem.id === exportId) || {};
   if (!options.skipConfirm && !window.confirm(forgetExportConfirmMessage(item))) return;
 
-  state.activeExportForgettingId = exportId;
-  state.exportsError = '';
   if (state.vaultMissing && item.missing) setForgetMissingButtonLoading(true);
-  renderExportCatalog();
 
   try {
     const data = await api(`/api/exports/${encodeURIComponent(exportId)}/forget`, { method: 'POST' });
     const wasActive = data.wasActive === true || item.active === true;
     const nextActiveExportId = cleanVisibleText(data.nextActiveExportId || '');
     state.exports = state.exports.filter(exportItem => exportItem.id !== exportId);
-    state.activeExportForgettingId = '';
     await refreshExportCatalog();
 
     if (!wasActive) return;
@@ -692,18 +548,15 @@ async function forgetSavedExport(exportId, options = {}) {
     renderConversationList();
     renderVaultWelcome({ mode: 'empty' });
   } catch (e) {
-    state.exportsError = cleanErrorMessage(e) || text.forgetExportFailed;
     await refreshExportCatalog();
-    renderExportCatalog();
     if (state.vaultMissing) {
       const missingPath = state.missingVaultPath || state.vaultRoot;
       setLibraryMissing({ lastVaultPath: missingPath });
+      setLibraryMessage(text.savedVaultMissing, 'warning', cleanErrorMessage(e) || text.forgetExportFailed);
       renderVaultWelcome({ mode: 'missing' });
     }
   } finally {
-    state.activeExportForgettingId = '';
     setForgetMissingButtonLoading(false);
-    renderExportCatalog();
   }
 }
 
@@ -3580,7 +3433,6 @@ async function init() {
   updateMediaTabs();
   bindControls();
   setLibraryEmpty();
-  renderExportCatalog();
   renderVaultWelcome({ mode: 'loading', lead: text.checkingStartupVault });
   try {
     const status = await api('/api/status');

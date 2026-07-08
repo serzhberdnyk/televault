@@ -38,6 +38,29 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.24 - remove archive cards from sidebar
+
+Changed:
+- removed the visible sidebar "Архивы" section from `frontend/index.html`
+- removed saved export card, counter, active/unavailable badge, opened-date and per-card forget button rendering from `frontend/app.js`
+- removed the `.export-catalog`, `.export-list` and `.export-item*` sidebar styles from `frontend/styles.css`
+- kept background `/api/exports` refresh so startup and missing-export handling can still use the existing catalog state
+- kept backend export catalog APIs, `exports[]`, `activeExportId`, `lastVaultPath`, duplicate handling and startup active-export behavior intact
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.24
+- parser, library storage, media endpoint, media security model, search logic, service notices, replies/edited rendering, audio metadata, text entity rendering, special content fallbacks, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.24
+- confirm the sidebar no longer shows "Архивы", export cards, active/unavailable badges, opened dates, archive count or per-card forget buttons
+- confirm the sidebar starts cleanly at chat search and the conversation list/empty state
+- confirm startup still opens the active export or `lastVaultPath`
+- confirm choosing a new export folder still loads chats and updates the internal catalog
+- confirm full export `chats.list`, single-chat export, media playback, search, service notices, replies/entities/audio metadata and special content fallbacks still work
+- confirm the visible UI does not show a full `C:\Users\...` archive path
+
 ## 2.9.23 - add special content fallbacks
 
 Changed:

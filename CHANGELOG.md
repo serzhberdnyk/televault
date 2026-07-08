@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.24
+
+### Changed
+
+* Removed the visible sidebar "Архивы" catalog block, including saved export cards, the archive counter, active/unavailable badges, last-opened dates and per-card forget buttons.
+* Kept the internal export catalog state refresh for startup/missing-export handling, while leaving `/api/exports`, `/api/exports/<id>/open`, `/api/exports/<id>/forget`, `exports[]`, `activeExportId` and `lastVaultPath` backend behavior intact.
+* Removed the now-unused archive-card frontend rendering code and CSS.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.24.
+* Parser, library storage, media endpoint, media security model, search logic, service notices, replies/edited rendering, audio metadata, text entity rendering, special content fallbacks, README and release packaging logic were not intentionally changed.
+
 ## 2.9.23
 
 ### Changed
