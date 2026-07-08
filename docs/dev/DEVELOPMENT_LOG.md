@@ -38,6 +38,21 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## Docs after 2.9.28 - README copy update
+
+Changed:
+- updated README.md with clearer product copy for the current local offline Telegram Desktop export reader
+- restored README screenshot links to the existing `docs/screenshots/*.png` files
+- kept the copy honest about local/offline behavior, Telegram login, cloud/sync, AI and current export support
+- did not change APP_VERSION because this is a docs-only patch
+- did not change backend, frontend, parser, storage, media endpoint, build/package scripts or release logic
+
+Manual test:
+- verify README screenshot links point to existing files
+- verify README does not promise a visible multi-export manager or cloud/sync behavior
+- run `git diff --check`
+- do not run package/release
+
 ## Docs after 2.9.28 - safe screenshots refresh
 
 Changed:

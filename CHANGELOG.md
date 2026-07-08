@@ -4,6 +4,7 @@
 
 ### Changed
 
+* Updated README copy after the 2.9.28 audit-fix cycle to explain the local offline reader/archive clearly without promising a visible multi-export manager or cloud/sync behavior.
 * Refreshed the public screenshots in `docs/screenshots/` from the current 2.9.28 UI using only synthetic demo data.
 * Added `docs/demo/demo-export/` as a minimal safe Telegram Desktop JSON export fixture for screenshot capture and manual documentation checks.
 * Updated screenshot and demo-export docs with capture notes and privacy-review status for the refreshed PNG files.
