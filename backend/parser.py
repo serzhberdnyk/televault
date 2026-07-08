@@ -82,6 +82,43 @@ def text_to_string(value: Any) -> str:
     return str(value)
 
 
+def normalize_text_entities(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+
+    entities: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, str):
+            if item:
+                entities.append({"type": "plain", "text": item})
+            continue
+        if not isinstance(item, dict):
+            continue
+
+        entity_type = compact_text(item.get("type")) or "plain"
+        entity: dict[str, Any] = {"type": entity_type}
+        if "text" in item:
+            entity["text"] = text_to_string(item.get("text", ""))
+        for key in ("href", "url", "language"):
+            value_text = text_to_string(item.get(key, ""))
+            if value_text:
+                entity[key] = value_text
+        for key in ("offset", "length"):
+            try:
+                number = int(item.get(key))
+            except (TypeError, ValueError):
+                continue
+            if number >= 0:
+                entity[key] = number
+
+        has_text = "text" in entity and entity["text"] != ""
+        has_range = "offset" in entity and "length" in entity
+        if has_text or has_range:
+            entities.append(entity)
+
+    return entities
+
+
 def compact_text(value: Any) -> str:
     return " ".join(text_to_string(value).split())
 
@@ -745,6 +782,12 @@ def normalize_message(
 
     photo_ref = build_media_ref(root, message.get("photo"), library_root)
     thumbnail_ref = build_media_ref(root, message.get("thumbnail"), library_root)
+    text_entities = normalize_text_entities(message.get("text_entities"))
+    if not text_entities:
+        text_entities = normalize_text_entities(message.get("text"))
+    caption_entities = normalize_text_entities(message.get("caption_entities"))
+    if not caption_entities:
+        caption_entities = normalize_text_entities(message.get("caption"))
 
     normalized = {
         "id": message.get("id", index),
@@ -756,6 +799,9 @@ def normalize_message(
         "edited_unixtime": message.get("edited_unixtime") or "",
         "from": message.get("from") or message.get("actor") or "",
         "text": text_to_string(message.get("text", "")),
+        "caption": text_to_string(message.get("caption", "")),
+        "text_entities": text_entities,
+        "caption_entities": caption_entities,
         "media": media,
         "media_url": media_url,
         "media_kind": kind,

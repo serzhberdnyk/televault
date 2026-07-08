@@ -210,6 +210,21 @@ let activeRegularMediaElement = null;
 
 const unavailableFallbackTextPattern = /^\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?$/i;
 const unavailableFallbackTextPatternGlobal = /\(?\s*file\s+unavailable(?:\s*,?\s*please\s+try\s+again\s+later)?\s*\)?/gi;
+const inlineTextEntityTypes = new Set([
+  'bold',
+  'italic',
+  'underline',
+  'strikethrough',
+  'strike',
+  'code',
+  'pre',
+  'text_link',
+  'link',
+  'url',
+  'mention',
+  'hashtag',
+  'spoiler',
+]);
 
 function visibleTextSource(value) {
   if (value === null || value === undefined) return '';
@@ -1953,12 +1968,159 @@ function groupProbableMediaAlbums(messages) {
   return items;
 }
 
-function messageVisibleText(msg) {
-  for (const candidate of [msg?.text, msg?.caption]) {
-    const value = cleanVisibleText(candidate);
-    if (value) return value;
+function messageTextPayload(msg) {
+  const candidates = [
+    { value: msg?.text, entities: msg?.text_entities },
+    { value: msg?.caption, entities: msg?.caption_entities },
+  ];
+  for (const candidate of candidates) {
+    const value = cleanVisibleText(candidate.value);
+    if (value) {
+      return {
+        text: value,
+        entities: Array.isArray(candidate.entities) ? candidate.entities : [],
+      };
+    }
   }
-  return '';
+  return { text: '', entities: [] };
+}
+
+function messageVisibleText(msg) {
+  return messageTextPayload(msg).text;
+}
+
+function textEntityType(entity) {
+  return String(entity?.type || 'plain').trim().toLowerCase();
+}
+
+function textEntityValue(entity) {
+  if (typeof entity === 'string') return entity;
+  if (!entity || typeof entity !== 'object' || !('text' in entity)) return '';
+  return visibleTextSource(entity.text);
+}
+
+function segmentFromEntity(entity) {
+  if (typeof entity === 'string') {
+    return { type: 'plain', text: entity, href: '', url: '' };
+  }
+  return {
+    type: textEntityType(entity),
+    text: textEntityValue(entity),
+    href: visibleTextSource(entity?.href),
+    url: visibleTextSource(entity?.url),
+  };
+}
+
+function textSegmentsFromEntityList(entities) {
+  if (!Array.isArray(entities) || !entities.length) return null;
+  const segments = [];
+  let hasTextShape = false;
+  entities.forEach(entity => {
+    if (typeof entity === 'string' || (entity && typeof entity === 'object' && 'text' in entity)) {
+      hasTextShape = true;
+      const segment = segmentFromEntity(entity);
+      if (segment.text) segments.push(segment);
+    }
+  });
+  return hasTextShape ? segments : null;
+}
+
+function textEntityRange(entity, textLength) {
+  if (!entity || typeof entity !== 'object') return null;
+  const offset = Number(entity.offset);
+  const length = Number(entity.length);
+  if (!Number.isInteger(offset) || !Number.isInteger(length)) return null;
+  if (offset < 0 || length <= 0 || offset + length > textLength) return null;
+  return {
+    ...segmentFromEntity(entity),
+    offset,
+    length,
+  };
+}
+
+function textSegmentsFromOffsetEntities(textValue, entities) {
+  if (!Array.isArray(entities) || !entities.length) return null;
+  const ranges = [];
+  for (const entity of entities) {
+    const range = textEntityRange(entity, textValue.length);
+    if (!range) return null;
+    ranges.push(range);
+  }
+  ranges.sort((a, b) => a.offset - b.offset || b.length - a.length);
+
+  const segments = [];
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.offset < cursor) return null;
+    if (range.offset > cursor) {
+      segments.push({ type: 'plain', text: textValue.slice(cursor, range.offset), href: '', url: '' });
+    }
+    const end = range.offset + range.length;
+    segments.push({
+      type: range.type,
+      text: textValue.slice(range.offset, end),
+      href: range.href,
+      url: range.url,
+    });
+    cursor = end;
+  }
+  if (cursor < textValue.length) {
+    segments.push({ type: 'plain', text: textValue.slice(cursor), href: '', url: '' });
+  }
+  return segments;
+}
+
+function textEntitySegments(textValue, entities) {
+  const textSegments = textSegmentsFromEntityList(entities);
+  if (textSegments) return textSegments;
+  return textSegmentsFromOffsetEntities(textValue, entities);
+}
+
+function safeEntityHref(segment, type) {
+  const raw = type === 'url' ? (segment.url || segment.href || segment.text) : (segment.url || segment.href);
+  const value = String(raw || '').trim();
+  if (!value || /[\u0000-\u001F\u007F]/.test(value)) return '';
+  const href = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+  try {
+    const url = new URL(href);
+    return (url.protocol === 'http:' || url.protocol === 'https:') ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function renderEntitySegment(segment) {
+  const escaped = escapeHtml(segment.text);
+  const type = inlineTextEntityTypes.has(segment.type) ? segment.type : 'plain';
+  if (!escaped) return '';
+  if (type === 'bold') return `<strong>${escaped}</strong>`;
+  if (type === 'italic') return `<em>${escaped}</em>`;
+  if (type === 'underline') return `<span class="message-entity-underline">${escaped}</span>`;
+  if (type === 'strikethrough' || type === 'strike') return `<span class="message-entity-strikethrough">${escaped}</span>`;
+  if (type === 'code') return `<code class="message-entity-code">${escaped}</code>`;
+  if (type === 'pre') return `<pre class="message-entity-pre"><code>${escaped}</code></pre>`;
+  if (type === 'mention') return `<span class="message-entity-mention">${escaped}</span>`;
+  if (type === 'hashtag') return `<span class="message-entity-hashtag">${escaped}</span>`;
+  if (type === 'spoiler') return `<span class="message-entity-spoiler" tabindex="0">${escaped}</span>`;
+  if (type === 'text_link' || type === 'link' || type === 'url') {
+    const href = safeEntityHref(segment, type);
+    if (href) return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer">${escaped}</a>`;
+  }
+  return escaped;
+}
+
+function renderFormattedTextPayload(payload) {
+  const plain = payload?.text || '';
+  if (!plain) return '';
+  const segments = textEntitySegments(plain, payload.entities);
+  if (!segments) return escapeHtml(plain);
+  const segmentText = segments.map(segment => segment.text).join('');
+  if (segmentText !== plain) return escapeHtml(plain);
+  return segments.map(renderEntitySegment).join('');
+}
+
+function renderMessageText(msg) {
+  return renderFormattedTextPayload(messageTextPayload(msg));
 }
 
 function createMessageDirectionContext(chat = {}, senders = []) {
@@ -2227,7 +2389,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
         ${renderForwardedMeta(msg)}
         ${renderReplyPreview(msg)}
         ${mediaFirstCaptionLayout ? inlineMedia : ''}
-        ${messageHasText ? `<div class="text">${escapeHtml(messageText)}</div>` : ''}
+        ${messageHasText ? `<div class="text">${renderMessageText(msg)}</div>` : ''}
         ${mediaFirstCaptionLayout ? '' : inlineMedia}
       </div>
       </article>
@@ -2617,8 +2779,11 @@ function renderMissingCard(msg) {
 }
 
 function renderMediaCaption(msg) {
-  const caption = messageVisibleText(msg);
-  return caption ? `<div class="media-caption">${escapeHtml(shortText(caption))}</div>` : '';
+  const payload = messageTextPayload(msg);
+  if (!payload.text) return '';
+  const shortCaption = shortText(payload.text);
+  const captionHtml = shortCaption === payload.text ? renderFormattedTextPayload(payload) : escapeHtml(shortCaption);
+  return `<div class="media-caption">${captionHtml}</div>`;
 }
 
 function renderMessageMeta(msg) {
@@ -2701,7 +2866,7 @@ function renderProbableMediaAlbum(albumMessages, directionContext, photoContext 
         <div class="media media-album media-album-grid ${albumGridClass(albumMessages.length)}">
           ${albumMessages.map(msg => renderAlbumMediaItem(msg, photoContext)).join('')}
         </div>
-        ${caption ? `<div class="text media-album-caption">${escapeHtml(caption)}</div>` : ''}
+        ${caption ? `<div class="text media-album-caption">${renderMessageText(first)}</div>` : ''}
       </div>
     </article>
   `;

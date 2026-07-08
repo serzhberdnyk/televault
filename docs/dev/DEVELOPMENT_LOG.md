@@ -38,6 +38,31 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.22 - render text entities safely
+
+Changed:
+- preserved Telegram `text_entities` / `caption_entities` metadata in parsed messages without replacing the plain `text` and `caption` strings used by search and snippets
+- normalized array-form Telegram text into lightweight entity metadata so basic formatting can survive export parsing
+- rendered safe message/caption entities on the frontend for bold, italic, underline, strikethrough, inline code, preformatted blocks, `url`, `text_link`, Telegram Desktop `link`, mention, hashtag and spoiler
+- kept unknown entity types as plain escaped text and left unsafe link schemes inactive
+- added wrapping styles for long links, inline code and preformatted blocks so formatted text stays inside the message bubble
+- kept reply preview and service notice text plain escaped in this patch
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.22
+- media endpoint, media security model, storage settings format, export catalog/forget behavior, search UI, service notice labels, reply preview rendering, audio playback, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.22
+- open a single-chat export and a full export with `chats.list`
+- confirm ordinary plain text messages look like before
+- confirm bold, italic, underline, strikethrough, code, pre, url, text_link/link, mention, hashtag and spoiler render safely when present
+- confirm unknown entity types keep their text without breaking the message
+- confirm text like `<script>` or `<img onerror>` displays as text and does not execute
+- confirm media captions with supported entities render correctly when not truncated in media cards
+- confirm reply previews, service notices, in-chat search, global search, long links/code/pre wrapping, media/audio playback, export switching and forget export still work
+
 ## 2.9.21 - show audio metadata
 
 Changed:

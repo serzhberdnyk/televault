@@ -1240,6 +1240,82 @@ code {
   overflow-wrap: anywhere;
 }
 
+.message .text a,
+.media-caption a {
+  color: #70c7ff;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.message .text a:hover,
+.media-caption a:hover {
+  text-decoration: underline;
+}
+
+.message-entity-underline {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.message-entity-strikethrough {
+  text-decoration: line-through;
+}
+
+.message-entity-mention,
+.message-entity-hashtag {
+  color: #9edcff;
+  font-weight: 700;
+}
+
+.message .text .message-entity-code,
+.media-caption .message-entity-code {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message .text .message-entity-pre,
+.media-caption .message-entity-pre {
+  display: block;
+  max-width: 100%;
+  margin: 5px 0;
+  overflow-x: auto;
+  border: 1px solid rgba(111, 199, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(7, 12, 18, 0.34);
+  padding: 8px 9px;
+  color: #d6eefc;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message .text .message-entity-pre code,
+.media-caption .message-entity-pre code {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  white-space: inherit;
+}
+
+.message-entity-spoiler {
+  border-radius: 4px;
+  background: rgba(231, 238, 245, 0.2);
+  color: transparent;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color var(--transition),
+    color var(--transition);
+}
+
+.message-entity-spoiler:hover,
+.message-entity-spoiler:focus {
+  background: rgba(231, 238, 245, 0.08);
+  color: inherit;
+}
+
 .media {
   display: grid;
   justify-items: start;

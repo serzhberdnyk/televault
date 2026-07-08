@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.22
+
+### Changed
+
+* Telegram `text_entities` and array-form text now pass through the parser as lightweight formatting metadata while keeping plain `text`/`caption` fields searchable and human-readable.
+* Message text and media captions now render safe basic entities: bold, italic, underline, strikethrough, inline code, preformatted blocks, `url`, `text_link`, Telegram Desktop `link`, mention, hashtag and spoiler.
+* Entity rendering only emits escaped text with whitelisted local tags; unknown entities keep their text as plain text and unsafe link schemes stay inactive.
+* Long entity links, inline code and preformatted blocks now wrap inside message bubbles instead of stretching the layout.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.22.
+* Media endpoint, media security model, storage settings format, export catalog/forget behavior, search UI, service notice labels, reply preview rendering, audio playback, README and release packaging logic were not intentionally changed.
+
 ## 2.9.21
 
 ### Changed
