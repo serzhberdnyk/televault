@@ -904,7 +904,7 @@ function renderHighlightedSearchSnippet(value, query) {
 }
 
 function getVisibleChats() {
-  const q = state.chatSearchQuery.trim().toLowerCase();
+  const q = normalizeSearchText(state.chatSearchQuery);
   const chats = state.chats.filter(chat => !q || conversationSearchText(chat).includes(q));
   return chats.sort(compareChatsNewestFirst);
 }
@@ -917,7 +917,7 @@ function conversationSearchText(chat) {
 
 function buildConversationSearchText(chat, messages = []) {
   const senders = uniqueSenderNames(messages.map(messageSender)).join(' ');
-  return [chat.title, chat.path, senders].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
+  return joinSearchText([chat.title, chat.path, senders]);
 }
 
 function compareChatsNewestFirst(a, b) {
@@ -1529,8 +1529,19 @@ function senderName(value) {
   return cleanVisibleText(value).replace(/\s+/g, ' ').trim();
 }
 
+function normalizeSearchText(value) {
+  return cleanVisibleText(value).replace(/\s+/g, ' ').trim().toLocaleLowerCase('ru-RU');
+}
+
+function joinSearchText(values) {
+  return (values || [])
+    .map(normalizeSearchText)
+    .filter(Boolean)
+    .join(' ');
+}
+
 function senderKey(value) {
-  return senderName(value).toLowerCase();
+  return normalizeSearchText(value);
 }
 
 const FORWARDED_SOURCE_FIELDS = [
@@ -1552,6 +1563,10 @@ function forwardedSource(msg) {
     if (source) return source;
   }
   return '';
+}
+
+function forwardedSearchFields(msg) {
+  return FORWARDED_SOURCE_FIELDS.map(key => msg?.[key]);
 }
 
 function messageSender(msg) {
@@ -1620,7 +1635,7 @@ function detectOwnerSenderKey() {
 }
 
 function filterMessages(messages, search, sender = '') {
-  const q = search.trim().toLowerCase();
+  const q = normalizeSearchText(search);
   const mode = state.mediaMode;
   const selectedSender = senderKey(sender);
   const requireMedia = mode !== 'all';
@@ -1635,18 +1650,50 @@ function filterMessages(messages, search, sender = '') {
   });
 }
 
-function messageSearchText(msg) {
+function messageAuthorSearchFields(msg) {
   return [
+    msg?.from,
+    msg?.sender,
+    msg?.author,
+    msg?.actor,
+    msg?.from_id,
+    msg?.actor_id,
+  ];
+}
+
+function messageReplySearchFields(msg) {
+  return [
+    msg?.reply_to_message_from,
+    msg?.reply_to_message_author,
+    msg?.reply_to_message_preview,
+  ];
+}
+
+function messageMediaSearchFields(msg) {
+  return [
+    msg?.media,
+    mediaName(msg),
+    msg?.media_name,
+    msg?.media_kind,
+    msg?.media_type,
+    msg?.mime_type,
+    msg?.sticker_emoji,
+  ];
+}
+
+function messageSearchText(msg) {
+  return joinSearchText([
     messageVisibleText(msg),
     isServiceMessage(msg) ? serviceNoticeLabel(msg) : '',
-    msg.from,
-    msg.actor,
-    forwardedSource(msg),
-    msg.service_kind,
-    msg.service_action,
-    msg.pinned_message_preview,
-    msg.pinned_message_id,
-  ].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
+    ...messageAuthorSearchFields(msg),
+    ...forwardedSearchFields(msg),
+    msg?.service_kind,
+    msg?.service_action,
+    msg?.pinned_message_preview,
+    msg?.pinned_message_id,
+    ...messageReplySearchFields(msg),
+    ...messageMediaSearchFields(msg),
+  ]);
 }
 
 function messageDomId(msg) {
@@ -1663,16 +1710,7 @@ function messageArticleAttributes(msg, options = {}) {
 }
 
 function mediaSearchText(msg) {
-  return [
-    messageVisibleText(msg),
-    msg.from,
-    mediaName(msg),
-    msg.media_kind,
-    msg.media_type,
-    msg.mime_type,
-    msg.sticker_emoji,
-    forwardedSource(msg),
-  ].map(value => cleanVisibleText(value).toLowerCase()).join(' ');
+  return messageSearchText(msg);
 }
 
 function matchesMediaMode(msg, mode) {

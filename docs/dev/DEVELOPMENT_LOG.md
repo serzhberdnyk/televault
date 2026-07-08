@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.20 - align searchable text
+
+Changed:
+- aligned in-chat message search and `/api/search` around the same searchable message fields
+- included message text/caption, service notice text, sender/actor/author ids, forwarded/saved/via labels, reply preview text and media metadata in the shared search meaning
+- kept global search scoped to the active export and independent from frontend chat preload
+- made media-tab search reuse the same message searchable text while still applying the selected media type
+- made the legacy `/api/chat?q=...` backend filter use `message_search_text()` for compatibility
+- compacted whitespace before search matching and kept Cyrillic/Latin case-insensitive matching
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.20
+- parser, storage format, media endpoint, media security model, search UI, export catalog/forget behavior, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.20
+- open a single-chat export and a full export with `chats.list`
+- search inside an opened chat and with sidebar global search for the same regular text
+- confirm search can find media caption/text, service notice text and forwarded/saved/via labels when those fields exist
+- confirm reply preview search works only from stored reply preview data
+- confirm empty query, active export switching and forget export still do not break search
+- confirm replies/edited, service notices and media playback still render normally
+
 ## 2.9.19 - forget saved export from library
 
 Changed:

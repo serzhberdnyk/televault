@@ -35,7 +35,22 @@ class ResultJsonSearchLimitError(Exception):
 
 
 def compact_value(value: Any) -> str:
-    return " ".join(str(value or "").split())
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return " ".join(part for part in (compact_value(item) for item in value) if part)
+    if isinstance(value, dict):
+        for key in ("text", "value", "name", "title", "username", "id"):
+            if key in value:
+                text = compact_value(value.get(key))
+                if text:
+                    return text
+        return " ".join(part for part in (compact_value(item) for item in value.values()) if part)
+    return " ".join(str(value).split())
+
+
+def compact_values(values: tuple[Any, ...]) -> str:
+    return " ".join(part for part in (compact_value(value) for value in values) if part)
 
 
 def clamp_search_limit(value: int) -> int:
@@ -49,13 +64,21 @@ def clamp_search_limit(value: int) -> int:
 def message_search_text(message: dict[str, Any]) -> str:
     fields = (
         message.get("text"),
+        message.get("caption"),
         message.get("from"),
+        message.get("sender"),
+        message.get("author"),
         message.get("actor"),
+        message.get("from_id"),
+        message.get("actor_id"),
         message.get("service_text"),
         message.get("service_kind"),
         message.get("service_action"),
         message.get("pinned_message_preview"),
         message.get("pinned_message_id"),
+        message.get("reply_to_message_from"),
+        message.get("reply_to_message_author"),
+        message.get("reply_to_message_preview"),
         message.get("media"),
         message.get("media_name"),
         message.get("media_kind"),
@@ -73,7 +96,7 @@ def message_search_text(message: dict[str, Any]) -> str:
         message.get("via"),
         message.get("via_bot"),
     )
-    return " ".join(compact_value(field) for field in fields).casefold()
+    return compact_values(fields).casefold()
 
 
 def message_media_type(message: dict[str, Any]) -> str:
@@ -85,7 +108,7 @@ def message_media_type(message: dict[str, Any]) -> str:
 
 
 def message_snippet(message: dict[str, Any]) -> str:
-    for key in ("text", "service_text", "pinned_message_preview"):
+    for key in ("text", "caption", "service_text", "pinned_message_preview", "reply_to_message_preview"):
         value = compact_value(message.get(key))
         if value:
             return value[:117].rstrip() + "..." if len(value) > 120 else value
@@ -255,16 +278,16 @@ class ExportLibrary:
             raise ValueError("чат не найден")
 
         items = self.messages.get(chat_id, [])
-        q = query.strip().lower()
-        s = sender.strip().lower()
+        q = compact_value(query).casefold()
+        s = compact_value(sender).casefold()
 
         filtered = []
         for m in items:
             if media_only and not m.get("media"):
                 continue
-            if q and q not in (m.get("text", "") + " " + m.get("from", "")).lower():
+            if q and q not in message_search_text(m):
                 continue
-            if s and s != str(m.get("from", "")).lower():
+            if s and s != compact_value(m.get("from")).casefold():
                 continue
             filtered.append(m)
 

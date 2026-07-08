@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.20
+
+### Changed
+
+* Aligned in-chat search and `/api/search` around the same searchable message text: text/caption, service notice text, sender/actor/author fields, forwarded/saved/via labels, reply preview text and media metadata.
+* Media-tab search now reuses the same message searchable text while still filtering by the selected media type.
+* The legacy `/api/chat?q=...` backend filter now uses the shared backend searchable text for compatibility.
+* Search normalization now compacts whitespace and keeps Cyrillic/Latin matching case-insensitive.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.20.
+* Parser, storage format, media endpoint, media security model, search UI, export catalog/forget behavior, README and release packaging logic were not intentionally changed.
+
 ## 2.9.19
 
 ### Changed
