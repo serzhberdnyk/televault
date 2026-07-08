@@ -393,14 +393,16 @@ select:focus-visible {
   width: 100%;
   min-height: 48px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 32px;
   align-items: center;
-  gap: 8px;
-  border-color: transparent;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
-  padding: 8px 10px;
-  text-align: left;
-  white-space: normal;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .export-item:hover {
@@ -421,6 +423,62 @@ select:focus-visible {
 
 .export-item.is-missing:not(.is-active) {
   background: rgba(255, 191, 105, 0.035);
+}
+
+.export-item__open {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-content: stretch;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 8px 4px 8px 10px;
+  text-align: left;
+  white-space: normal;
+}
+
+.export-item__open:hover,
+.export-item__open:active {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.export-item__open:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(42, 171, 238, 0.32);
+}
+
+.export-item__forget {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: #8d9aa7;
+}
+
+.export-item__forget:hover {
+  border-color: rgba(255, 191, 105, 0.24);
+  background: rgba(255, 191, 105, 0.08);
+  color: #ffd29a;
+}
+
+.export-item__forget .close-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .export-item__main {

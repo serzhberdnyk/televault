@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.19
+
+### Changed
+
+* Added `POST /api/exports/<id>/forget` to remove a saved export record from the local TeleVault catalog without deleting the export folder or media files.
+* The sidebar "Архивы" list now has a safe "забыть из библиотеки" action for every saved export, including unavailable ones.
+* Forgetting a non-active export only removes it from the saved list and keeps the currently opened archive untouched.
+* Forgetting the active export switches to the most recently opened available saved export, or shows the empty library state when no available exports remain.
+* Confirmation copy now says that files on disk stay in place, and the UI avoids delete-style wording for this action.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.19.
+* Parser, library chat/message storage, media endpoint, media security model, search, README and release packaging logic were not intentionally changed.
+
 ## 2.9.18
 
 ### Changed

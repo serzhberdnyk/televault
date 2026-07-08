@@ -18,6 +18,7 @@ const state = {
   exportsLoading: false,
   exportsError: '',
   activeExportOpeningId: '',
+  activeExportForgettingId: '',
   selectedChatId: null,
   lightboxPhotos: [],
   lightboxIndex: -1,
@@ -146,13 +147,18 @@ const text = {
   savedVaultMissing: 'папка экспорта недоступна',
   savedVaultMissingBody: 'TeleVault помнит этот архив, но сейчас не может открыть его папку.',
   savedVaultMissingDetail: 'Возможно, папку перенесли или диск отключён.',
-  forgetUnavailableExport: 'удалить недоступный экспорт из библиотеки',
-  forgettingUnavailableExport: 'удаляем...',
-  forgotUnavailableExport: 'недоступный экспорт удален из библиотеки',
+  forgetUnavailableExport: 'забыть недоступный архив',
+  forgettingUnavailableExport: 'забываем...',
+  forgotUnavailableExport: 'недоступный архив убран из библиотеки',
   exportsEmpty: 'сохранённые экспорты появятся здесь',
   exportsLoadFailed: 'не удалось обновить список архивов',
   activeExport: 'активен',
   unavailableExport: 'недоступен',
+  forgetExport: 'забыть из библиотеки',
+  forgetExportFailed: 'не удалось забыть архив',
+  forgetExportConfirm: 'Убрать этот архив из библиотеки TeleVault?\n\nФайлы на диске останутся на месте.',
+  forgetExportConfirmNamed: 'Убрать архив «{name}» из библиотеки TeleVault?\n\nФайлы на диске останутся на месте.',
+  forgotExport: 'архив убран из библиотеки',
   openingExport: 'открываем архив...',
   savedExportOpenFailed: 'не удалось открыть сохранённый архив',
   storageReady: 'архив открыт',
@@ -518,43 +524,66 @@ function renderExportCatalog() {
 }
 
 function renderExportItem(item) {
-  const button = document.createElement('button');
   const isOpening = state.activeExportOpeningId === item.id;
+  const isForgetting = state.activeExportForgettingId === item.id;
   const isActive = item.active === true;
   const isMissing = item.missing === true;
   const name = exportDisplayName(item);
   const meta = exportMetaText(item);
   const badges = [];
   if (isOpening) badges.push(text.openingExport);
+  if (isForgetting) badges.push(text.forgettingUnavailableExport);
   if (isActive) badges.push(text.activeExport);
   if (isMissing) badges.push(text.unavailableExport);
+  const isBusy = Boolean(state.activeExportOpeningId || state.activeExportForgettingId);
 
-  button.type = 'button';
-  button.className = [
+  const row = document.createElement('div');
+  row.className = [
     'export-item',
     isActive ? 'is-active' : '',
     isMissing ? 'is-missing' : '',
     isOpening ? 'is-opening' : '',
+    isForgetting ? 'is-forgetting' : '',
   ].filter(Boolean).join(' ');
-  button.disabled = Boolean(state.activeExportOpeningId);
-  button.setAttribute('aria-pressed', String(isActive));
-  button.innerHTML = `
+
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'export-item__open';
+  openButton.disabled = isBusy;
+  openButton.setAttribute('aria-pressed', String(isActive));
+  openButton.innerHTML = `
     <span class="export-item__main">
       <span class="export-item__name">${escapeHtml(name)}</span>
       ${meta ? `<span class="export-item__meta">${escapeHtml(meta)}</span>` : ''}
     </span>
     ${badges.length ? `<span class="export-item__badges">${badges.map(badge => `<span>${escapeHtml(badge)}</span>`).join('')}</span>` : ''}
   `;
-  button.addEventListener('click', () => {
+  openButton.addEventListener('click', () => {
     openSavedExport(item.id);
   });
-  return button;
+
+  const forgetButton = document.createElement('button');
+  forgetButton.type = 'button';
+  forgetButton.className = 'export-item__forget';
+  forgetButton.disabled = isBusy;
+  forgetButton.title = text.forgetExport;
+  forgetButton.setAttribute('aria-label', `${text.forgetExport}: ${name}`);
+  forgetButton.innerHTML = icons.close;
+  forgetButton.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    forgetSavedExport(item.id);
+  });
+
+  row.appendChild(openButton);
+  row.appendChild(forgetButton);
+  return row;
 }
 
-async function openSavedExport(exportId) {
-  if (!exportId || state.activeExportOpeningId) return;
+async function openSavedExport(exportId, options = {}) {
+  if (!exportId || state.activeExportOpeningId || state.activeExportForgettingId) return;
   const current = state.exports.find(item => item.id === exportId);
-  if (current?.active && state.vaultLoaded && !current?.missing) return;
+  if (!options.force && current?.active && state.vaultLoaded && !current?.missing) return;
 
   const hadOpenVault = state.vaultLoaded;
   let failureMessage = '';
@@ -591,6 +620,77 @@ async function openSavedExport(exportId) {
   }
 }
 
+function forgetExportConfirmMessage(item) {
+  const name = exportDisplayName(item);
+  if (!name) return text.forgetExportConfirm;
+  return text.forgetExportConfirmNamed.replace('{name}', name);
+}
+
+function clearCurrentLibraryForSwitch(message = text.openingExport) {
+  state.chats = [];
+  state.vaultLoaded = false;
+  state.vaultRoot = '';
+  state.vaultErrors = [];
+  state.vaultLoadError = '';
+  state.vaultLoadDetail = '';
+  state.vaultMissing = false;
+  state.missingVaultPath = '';
+  state.selectedChatId = null;
+  state.chatCache = {};
+  state.messagesRequestId += 1;
+  resetGlobalMessageSearch();
+  closeLightbox();
+  renderConversationList();
+  setLibraryLoading(message);
+  renderVaultWelcome({ mode: 'loading', lead: message });
+}
+
+async function forgetSavedExport(exportId, options = {}) {
+  if (!exportId || state.activeExportOpeningId || state.activeExportForgettingId) return;
+  const item = state.exports.find(exportItem => exportItem.id === exportId) || {};
+  if (!options.skipConfirm && !window.confirm(forgetExportConfirmMessage(item))) return;
+
+  state.activeExportForgettingId = exportId;
+  state.exportsError = '';
+  if (state.vaultMissing && item.missing) setForgetMissingButtonLoading(true);
+  renderExportCatalog();
+
+  try {
+    const data = await api(`/api/exports/${encodeURIComponent(exportId)}/forget`, { method: 'POST' });
+    const wasActive = data.wasActive === true || item.active === true;
+    const nextActiveExportId = cleanVisibleText(data.nextActiveExportId || '');
+    state.exports = state.exports.filter(exportItem => exportItem.id !== exportId);
+    state.activeExportForgettingId = '';
+    await refreshExportCatalog();
+
+    if (!wasActive) return;
+
+    if (nextActiveExportId) {
+      clearCurrentLibraryForSwitch(text.openingExport);
+      await openSavedExport(nextActiveExportId, { force: true });
+      return;
+    }
+
+    setLibraryEmpty();
+    setLibraryMessage(item.missing ? text.forgotUnavailableExport : text.forgotExport, 'empty', text.storageNotSelectedBody);
+    renderConversationList();
+    renderVaultWelcome({ mode: 'empty' });
+  } catch (e) {
+    state.exportsError = cleanErrorMessage(e) || text.forgetExportFailed;
+    await refreshExportCatalog();
+    renderExportCatalog();
+    if (state.vaultMissing) {
+      const missingPath = state.missingVaultPath || state.vaultRoot;
+      setLibraryMissing({ lastVaultPath: missingPath });
+      renderVaultWelcome({ mode: 'missing' });
+    }
+  } finally {
+    state.activeExportForgettingId = '';
+    setForgetMissingButtonLoading(false);
+    renderExportCatalog();
+  }
+}
+
 function setFolderButtonLoading(isLoading) {
   state.isPickingFolder = isLoading;
   document.querySelectorAll('[data-pick-folder]').forEach(button => {
@@ -605,7 +705,7 @@ function setForgetMissingButtonLoading(isLoading) {
   if (!button) return;
   button.disabled = isLoading;
   button.setAttribute('aria-busy', String(isLoading));
-  button.innerHTML = `${icons.trash}<span>${isLoading ? text.forgettingUnavailableExport : text.forgetUnavailableExport}</span>`;
+  button.innerHTML = `${icons.close}<span>${isLoading ? text.forgettingUnavailableExport : text.forgetUnavailableExport}</span>`;
 }
 
 function updateMediaTabs() {
@@ -853,11 +953,24 @@ async function pickFolder() {
 }
 
 async function forgetMissingExport() {
-  if (!state.vaultMissing) return;
+  const missingExport = state.exports.find(item => item.active && item.missing)
+    || state.exports.find(item => item.missing);
+  if (!state.vaultMissing && !missingExport) return;
+  if (missingExport) {
+    await forgetSavedExport(missingExport.id);
+    return;
+  }
+
+  if (!window.confirm(text.forgetExportConfirm)) return;
   setForgetMissingButtonLoading(true);
   try {
-    await api('/api/forget-missing-vault', { method: 'POST' });
+    const data = await api('/api/forget-missing-vault', { method: 'POST' });
     await refreshExportCatalog();
+    if (data.nextActiveExportId) {
+      clearCurrentLibraryForSwitch(text.openingExport);
+      await openSavedExport(data.nextActiveExportId, { force: true });
+      return;
+    }
     setLibraryEmpty();
     setLibraryMessage(text.forgotUnavailableExport, 'empty', text.storageNotSelectedBody);
     renderConversationList();

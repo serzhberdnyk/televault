@@ -22,7 +22,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.18"
+APP_VERSION = "2.9.19"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -285,6 +285,30 @@ def find_export_by_id(exports: list[dict], export_id: str) -> dict | None:
     return None
 
 
+def export_record_is_available(record: dict) -> bool:
+    folder = str(record.get("path") or "").strip()
+    if not folder:
+        return False
+    try:
+        path = Path(folder).expanduser()
+        return path.exists() and path.is_dir()
+    except OSError:
+        return False
+
+
+def most_recent_available_export(exports: list[dict]) -> dict | None:
+    available = [
+        record
+        for record in exports
+        if isinstance(record, dict)
+        and record.get("id")
+        and export_record_is_available(record)
+    ]
+    if not available:
+        return None
+    return max(available, key=lambda record: str(record.get("lastOpenedAt") or record.get("addedAt") or ""))
+
+
 def open_export_by_id(export_id: str) -> tuple[dict, int]:
     settings = read_catalog_settings(persist_migration=False)
     exports = settings.get("exports")
@@ -390,24 +414,76 @@ def missing_saved_vault_response(folder: str, error: str = "") -> dict:
 
 def forget_saved_vault_path() -> dict:
     settings = read_catalog_settings()
-    removed_path = str(settings.pop("lastVaultPath", "") or "")
-    removed_export_id = str(settings.pop("activeExportId", "") or "")
+    active_record = active_export_record(settings)
+    if active_record and active_record.get("id"):
+        result, _status = forget_export_by_id(str(active_record.get("id") or ""))
+        return result
+
+    removed_path = str(settings.get("lastVaultPath") or "")
     exports = settings.get("exports")
-    changed = bool(removed_path or removed_export_id)
-    if isinstance(exports, list):
-        for record in exports:
-            if not isinstance(record, dict):
-                continue
-            is_removed_export = removed_export_id and record.get("id") == removed_export_id
-            is_removed_path = removed_path and export_path_key(str(record.get("path") or "")) == export_path_key(removed_path)
-            if is_removed_export or is_removed_path:
-                if not record.get("missing"):
-                    record["missing"] = True
-                    changed = True
-        settings["exports"] = exports
-    if changed:
+    if isinstance(exports, list) and removed_path:
+        record = find_export_by_path(exports, removed_path)
+        if record and record.get("id"):
+            result, _status = forget_export_by_id(str(record.get("id") or ""))
+            return result
+
+    removed_export_id = str(settings.pop("activeExportId", "") or "")
+    if removed_path:
+        settings.pop("lastVaultPath", None)
+    if removed_path or removed_export_id:
         write_settings(settings)
     return {"ok": True, "removed": bool(removed_path or removed_export_id), "lastVaultPath": removed_path}
+
+
+def forget_export_by_id(export_id: str) -> tuple[dict, int]:
+    settings = read_catalog_settings()
+    exports = settings.get("exports")
+    if not isinstance(exports, list):
+        exports = []
+
+    record = find_export_by_id(exports, export_id)
+    if not record:
+        return {"error": "архив не найден"}, 404
+
+    removed_path = str(record.get("path") or "")
+    active_export_id = str(settings.get("activeExportId") or "")
+    was_active = bool(active_export_id and record.get("id") == active_export_id)
+    remaining_exports = [
+        item
+        for item in exports
+        if not (isinstance(item, dict) and item.get("id") == export_id)
+    ]
+
+    # Forget only removes the catalog record from settings; it never deletes the export folder or media files.
+    settings["exports"] = remaining_exports
+    next_active_id = ""
+
+    if was_active:
+        next_record = most_recent_available_export(remaining_exports)
+        if next_record:
+            next_active_id = str(next_record.get("id") or "")
+            settings["activeExportId"] = next_active_id
+            settings["lastVaultPath"] = str(next_record.get("path") or "")
+        else:
+            settings.pop("activeExportId", None)
+            settings.pop("lastVaultPath", None)
+    else:
+        last_vault_path = str(settings.get("lastVaultPath") or "")
+        if removed_path and last_vault_path and export_path_key(last_vault_path) == export_path_key(removed_path):
+            active_record_after_forget = active_export_record(settings)
+            if active_record_after_forget:
+                settings["lastVaultPath"] = str(active_record_after_forget.get("path") or "")
+            else:
+                settings.pop("lastVaultPath", None)
+
+    write_settings(settings)
+    return {
+        "ok": True,
+        "removed": True,
+        "forgottenExportId": export_id,
+        "wasActive": was_active,
+        "nextActiveExportId": next_active_id,
+    }, 200
 
 
 def load_saved_vault() -> dict:
@@ -806,6 +882,15 @@ class Handler(BaseHTTPRequestHandler):
                 return
             export_id = unquote(parsed.path[len(export_open_prefix):-len("/open")]).strip("/")
             result, status = open_export_by_id(export_id)
+            json_response(self, result, status)
+            return
+
+        if parsed.path.startswith(export_open_prefix) and parsed.path.endswith("/forget"):
+            if not is_allowed_local_post(self):
+                json_response(self, {"error": "forbidden"}, 403)
+                return
+            export_id = unquote(parsed.path[len(export_open_prefix):-len("/forget")]).strip("/")
+            result, status = forget_export_by_id(export_id)
             json_response(self, result, status)
             return
 

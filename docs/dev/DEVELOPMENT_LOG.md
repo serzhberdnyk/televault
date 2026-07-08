@@ -38,6 +38,32 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.19 - forget saved export from library
+
+Changed:
+- added `POST /api/exports/<id>/forget` for removing a saved export record from `settings.json`
+- kept forget intentionally narrow: it removes only the catalog record and never deletes the export folder or media files
+- made active-export forget choose the most recently opened remaining export that still has an available folder
+- cleared `activeExportId` and `lastVaultPath` when the forgotten active export was the last available saved export
+- added a per-export "забыть из библиотеки" action in the sidebar "Архивы" list, including missing exports
+- added confirmation copy that explicitly says files on disk stay in place
+- changed the unavailable-export empty-state action from delete wording to safe forget wording
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.19
+- backend parser, library chat/message storage, media endpoint, media security model, search, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- with export A active and export B saved, forget B and confirm A stays open
+- with export A active and export B saved, forget A and confirm B becomes active and loads
+- forget the last remaining export and confirm the saved list is empty and the empty library state appears
+- move or remove a saved export folder, confirm it is shown as unavailable, then forget it from "Архивы"
+- confirm the confirmation dialog says files on disk stay in place
+- re-add a forgotten export through the folder picker and confirm duplicate handling still works
+- confirm full-export `chats.list`, single-chat export, media, replies/edited, service notices and search still work after switching/forgetting
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.19
+
 ## 2.9.18 - saved exports sidebar catalog
 
 Changed:
