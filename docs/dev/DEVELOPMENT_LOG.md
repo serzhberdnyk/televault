@@ -38,6 +38,23 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## Branding after 2.9.28 - icon assets preparation
+
+Changed:
+- saved the selected TeleVault archive-box icon source in `docs/brand/televault-icon-source.png`
+- prepared PNG icon assets in `frontend/assets/icons/` for 16, 32, 48, 64, 128, 256 and 512 px
+- prepared `frontend/assets/icons/televault.ico` with 16, 32, 48 and 256 px entries
+- did not integrate the icon into the frontend, launcher, manifest or build scripts yet
+- did not change APP_VERSION because this is an asset-only branding patch
+- did not change backend, parser, storage, media endpoints or app behavior
+
+Manual test:
+- verify PNG icon files exist and have the expected dimensions
+- inspect 32, 256 and 512 px previews for readability
+- verify `televault.ico` exists and contains multiple sizes
+- run `git diff --check`
+- do not run package/release
+
 ## Docs after 2.9.28 - README copy update
 
 Changed:
