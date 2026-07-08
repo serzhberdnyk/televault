@@ -15,6 +15,8 @@ Save the reviewed screenshots as:
 
 Do not add placeholder images. Add these files only after the visible content is demo or sanitized.
 
+The currently committed PNG files are historical. Replace them only after a separate screenshot task with reviewed demo/sanitized content.
+
 ## Safety Rules
 
 - use only demo or sanitized Telegram Desktop exports
@@ -45,9 +47,9 @@ Use neutral message text about travel plans, project notes, grocery reminders, d
 
 File: `docs/screenshots/01-library.png`
 
-Capture the local library with several demo exports visible. The screenshot should communicate that TeleVault can keep multiple Telegram Desktop exports on the same computer.
+Capture the selected Telegram Desktop export with several demo conversations visible. The screenshot should communicate that TeleVault opens a local export folder and makes its chats readable.
 
-Before saving, verify that no real chat names, local paths, usernames, phones, emails, logs or personal folders are visible.
+Before saving, verify that no real chat names, local paths, usernames, phones, emails, logs, personal folders, removed archive manager controls or sidebar archive status cards are visible.
 
 ### 2. Chat Reading
 

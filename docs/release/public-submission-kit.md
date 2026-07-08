@@ -16,17 +16,19 @@ TeleVault turns local Telegram Desktop exports into a private Windows reader for
 
 TeleVault is a local offline reader for Telegram Desktop exports. It helps people keep important exported conversations on their own computer and browse them in a cleaner, more comfortable interface than raw export folders.
 
-The app is designed for reading archives, not for chatting. It opens exports that already exist on disk, lets you keep multiple exports in a local library, and makes messages, photos, videos, voice notes, audio and files easier to review.
+The app is designed for reading archives, not for chatting. It opens a Telegram Desktop export that already exists on disk, shows the conversations inside that export, and makes messages, photos, videos, voice notes, audio and files easier to review.
 
 TeleVault does not require Telegram login, does not upload exports to a server, and does not provide cloud sync. The data stays where the user stores it.
 
 ## Short Russian Description
 
-TeleVault — локальный offline reader для экспортов Telegram Desktop. Он помогает хранить несколько экспортов на компьютере и удобно читать сообщения, фото, видео, голосовые, аудио и файлы без Telegram login, cloud/sync и загрузки данных на сервер.
+TeleVault — локальный offline reader для экспортов Telegram Desktop. Он помогает открыть выбранную папку экспорта и удобно читать сообщения, фото, видео, голосовые, аудио и файлы без Telegram login, cloud/sync и загрузки данных на сервер.
 
 ## Key Features
 
-- local library for multiple Telegram Desktop exports
+- opens local Telegram Desktop JSON exports
+- supports full exports with several chats through `chats.list`
+- supports single-chat exports
 - comfortable chat reading view
 - photo viewing inside the archive
 - inline video, voice and audio playback
@@ -92,6 +94,7 @@ Required public PNG files:
 Before publishing, verify every screenshot:
 
 - demo or sanitized content only
+- current UI only, without removed archive manager/sidebar archive cards
 - no phone numbers
 - no emails
 - no usernames

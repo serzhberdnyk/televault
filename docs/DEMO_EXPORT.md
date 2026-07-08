@@ -8,9 +8,12 @@ This document is only a plan. The demo export does not exist yet.
 
 ## Current parser assumptions
 
-- Supported export format: Telegram Desktop JSON export with one or more `result.json` files.
+- Supported export format: Telegram Desktop JSON export with `result.json`.
+- Full export support: a Telegram Desktop JSON export can contain several chats through `chats.list`; `left_chats.list` is also read when present.
+- Single-chat support: a `result.json` with a top-level `messages` array is treated as one chat.
 - HTML export support: not confirmed yet. The current backend searches for `result.json` and reads JSON only.
-- Expected entry files: the selected folder may be a single export folder containing `result.json`, or a parent folder containing several exports. TeleVault scans recursively for `result.json` and loads each readable file as a chat.
+- Expected entry files: the selected folder should normally be the Telegram Desktop export folder that contains `result.json`.
+- Wrong-folder behavior: TeleVault also performs a bounded shallow search for nearby `result.json` files so a slightly wrong folder can still open, but broad recursive folder imports should not be used as the demo baseline.
 - Minimal JSON shape: a top-level object with a `messages` array. `name` or `title` is used for the chat title when present; otherwise the export folder name is used.
 - Expected media paths: message media is read from `file`, `photo`, or `thumbnail` fields. Paths are expected to be relative to the folder that contains that `result.json`.
 - Media classification: file extension, `mime_type`, `media_type`, and whether the field is `file`, `photo`, or `thumbnail` are used to classify image, video, audio, sticker, or file messages.
@@ -66,7 +69,7 @@ demo-export/
     notes-example.txt
 ```
 
-For several fake chats, use separate export folders under one parent folder so TeleVault can exercise recursive `result.json` loading:
+For several fake chats, prefer one full-export style `result.json` with `chats.list`. A small parent folder with several single-chat `result.json` files may be useful for bounded-scan testing, but it should not be presented as a visible multi-export manager:
 
 ```text
 demo-library/
@@ -102,7 +105,7 @@ Do not add these files yet. Do not use real photos, recordings, documents, thumb
 
 A safe demo export should cover:
 
-- library screen with multiple fake exports loaded
+- selected export screen with several fake conversations visible
 - chat reading with short neutral messages
 - photo preview or lightbox with a placeholder image
 - voice, audio, video, and file messages with placeholder media

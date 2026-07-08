@@ -33,10 +33,27 @@ Rule:
 Every change should make storing, opening, reading or viewing Telegram exports more convenient or pleasant.
 
 After every future patch:
-- update APP_VERSION
+- update APP_VERSION for app behavior/versioned release changes
 - update CHANGELOG.md
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
+
+## Docs after 2.9.28 - cleanup after audit fixes
+
+Changed:
+- refreshed README.md so it describes the current local/offline Telegram Desktop export reader without promising sidebar archive cards, an archive manager modal or visible multi-export UI
+- documented current export support honestly: full JSON exports with `chats.list`, `left_chats.list`, single-chat exports, media, replies/edited metadata, service notices, text entities, audio metadata and special-content fallbacks
+- removed outdated README screenshot references because the committed PNGs show historical UI, local path/status text and old version labels
+- updated screenshot, demo-export and public-submission docs so they describe a selected export/conversation list, not a visible multi-export manager
+- marked old 2.6.4/2.7.0/2.9.3 build docs as historical snapshots where they are not current release instructions
+- did not change APP_VERSION because this is a docs-only patch
+- did not change backend, frontend, parser, storage, media endpoint, build/package scripts or release logic
+
+Manual test:
+- verify README local links point to existing files
+- verify README no longer mentions visible archive manager/sidebar archive cards or visible multi-export UI
+- run `git diff --check`
+- do not run package/release
 
 ## 2.9.28 - hide archive controls in sidebar
 

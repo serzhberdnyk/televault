@@ -233,6 +233,8 @@ git diff --check
 
 - `README.md` должен быть обязательной проверкой перед release, если в нём указаны текущая версия, download-инструкция, имя portable zip, GitHub Releases links или Windows compatibility wording.
 - `README.md` должен указывать актуальную release version, объяснять установку через portable zip из GitHub Releases и не обещать официальную поддержку Windows 7 для основной Windows 10/11-сборки.
+- `README.md` не должен обещать видимый archive manager, sidebar archive cards или управление несколькими сохранёнными exports через текущий UI, если такого UI нет в релизе.
+- `README.md` должен описывать выбранную папку Telegram Desktop export, local/offline режим, отсутствие Telegram login/cloud/sync и то, что TeleVault не является Telegram-клиентом.
 - `tools\build_exe_launcher.py` должен проверять синхронизацию package, backend и launcher version перед компиляцией exe.
 - `README.md` должен объяснять запуск через `TeleVault.exe` и fallback через `run_windows.bat`.
 - `docs/dev/EXE_PACKAGING_PLAN.md` должен оставлять one-file exe и installer будущими этапами.

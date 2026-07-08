@@ -6,6 +6,8 @@ This guide explains which public screenshots TeleVault needs and how to capture 
 
 Create clear product screenshots without exposing personal Telegram chats, local machine details, private files, or real media.
 
+Current committed screenshots in `docs/screenshots/` are historical and need to be recaptured before public use. They should not be treated as current product screenshots until they are replaced with reviewed demo/sanitized images.
+
 ## Safety Rules
 
 - use only demo/fake Telegram exports
@@ -31,13 +33,13 @@ See the [demo export plan](DEMO_EXPORT.md) before creating any fake export data.
 
 ## Required Screenshots
 
-Capture at least these five screenshots.
+Capture these four screenshots when public images are refreshed.
 
 ### 1. Library Screen
 
-- purpose: show that TeleVault can keep several Telegram exports in a local library
-- what to show: empty or populated archive screen with demo export names only
-- what to avoid: real chat names, real export paths, local usernames, cache or log folders
+- purpose: show the selected Telegram Desktop export and its conversation list
+- what to show: empty or populated conversation list with demo chat names only
+- what to avoid: real chat names, real export paths, local usernames, cache or log folders, removed archive manager/sidebar archive cards
 - suggested filename: `01-library.png`
 
 ### 2. Chat Reading View
@@ -52,24 +54,18 @@ Capture at least these five screenshots.
 - purpose: show photo/media viewing inside TeleVault
 - what to show: placeholder media opened in the preview or lightbox
 - what to avoid: real photos, faces, documents, screenshots from private chats
-- suggested filename: `03-photo-viewer.png`
+- suggested filename: `03-media-viewer.png`
 
 ### 4. Media Messages
 
 - purpose: show that voice, audio, video and file messages are readable in the archive
 - what to show: demo voice/audio/video/file items with placeholder names
 - what to avoid: personal filenames, real recordings, private files, real thumbnails
-- suggested filename: `04-media-messages.png`
-
-### 5. Conversation Search
-
-- purpose: show search inside a conversation
-- what to show: a neutral query and matching demo messages
-- what to avoid: sensitive keywords, personal names, emails, phone numbers, private message text
-- suggested filename: `05-search.png`
+- suggested filename: `04-media-in-library.png`
 
 ## Optional Screenshots
 
+- conversation search with a neutral query and matching demo messages
 - first launch / empty state
 - add export flow
 - files/media view if visually useful

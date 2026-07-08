@@ -1,5 +1,15 @@
 # Changelog
 
+## Docs after 2.9.28
+
+### Changed
+
+* Updated README to describe the current local/offline Telegram Desktop export reader without promising a visible archive manager, sidebar archive cards or visible multi-export UI.
+* Clarified current support for full JSON exports with `chats.list`, `left_chats.list`, single-chat exports, replies/edited metadata, service notices, text entities, audio metadata and special-content fallbacks.
+* Updated screenshot, demo-export, public-submission and dev docs that still described old multi-export library UI or old build-plan versions as current instructions.
+* Marked existing public screenshots as needing a refresh before publication because they show historical UI and local/path-like details.
+* No app version, backend, frontend, parser, storage, media endpoint, build scripts or release/package logic changed.
+
 ## 2.9.28
 
 ### Changed

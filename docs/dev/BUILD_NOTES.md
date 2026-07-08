@@ -1,20 +1,20 @@
 # Build Notes
 
-TeleVault 2.6.4 не собирает exe. Этот файл фиксирует подготовительные заметки для будущего Windows release.
+Historical note: этот файл был создан в эпоху 2.6.4 как подготовительные заметки перед первым Windows release. Сейчас TeleVault уже имеет portable/launcher-style Windows package flow, поэтому актуальные release-проверки находятся в `docs/release/RELEASE_CHECKLIST.md`.
 
-Подробный assessment текущего runtime, файлов для будущей сборки, рисков и packaging candidates находится в [BUILD_ASSESSMENT.md](BUILD_ASSESSMENT.md).
+Подробный historical assessment runtime, файлов для будущей сборки, рисков и packaging candidates находится в [BUILD_ASSESSMENT.md](BUILD_ASSESSMENT.md).
 
 ## Цель будущего этапа
 
-Собрать Windows exe так, чтобы обычный пользователь мог запускать TeleVault без ручной настройки Python.
+Поддерживать Windows package так, чтобы обычный пользователь мог запускать TeleVault без ручной настройки Python.
 
-Сейчас рабочий запуск остаётся через:
+На момент этой исторической заметки рабочий запуск оставался через:
 
 ```bat
 run_windows.bat
 ```
 
-## Перед exe нужно проверить
+## Historical pre-exe checks
 
 - запуск из чистой папки проекта
 - bundled Python или другой способ поставки Python runtime
@@ -25,11 +25,11 @@ run_windows.bat
 - startup vault после перезапуска
 - отсутствие ручного ввода пути в UI
 
-## Возможный инструмент упаковки
+## Historical packaging notes
 
-Инструмент упаковки пока не выбран. В проект не добавлены PyInstaller, Nuitka, Electron, Tauri или новые зависимости.
+Эти заметки про выбор упаковщика исторические. В проект не добавлены PyInstaller, Nuitka, Electron, Tauri или новые зависимости.
 
-Выбор инструмента лучше делать отдельным шагом после проверки текущего локального запуска.
+Новые решения по упаковке лучше делать отдельным шагом после проверки текущего release checklist.
 
 ## Риски
 
@@ -41,4 +41,4 @@ run_windows.bat
 
 ## Зависимости
 
-Сейчас проект старается обходиться без лишних зависимостей. Отдельный `requirements.txt` отсутствует, потому что текущий сервер использует стандартную библиотеку Python.
+Проект по-прежнему старается обходиться без лишних зависимостей. Отдельный `requirements.txt` отсутствует, потому что сервер использует стандартную библиотеку Python.

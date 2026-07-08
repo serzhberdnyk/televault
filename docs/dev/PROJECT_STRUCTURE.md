@@ -10,10 +10,10 @@
 - `frontend/styles.css` - UI styles
 - `run_windows.bat` - Windows launcher
 - `CHANGELOG.md` - release history
-- `docs/dev/BUILD_ASSESSMENT.md` - текущий build environment assessment
-- `docs/dev/BUILD_NOTES.md` - build preparation notes
+- `docs/dev/BUILD_ASSESSMENT.md` - historical build environment assessment
+- `docs/dev/BUILD_NOTES.md` - historical build preparation notes
 - `docs/dev/DEVELOPMENT_LOG.md` - development notes
 - `docs/dev/EXE_PACKAGING_PLAN.md` - exe packaging plan
 - `docs/release/RELEASE_CHECKLIST.md` - release checks
 
-В 2.6.4 этот файл нужен как простой ориентир перед будущей подготовкой Windows exe.
+Этот файл нужен как простой ориентир по структуре проекта. Старые build assessment/notes остаются историческими снимками и не заменяют текущий release checklist.

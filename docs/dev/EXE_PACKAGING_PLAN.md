@@ -2,11 +2,13 @@
 
 TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.9.2 replaced the .NET Framework launcher with a native Windows launcher while keeping the launcher-style portable package. TeleVault 2.9.3 keeps that main package and adds a separate Windows 7 legacy package profile. `run_windows.bat` remains the debug/fallback launcher.
 
+This is now a historical architecture plan for the launcher-style package. Use `docs/release/RELEASE_CHECKLIST.md` for current release checks and replace concrete version examples with the actual release version.
+
 ## Goal
 
 The exe phase should make TeleVault easier to start on Windows without changing the current app behavior.
 
-In 2.9.3, the main Windows 10/11 package should provide:
+The main Windows 10/11 package should provide:
 
 - `TeleVault.exe`
 - startup by double-clicking `TeleVault.exe`
@@ -48,12 +50,12 @@ Launcher-style exe is recommended before one-file packaging because it is:
 
 This also gives a beginner-friendly release path: first make the existing folder double-clickable through `TeleVault.exe`, then consider deeper packaging.
 
-## Launcher Risks To Check
+## Historical Launcher Risks
 
-Before shipping the launcher preview, verify that:
+The launcher preview has moved beyond this planning stage. Keep these checks as historical context and use `docs/release/RELEASE_CHECKLIST.md` for current release validation:
 
-- `TeleVault.exe` exists in `dist/TeleVault-v2.9.3/`
-- the zip contains `TeleVault-v2.9.3/TeleVault.exe`
+- `TeleVault.exe` exists in `dist/TeleVault-vX.Y.Z/`
+- the zip contains `TeleVault-vX.Y.Z/TeleVault.exe`
 - the launcher finds `runtime/python/pythonw.exe`, `app.py`, `backend/` and `frontend/` relative to its own folder
 - the launcher does not depend on the current working directory
 - missing required files produce a readable MessageBox error
@@ -83,4 +85,4 @@ After the launcher preview is stable, later packaging options can be evaluated:
 - installer
 - desktop shortcut or Start Menu integration
 
-Installer and one-file exe remain future options, not part of 2.9.3.
+Installer and one-file exe remain future options, not part of the current launcher-style package.

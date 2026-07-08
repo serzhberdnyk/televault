@@ -1,7 +1,9 @@
 # TeleVault Build Assessment
 
-Release: 2.6.4
-Purpose: document the current Windows build environment before the first exe prototype.
+Historical release snapshot: 2.6.4
+Purpose: document the Windows build environment before the first exe prototype.
+
+This document is historical. It is useful for understanding early packaging decisions, but current release checks live in `docs/release/RELEASE_CHECKLIST.md`.
 
 This is an assessment-only patch. It does not build an exe, add an installer, add
 dependencies, or change app runtime behavior.
@@ -153,10 +155,11 @@ Checks:
 - confirm folder picker support
 - confirm browser launch and local API calls
 
-Preliminary recommendation: try PyInstaller first in 2.7.0. The current app is a
+Historical preliminary recommendation: try PyInstaller first in 2.7.0. The app was a
 standard-library Python local server with static frontend files, so PyInstaller
-is the shortest path to a useful Windows exe prototype. Do not make the final
-packaging decision until an actual prototype is built and tested.
+looked like the shortest path to a useful Windows exe prototype. This is no longer
+the current release plan; use `docs/release/RELEASE_CHECKLIST.md` for current
+packaging checks.
 
 ## Risk Checklist
 
@@ -178,11 +181,11 @@ packaging decision until an actual prototype is built and tested.
 - [ ] large chats remain usable
 - [ ] backup/privacy check: user exports are not included in the exe
 
-## Next Step
+## Historical Next Step
 
-Expected next release target: 2.7.0 - first Windows exe prototype.
+Historical expected next release target: 2.7.0 - first Windows exe prototype.
 
-For 2.7.0:
+Historical 2.7.0 plan:
 - choose the first packaging candidate to prototype
 - build the first prototype exe
 - verify launch on the same machine
