@@ -1240,6 +1240,65 @@ code {
   overflow-wrap: anywhere;
 }
 
+.bubble--special-content {
+  min-width: min(240px, 100%);
+}
+
+.special-content {
+  display: grid;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  color: var(--text);
+}
+
+.special-content__title {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--muted-strong);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.special-content__fields {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 6px 0 0;
+  border-top: 1px solid rgba(111, 199, 255, 0.16);
+}
+
+.special-content__field {
+  display: grid;
+  grid-template-columns: minmax(0, 90px) minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.special-content__field dt,
+.special-content__field dd {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.special-content__field dt {
+  color: #8fa2b2;
+  font-weight: 750;
+}
+
+.special-content__field dd {
+  color: #c4d0dc;
+}
+
 .message .text a,
 .media-caption a {
   color: #70c7ff;

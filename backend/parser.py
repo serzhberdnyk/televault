@@ -10,6 +10,9 @@ import mimetypes
 
 
 SERVICE_PREVIEW_LIMIT = 76
+SPECIAL_PREVIEW_LIMIT = 120
+SPECIAL_META_LIMIT = 96
+SPECIAL_OPTION_LIMIT = 4
 CREATE_CHANNEL_ACTIONS = {"create_channel"}
 CREATE_CHAT_ACTIONS = {"create_chat", "create_group"}
 PHOTO_UPDATE_ACTIONS = {"edit_channel_photo", "edit_chat_photo", "edit_group_photo", "update_photo"}
@@ -48,6 +51,45 @@ FORWARDED_FIELDS = (
     "via_bot",
 )
 GENERIC_SERVICE_TEXT = "системное событие Telegram"
+GENERIC_SPECIAL_TEXT = "специальное сообщение Telegram"
+SPECIAL_LABELS = {
+    "poll": "опрос",
+    "contact": "контакт",
+    "location": "геолокация",
+    "venue": "место",
+    "invoice": "платёж / invoice",
+    "payment": "платёж / invoice",
+    "game": "игра",
+    "dice": "dice",
+    "unknown": GENERIC_SPECIAL_TEXT,
+}
+SPECIAL_MEDIA_TYPE_ALIASES = {
+    "poll": "poll",
+    "contact": "contact",
+    "phone_contact": "contact",
+    "location": "location",
+    "geo": "location",
+    "geo_point": "location",
+    "geopoint": "location",
+    "live_location": "location",
+    "geo_live": "location",
+    "venue": "venue",
+    "invoice": "invoice",
+    "payment": "payment",
+    "paid_media": "payment",
+    "game": "game",
+    "dice": "dice",
+}
+REGULAR_MEDIA_TYPE_PREFIXES = (
+    "photo",
+    "video",
+    "voice",
+    "audio",
+    "sticker",
+    "animation",
+    "file",
+    "document",
+)
 
 
 @dataclass
@@ -264,6 +306,283 @@ def normalize_forwarded_fields(message: dict[str, Any]) -> dict[str, Any]:
     return fields
 
 
+def compact_metadata(value: Any) -> str:
+    if isinstance(value, dict):
+        for key in ("text", "value", "name", "title", "username", "id"):
+            if key in value:
+                text = compact_metadata(value.get(key))
+                if text:
+                    return text
+        return compact_text(metadata_text(value))
+    return compact_text(value)
+
+
+def compact_field(source: dict[str, Any], keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = source.get(key)
+        if value in (None, "", [], {}):
+            continue
+        text = compact_metadata(value)
+        if text:
+            return text
+    return ""
+
+
+def first_compact_field(sources: tuple[dict[str, Any], ...], keys: tuple[str, ...]) -> str:
+    for source in sources:
+        text = compact_field(source, keys)
+        if text:
+            return text
+    return ""
+
+
+def dict_field(message: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    for key in keys:
+        value = message.get(key)
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
+def non_empty_field(message: dict[str, Any], keys: tuple[str, ...]) -> bool:
+    return any(message.get(key) not in (None, "", [], {}) for key in keys)
+
+
+def normalized_media_type_token(message: dict[str, Any]) -> str:
+    return compact_metadata(message.get("media_type")).casefold().replace(" ", "_").replace("-", "_")
+
+
+def special_field(label: str, value: Any) -> dict[str, str]:
+    text = short_preview(value, SPECIAL_META_LIMIT)
+    if not label or not text:
+        return {}
+    return {"label": label, "value": text}
+
+
+def special_result(
+    special_type: str,
+    detail: Any = "",
+    fields: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    label = SPECIAL_LABELS.get(special_type, GENERIC_SPECIAL_TEXT)
+    clean_detail = short_preview(detail, SPECIAL_PREVIEW_LIMIT)
+    clean_fields = [field for field in (fields or []) if field.get("label") and field.get("value")]
+    return {
+        "special_type": special_type,
+        "special_label": label,
+        "special_detail": clean_detail,
+        "special_text": f"{label}: {clean_detail}" if clean_detail else label,
+        "special_fields": clean_fields,
+    }
+
+
+def empty_special_fields() -> dict[str, Any]:
+    return {
+        "special_type": "",
+        "special_label": "",
+        "special_detail": "",
+        "special_text": "",
+        "special_fields": [],
+    }
+
+
+def option_texts(value: Any, limit: int = SPECIAL_OPTION_LIMIT) -> str:
+    if not isinstance(value, list):
+        return ""
+
+    options: list[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            text = compact_field(item, ("text", "option", "label", "title"))
+        else:
+            text = compact_metadata(item)
+        if text:
+            options.append(text)
+
+    if not options:
+        return ""
+
+    visible = options[:limit]
+    suffix = ""
+    remaining = len(options) - len(visible)
+    if remaining > 0:
+        suffix = f" и ещё {remaining}"
+    return ", ".join(visible) + suffix
+
+
+def contact_name(source: dict[str, Any], message: dict[str, Any]) -> str:
+    sources = (source, message)
+    name = first_compact_field(sources, ("name", "title", "contact_name"))
+    if name:
+        return name
+
+    first_name = first_compact_field(sources, ("first_name", "first"))
+    last_name = first_compact_field(sources, ("last_name", "last"))
+    return " ".join(part for part in (first_name, last_name) if part)
+
+
+def coordinate_text(sources: tuple[dict[str, Any], ...]) -> str:
+    expanded: list[dict[str, Any]] = []
+    for source in sources:
+        expanded.append(source)
+        for key in ("location", "coordinates", "geo", "geo_point"):
+            value = source.get(key)
+            if isinstance(value, dict):
+                expanded.append(value)
+
+    latitude = first_compact_field(tuple(expanded), ("latitude", "lat"))
+    longitude = first_compact_field(tuple(expanded), ("longitude", "lon", "lng"))
+    if not latitude or not longitude:
+        return ""
+
+    def normalize_coordinate(value: str) -> str:
+        try:
+            return f"{float(value):.6f}".rstrip("0").rstrip(".")
+        except ValueError:
+            return value
+
+    return f"{normalize_coordinate(latitude)}, {normalize_coordinate(longitude)}"
+
+
+def normalize_poll_special(message: dict[str, Any]) -> dict[str, Any]:
+    source = dict_field(message, ("poll",))
+    sources = (source, message)
+    question = first_compact_field(sources, ("question", "poll_question", "title", "text"))
+    fields: list[dict[str, str]] = []
+
+    answers = source.get("answers") if source else None
+    if answers in (None, "", [], {}):
+        answers = message.get("answers")
+    options = option_texts(answers)
+    if options:
+        fields.append(special_field("варианты", options))
+
+    voters = first_compact_field(sources, ("total_voters", "voters", "vote_count"))
+    if voters:
+        fields.append(special_field("голосов", voters))
+
+    return special_result("poll", question, fields)
+
+
+def normalize_contact_special(message: dict[str, Any]) -> dict[str, Any]:
+    source = dict_field(message, ("contact", "contact_information", "phone_contact"))
+    sources = (source, message)
+    name = contact_name(source, message)
+    phone = first_compact_field(sources, ("phone_number", "phone", "contact_phone_number"))
+    fields: list[dict[str, str]] = []
+    if phone:
+        fields.append(special_field("телефон", phone))
+    return special_result("contact", name or phone, fields)
+
+
+def normalize_location_special(message: dict[str, Any]) -> dict[str, Any]:
+    source = dict_field(message, ("location", "location_information", "live_location", "geo", "geo_point"))
+    coordinates = coordinate_text((source, message))
+    fields = [special_field("координаты", coordinates)] if coordinates else []
+    return special_result("location", "", fields)
+
+
+def normalize_venue_special(message: dict[str, Any]) -> dict[str, Any]:
+    source = dict_field(message, ("venue", "venue_information"))
+    sources = (source, message)
+    title = first_compact_field(sources, ("title", "name", "venue_title"))
+    address = first_compact_field(sources, ("address", "venue_address"))
+    coordinates = coordinate_text((source, message))
+    fields: list[dict[str, str]] = []
+    if address:
+        fields.append(special_field("адрес", address))
+    if coordinates:
+        fields.append(special_field("координаты", coordinates))
+    return special_result("venue", title, fields)
+
+
+def normalize_payment_special(message: dict[str, Any], special_type: str) -> dict[str, Any]:
+    source = dict_field(message, ("invoice", "payment", "payment_information", "invoice_information", "paid_media"))
+    sources = (source, message)
+    title = first_compact_field(sources, ("title", "name", "invoice_title"))
+    description = first_compact_field(sources, ("description", "invoice_description"))
+    amount = first_compact_field(sources, ("amount", "total_amount", "price"))
+    currency = first_compact_field(sources, ("currency",))
+    amount_text = " ".join(part for part in (amount, currency) if part)
+    fields: list[dict[str, str]] = []
+    if description:
+        fields.append(special_field("описание", description))
+    if amount_text:
+        fields.append(special_field("сумма", amount_text))
+    return special_result(special_type, title or description, fields)
+
+
+def normalize_game_special(message: dict[str, Any]) -> dict[str, Any]:
+    source = dict_field(message, ("game", "game_information"))
+    sources = (source, message)
+    title = first_compact_field(sources, ("title", "name", "game_title"))
+    description = first_compact_field(sources, ("description", "game_description"))
+    fields = [special_field("описание", description)] if description else []
+    return special_result("game", title, fields)
+
+
+def normalize_dice_special(message: dict[str, Any]) -> dict[str, Any]:
+    source = dict_field(message, ("dice", "dice_information"))
+    sources = (source, message)
+    emoji = first_compact_field(sources, ("emoji", "emoticon"))
+    value = first_compact_field(sources, ("value", "dice_value"))
+    detail = " ".join(part for part in (emoji, value) if part)
+    fields = [special_field("значение", value)] if value and value != detail else []
+    return special_result("dice", detail, fields)
+
+
+def detect_special_type(message: dict[str, Any], kind: str = "") -> str:
+    media_token = normalized_media_type_token(message)
+    aliased = SPECIAL_MEDIA_TYPE_ALIASES.get(media_token)
+    if aliased:
+        return aliased
+
+    if non_empty_field(message, ("poll",)):
+        return "poll"
+    if non_empty_field(message, ("contact", "contact_information", "phone_contact")):
+        return "contact"
+    if non_empty_field(message, ("venue", "venue_information")):
+        return "venue"
+    if non_empty_field(message, ("location", "location_information", "live_location", "geo", "geo_point")):
+        return "location"
+    if non_empty_field(message, ("latitude", "longitude")):
+        return "location"
+    if non_empty_field(message, ("invoice", "payment", "payment_information", "invoice_information", "paid_media")):
+        return "invoice"
+    if non_empty_field(message, ("game", "game_information")):
+        return "game"
+    if non_empty_field(message, ("dice", "dice_information", "dice_value")):
+        return "dice"
+
+    if media_token and not kind and not media_token.startswith(REGULAR_MEDIA_TYPE_PREFIXES):
+        return "unknown"
+    return ""
+
+
+def normalize_special_content(message: dict[str, Any], kind: str = "") -> dict[str, Any]:
+    if message.get("type") == "service":
+        return empty_special_fields()
+
+    special_type = detect_special_type(message, kind)
+    if special_type == "poll":
+        return normalize_poll_special(message)
+    if special_type == "contact":
+        return normalize_contact_special(message)
+    if special_type == "location":
+        return normalize_location_special(message)
+    if special_type == "venue":
+        return normalize_venue_special(message)
+    if special_type in ("invoice", "payment"):
+        return normalize_payment_special(message, special_type)
+    if special_type == "game":
+        return normalize_game_special(message)
+    if special_type == "dice":
+        return normalize_dice_special(message)
+    if special_type == "unknown":
+        return special_result("unknown", compact_metadata(message.get("media_type")))
+    return empty_special_fields()
+
+
 def media_extension(filename: str) -> str:
     return Path(str(filename or "")).suffix.lower()
 
@@ -366,6 +685,10 @@ def referenced_message_preview(message: dict[str, Any]) -> str:
     mime_type = str(message.get("mime_type") or "")
     media_type = str(message.get("media_type") or "")
     kind = media_kind(filename, mime_type, media_type, media_field, message)
+
+    special_text = short_preview(normalize_special_content(message, kind).get("special_text", ""))
+    if special_text:
+        return special_text
 
     if kind == "sticker":
         return "стикер"
@@ -780,6 +1103,7 @@ def normalize_message(
                 file_size = None
         kind = media_kind(media, mime_type, media_type, media_field, message)
 
+    special_fields = normalize_special_content(message, kind)
     photo_ref = build_media_ref(root, message.get("photo"), library_root)
     thumbnail_ref = build_media_ref(root, message.get("thumbnail"), library_root)
     text_entities = normalize_text_entities(message.get("text_entities"))
@@ -822,6 +1146,7 @@ def normalize_message(
         "thumbnail_url": thumbnail_ref["url"],
         "thumbnail_exists": thumbnail_ref["exists"],
     }
+    normalized.update(special_fields)
     normalized.update(normalize_audio_metadata(message, kind))
     normalized.update(normalize_forwarded_fields(message))
     normalized.update(normalize_reply_fields(message, messages_by_id))

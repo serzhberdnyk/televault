@@ -38,6 +38,29 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.23 - add special content fallbacks
+
+Changed:
+- normalized Telegram special content fields for poll, contact, location, venue, invoice/payment, game and dice messages into compact `special_*` fields
+- added a neutral fallback for unknown non-media `media_type` values so those messages do not render as empty bubbles
+- included `special_text`, `special_type`, labels, details and safe field rows in backend search text and message snippets
+- used special fallback text in reply previews for referenced poll/contact/location/payment/game/dice messages
+- rendered special content as compact message-like content inside the regular chat bubble instead of a centered service notice
+- kept location/venue fully offline: coordinates render as text only, with no map links or external requests
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.23
+- media endpoint, media security model, storage settings format, export catalog/forget behavior, search UI, service notice labels, audio playback, text entity rendering, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.23
+- confirm ordinary plain text messages look like before
+- confirm poll, contact, location/venue, invoice/payment, game and dice messages show readable compact fallbacks when present in a Telegram export
+- confirm unknown non-media special content does not break the timeline
+- confirm search finds fallback text such as `опрос`, `контакт`, `геолокация` and `игра`
+- confirm service notices, replies/edited metadata, media/audio playback, text entities, full export `chats.list`, export switching and forget export still work
+
 ## 2.9.22 - render text entities safely
 
 Changed:

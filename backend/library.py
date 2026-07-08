@@ -82,6 +82,11 @@ def message_search_text(message: dict[str, Any]) -> str:
         message.get("service_text"),
         message.get("service_kind"),
         message.get("service_action"),
+        message.get("special_type"),
+        message.get("special_text"),
+        message.get("special_label"),
+        message.get("special_detail"),
+        message.get("special_fields"),
         message.get("pinned_message_preview"),
         message.get("pinned_message_id"),
         message.get("reply_to_message_from"),
@@ -118,7 +123,7 @@ def message_media_type(message: dict[str, Any]) -> str:
 
 
 def message_snippet(message: dict[str, Any]) -> str:
-    for key in ("text", "caption", "service_text", "pinned_message_preview", "reply_to_message_preview"):
+    for key in ("text", "caption", "special_text", "service_text", "pinned_message_preview", "reply_to_message_preview"):
         value = compact_value(message.get(key))
         if value:
             return value[:117].rstrip() + "..." if len(value) > 120 else value

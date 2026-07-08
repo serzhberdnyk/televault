@@ -111,6 +111,7 @@ const text = {
   pinnedMessage: 'закреплено сообщение',
   pinnedMessageFallback: 'сообщение',
   genericService: 'системное событие Telegram',
+  specialContentFallback: 'специальное сообщение Telegram',
   requestFailed: 'не удалось выполнить запрос',
   fileMissing: 'файл отсутствует в этом архиве',
   imageUnavailable: 'фото недоступно',
@@ -2123,6 +2124,39 @@ function renderMessageText(msg) {
   return renderFormattedTextPayload(messageTextPayload(msg));
 }
 
+function specialContentClassToken(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+function hasSpecialContent(msg) {
+  return Boolean(cleanVisibleText(msg?.special_text) || cleanVisibleText(msg?.special_label) || cleanVisibleText(msg?.special_type));
+}
+
+function renderSpecialField(field) {
+  const label = cleanVisibleText(field?.label);
+  const value = cleanVisibleText(field?.value);
+  if (!label || !value) return '';
+  return `
+    <div class="special-content__field">
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${escapeHtml(value)}</dd>
+    </div>
+  `;
+}
+
+function renderSpecialContent(msg) {
+  if (!hasSpecialContent(msg)) return '';
+  const title = cleanVisibleText(msg?.special_text) || cleanVisibleText(msg?.special_label) || text.specialContentFallback;
+  const fields = Array.isArray(msg?.special_fields) ? msg.special_fields.map(renderSpecialField).filter(Boolean) : [];
+  const type = specialContentClassToken(msg?.special_type);
+  return `
+    <section class="special-content special-content--${escapeAttr(type)}" aria-label="${escapeAttr(title)}">
+      <div class="special-content__title">${escapeHtml(title)}</div>
+      ${fields.length ? `<dl class="special-content__fields">${fields.join('')}</dl>` : ''}
+    </section>
+  `;
+}
+
 function createMessageDirectionContext(chat = {}, senders = []) {
   return {
     chatTitle: senderKey(chat?.title),
@@ -2352,9 +2386,11 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
     }
     const stickerMessage = isSticker(msg);
     const messageText = messageVisibleText(msg);
+    const specialContent = renderSpecialContent(msg);
     const messageHasText = messageText.trim().length > 0;
-    const audioOnlyMessage = isAudioOnlyMessage(msg);
-    const missingOnlyMessage = !stickerMessage && isMediaMissing(msg) && hasMedia(msg) && !messageHasText;
+    const messageHasSpecial = Boolean(specialContent);
+    const audioOnlyMessage = isAudioOnlyMessage(msg) && !messageHasSpecial;
+    const missingOnlyMessage = !stickerMessage && isMediaMissing(msg) && hasMedia(msg) && !messageHasText && !messageHasSpecial;
     const playableVideoNote = isPlayableVideoNote(msg);
     const mediaFirstCaptionLayout = usesMediaFirstCaptionLayout(msg);
     const mediaPreviewWidth = messageHasText && hasMedia(msg) && !stickerMessage && !audioOnlyMessage && !missingOnlyMessage && !playableVideoNote
@@ -2369,7 +2405,8 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       missingOnlyMessage ? 'message--missing-only' : '',
       playableVideoNote ? 'message--video-note' : '',
       hasMedia(msg) ? 'message--media' : '',
-      messageHasText ? 'message--text' : 'message--no-text',
+      messageHasSpecial ? 'message--special-content' : '',
+      messageHasText || messageHasSpecial ? 'message--text' : 'message--no-text',
       searchActive ? 'message--search-result' : '',
     ].filter(Boolean).join(' ');
     const bubbleClasses = [
@@ -2378,6 +2415,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
       stickerMessage ? 'bubble--sticker' : '',
       audioOnlyMessage ? 'bubble--audio-only' : '',
       missingOnlyMessage ? 'bubble--missing-only' : '',
+      messageHasSpecial ? 'bubble--special-content' : '',
       mediaPreviewWidth ? 'bubble--media-preview-sized' : '',
     ].filter(Boolean).join(' ');
     const bubbleStyle = mediaPreviewWidth ? ` style="--media-preview-width: ${mediaPreviewWidth}px"` : '';
@@ -2389,6 +2427,7 @@ function renderMessages(messages, chat = {}, senders = [], options = {}) {
         ${renderForwardedMeta(msg)}
         ${renderReplyPreview(msg)}
         ${mediaFirstCaptionLayout ? inlineMedia : ''}
+        ${specialContent}
         ${messageHasText ? `<div class="text">${renderMessageText(msg)}</div>` : ''}
         ${mediaFirstCaptionLayout ? '' : inlineMedia}
       </div>

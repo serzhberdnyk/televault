@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.23
+
+### Changed
+
+* Telegram poll, contact, location, venue, invoice/payment, game and dice messages now get compact normalized `special_*` fallback fields when those export fields are present.
+* Unknown non-media `media_type` values now keep a neutral Telegram special-message fallback instead of disappearing as empty messages.
+* Special fallback text and safe detail fields are included in backend message search, global search snippets and reply previews.
+* The chat view now renders special content as compact message-like content inside the normal message bubble, not as centered service notices.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.23.
+* Media endpoint, media security model, storage settings format, export catalog/forget behavior, search UI, service notice labels, audio playback, text entity rendering, README and release packaging logic were not intentionally changed.
+
 ## 2.9.22
 
 ### Changed
