@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## Docs after 2.9.28 - safe screenshots refresh
+
+Changed:
+- created `docs/demo/demo-export/` as a minimal synthetic Telegram Desktop JSON export for safe screenshot capture
+- replaced the public PNG screenshots in `docs/screenshots/` with current 2.9.28 UI screenshots captured only from demo data
+- covered the loaded chat list, chat reading with reply/edited/service notice, photo lightbox and media/file/audio states
+- updated `docs/SCREENSHOTS.md`, `docs/DEMO_EXPORT.md` and `CHANGELOG.md` with capture notes and privacy-review status
+- did not change APP_VERSION because this is a docs/screenshots-only patch
+- did not change backend, frontend, parser, storage, media endpoint, build/package scripts or release logic
+
+Manual test:
+- load `docs/demo/demo-export/` and confirm it opens as 4 fake chats
+- visually review every PNG in `docs/screenshots/`
+- confirm screenshots contain no `C:\Users\...`, phone numbers, emails, usernames, private messages, personal filenames, tokens, keys, logs, cache or `user_data`
+- confirm screenshots do not show the old sidebar `Архивы` block or old `архив открыт` card
+- verify README screenshot links, if any, point to existing files
+- run `git diff --check`
+- do not run package/release
+
 ## Docs after 2.9.28 - cleanup after audit fixes
 
 Changed:

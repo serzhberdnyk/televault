@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-label="TeleVault demo placeholder image">
+  <rect width="960" height="640" fill="#f3f5f7"/>
+  <rect x="56" y="56" width="848" height="528" rx="28" fill="#ffffff" stroke="#d7dde4" stroke-width="4"/>
+  <rect x="96" y="96" width="770" height="350" rx="20" fill="#dce8f5"/>
+  <circle cx="725" cy="166" r="54" fill="#f7c76f"/>
+  <path d="M96 446 300 266 444 386 560 292 866 446Z" fill="#88b4a7"/>
+  <path d="M96 446 256 318 402 446Z" fill="#679b8e"/>
+  <rect x="128" y="492" width="292" height="22" rx="11" fill="#96a3b2"/>
+  <rect x="128" y="530" width="512" height="18" rx="9" fill="#c6ced8"/>
+  <text x="480" y="582" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#596575">Demo media only</text>
+</svg>

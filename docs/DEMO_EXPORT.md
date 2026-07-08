@@ -1,128 +1,65 @@
-# TeleVault demo export plan
+# TeleVault demo export
 
-## Purpose
+`docs/demo/demo-export/` is a minimal synthetic Telegram Desktop JSON export used for safe public screenshots and manual UI checks.
 
-The demo export is a future fake Telegram Desktop export for safe public screenshots and manual checks. It should let TeleVault show realistic archive reading, media preview, and search behavior without exposing personal chats, local machine details, private files, or real media.
+The fixture is intentionally small. It exists only to show the current TeleVault UI without exposing private Telegram data, local machine details, private media or personal filenames.
 
-This document is only a plan. The demo export does not exist yet.
-
-## Current parser assumptions
-
-- Supported export format: Telegram Desktop JSON export with `result.json`.
-- Full export support: a Telegram Desktop JSON export can contain several chats through `chats.list`; `left_chats.list` is also read when present.
-- Single-chat support: a `result.json` with a top-level `messages` array is treated as one chat.
-- HTML export support: not confirmed yet. The current backend searches for `result.json` and reads JSON only.
-- Expected entry files: the selected folder should normally be the Telegram Desktop export folder that contains `result.json`.
-- Wrong-folder behavior: TeleVault also performs a bounded shallow search for nearby `result.json` files so a slightly wrong folder can still open, but broad recursive folder imports should not be used as the demo baseline.
-- Minimal JSON shape: a top-level object with a `messages` array. `name` or `title` is used for the chat title when present; otherwise the export folder name is used.
-- Expected media paths: message media is read from `file`, `photo`, or `thumbnail` fields. Paths are expected to be relative to the folder that contains that `result.json`.
-- Media classification: file extension, `mime_type`, `media_type`, and whether the field is `file`, `photo`, or `thumbnail` are used to classify image, video, audio, sticker, or file messages.
-- Media safety: media URLs are served only from inside the selected export root. Absolute paths or paths outside that root should not be used in demo data.
-- Any uncertainty: not confirmed yet whether the proposed media folder names below match every Telegram Desktop export variant. The current parser follows the relative paths written in `result.json` rather than requiring fixed folder names.
-
-## Recommended safe demo content
-
-Use only fake, neutral chats:
-
-- `Alice`
-- `Bob`
-- `Family Archive`
-- `Work Notes`
-
-Use short, ordinary messages:
-
-- travel plans, such as train times, hotel check-in, or packing reminders
-- project notes, such as draft status, meeting agenda, or follow-up items
-- grocery reminders, such as milk, apples, bread, or coffee
-- photo placeholder messages, such as "Here is the photo placeholder."
-- voice note placeholder messages, such as "Voice note placeholder for the demo."
-- file attachment placeholder messages, such as "Attached notes-example.txt for review."
-
-Do not include:
-
-- real people
-- real chats
-- real usernames
-- real phone numbers
-- real emails
-- real avatars
-- private media
-- real file paths
-- private filenames
-
-## Proposed minimal export structure
-
-Do not create this folder in this patch. A future fake fixture could use a small JSON export with relative media paths:
+## Structure
 
 ```text
-demo-export/
+docs/demo/demo-export/
   result.json
   photos/
-    photo-example.jpg
-  video_files/
-    video-example.mp4
-  voice_messages/
-    voice-example.ogg
-  audio_files/
-    audio-example.mp3
+    photo-example.svg
   files/
     notes-example.txt
+  audio/
+    voice-note-example.ogg
 ```
 
-For several fake chats, prefer one full-export style `result.json` with `chats.list`. A small parent folder with several single-chat `result.json` files may be useful for bounded-scan testing, but it should not be presented as a visible multi-export manager:
+The export uses a full-export style `result.json` with `chats.list` so TeleVault can show several conversations from one selected export folder.
 
-```text
-demo-library/
-  alice/
-    result.json
-    photos/
-  bob/
-    result.json
-    voice_messages/
-  family-archive/
-    result.json
-    video_files/
-  work-notes/
-    result.json
-    files/
-```
+## Demo content
 
-The future `result.json` files should reference media with relative paths only, for example `photos/photo-example.jpg` or `files/notes-example.txt`.
+The fixture contains only fake chats and neutral messages:
 
-## Media placeholders
+- `Project Room`
+- `Travel Notes`
+- `Family Notes`
+- `Media Samples`
 
-Future placeholder files should be clearly fake and safe:
+Covered UI states:
 
-- `photo-example.jpg`
-- `video-example.mp4`
-- `voice-example.ogg`
-- `audio-example.mp3`
-- `notes-example.txt`
+- loaded export with several chats
+- chat reading
+- reply preview
+- edited message metadata
+- service notices
+- placeholder photo preview
+- placeholder photo lightbox
+- safe text file attachment
+- safe audio UI placeholder
+- special-content fallback through a demo poll
+- neutral search terms such as `demo` and `checklist`
 
-Do not add these files yet. Do not use real photos, recordings, documents, thumbnails, avatars, screenshots, or private filenames.
+## Safety rules
 
-## Screenshot coverage
+The demo export must stay synthetic:
 
-A safe demo export should cover:
+- no real people or real chat names
+- no usernames
+- no phone numbers
+- no email addresses
+- no private messages
+- no private photos, recordings, documents or screenshots
+- no absolute local paths
+- no personal filenames
+- no tokens, keys, logs, cache or `user_data`
 
-- selected export screen with several fake conversations visible
-- chat reading with short neutral messages
-- photo preview or lightbox with a placeholder image
-- voice, audio, video, and file messages with placeholder media
-- search inside a conversation using a neutral query
+Media references in `result.json` must stay relative to `docs/demo/demo-export/`.
 
-## Release/package caution
+## Packaging caution
 
-- The demo export must not be bundled into the user release zip unless explicitly intended.
-- The release zip must not contain personal exports, cache, logs, or `user_data`.
-- Any demo data must be clearly fake, safe, and reviewed before public use.
-- Current portable packaging appears allowlist-based and does not include `docs/` or arbitrary fixture folders by default, but this should be rechecked before any release packaging change.
+This fixture is documentation/demo data. Do not include it in release packages unless a future release task explicitly asks for that and reviews the privacy impact.
 
-## Next implementation step
-
-A later patch can:
-
-- create a minimal fake demo export fixture
-- verify TeleVault can import it
-- visually review the app with that fixture
-- take screenshots manually after privacy and visual review
+Current release/package scripts were not changed for this screenshot refresh.

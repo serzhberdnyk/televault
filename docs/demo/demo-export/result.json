@@ -1,0 +1,186 @@
+{
+  "name": "TeleVault Demo Export",
+  "type": "personal_chat",
+  "id": 1000,
+  "chats": {
+    "list": [
+      {
+        "name": "Project Room",
+        "type": "private_group",
+        "id": 1001,
+        "messages": [
+          {
+            "id": 1,
+            "type": "message",
+            "date": "2026-02-15T09:10:00",
+            "from": "Mira Lane",
+            "text": "Draft outline is ready for the demo archive."
+          },
+          {
+            "id": 2,
+            "type": "message",
+            "date": "2026-02-15T09:18:00",
+            "edited": "2026-02-15T09:24:00",
+            "from": "Noah Vale",
+            "reply_to_message_id": 1,
+            "text": "I added a short review note and kept the wording neutral."
+          },
+          {
+            "id": 3,
+            "type": "service",
+            "date": "2026-02-15T09:26:00",
+            "actor": "Mira Lane",
+            "action": "edit_chat_title",
+            "old_title": "Demo Notes",
+            "new_title": "Project Room"
+          },
+          {
+            "id": 4,
+            "type": "message",
+            "date": "2026-02-15T09:34:00",
+            "from": "Mira Lane",
+            "photo": "photos/photo-example.svg",
+            "width": 960,
+            "height": 640,
+            "text": "Placeholder photo for the demo screen."
+          },
+          {
+            "id": 5,
+            "type": "message",
+            "date": "2026-02-15T09:42:00",
+            "from": "Noah Vale",
+            "file": "files/notes-example.txt",
+            "mime_type": "text/plain",
+            "file_size": 180,
+            "text": "Attached notes-example.txt for the archive review."
+          },
+          {
+            "id": 6,
+            "type": "message",
+            "date": "2026-02-15T09:48:00",
+            "from": "Mira Lane",
+            "file": "audio/voice-note-example.ogg",
+            "mime_type": "audio/ogg",
+            "media_type": "voice_message",
+            "duration_seconds": 7,
+            "text": "Voice note placeholder for the demo."
+          },
+          {
+            "id": 7,
+            "type": "message",
+            "date": "2026-02-15T09:55:00",
+            "from": "Noah Vale",
+            "poll": {
+              "question": "Which demo view should be captured next?",
+              "answers": [
+                {
+                  "text": "Media view"
+                },
+                {
+                  "text": "Lightbox view"
+                }
+              ],
+              "total_voters": 2
+            }
+          },
+          {
+            "id": 8,
+            "type": "service",
+            "date": "2026-02-15T10:02:00",
+            "actor": "Noah Vale",
+            "action": "pin_message",
+            "message_id": 4,
+            "text": "Noah Vale pinned a demo photo message."
+          }
+        ]
+      },
+      {
+        "name": "Travel Notes",
+        "type": "personal_chat",
+        "id": 1002,
+        "messages": [
+          {
+            "id": 1,
+            "type": "message",
+            "date": "2026-02-16T11:00:00",
+            "from": "Iris Stone",
+            "text": "Packing list is short: notebook, charger, water bottle."
+          },
+          {
+            "id": 2,
+            "type": "message",
+            "date": "2026-02-16T11:18:00",
+            "from": "Owen Reed",
+            "text": "Hotel check-in note is saved in the shared folder."
+          },
+          {
+            "id": 3,
+            "type": "message",
+            "date": "2026-02-16T11:36:00",
+            "from": "Iris Stone",
+            "text": "The demo search can find the word checklist here."
+          }
+        ]
+      },
+      {
+        "name": "Family Notes",
+        "type": "private_group",
+        "id": 1003,
+        "messages": [
+          {
+            "id": 1,
+            "type": "message",
+            "date": "2026-02-17T08:12:00",
+            "from": "Lena Moss",
+            "text": "Please bring apples, bread and coffee."
+          },
+          {
+            "id": 2,
+            "type": "message",
+            "date": "2026-02-17T08:25:00",
+            "from": "Theo Park",
+            "text": "Done. I also added a reminder for the demo archive."
+          }
+        ]
+      },
+      {
+        "name": "Media Samples",
+        "type": "private_group",
+        "id": 1004,
+        "messages": [
+          {
+            "id": 1,
+            "type": "message",
+            "date": "2026-02-18T14:00:00",
+            "from": "Mira Lane",
+            "photo": "photos/photo-example.svg",
+            "width": 960,
+            "height": 640,
+            "text": "A safe placeholder image for screenshots."
+          },
+          {
+            "id": 2,
+            "type": "message",
+            "date": "2026-02-18T14:08:00",
+            "from": "Noah Vale",
+            "file": "files/notes-example.txt",
+            "mime_type": "text/plain",
+            "file_size": 180,
+            "text": "A safe text attachment for file preview."
+          },
+          {
+            "id": 3,
+            "type": "message",
+            "date": "2026-02-18T14:16:00",
+            "from": "Mira Lane",
+            "file": "audio/voice-note-example.ogg",
+            "mime_type": "audio/ogg",
+            "media_type": "voice_message",
+            "duration_seconds": 7,
+            "text": "A safe voice placeholder for audio UI."
+          }
+        ]
+      }
+    ]
+  }
+}

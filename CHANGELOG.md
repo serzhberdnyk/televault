@@ -4,10 +4,13 @@
 
 ### Changed
 
+* Refreshed the public screenshots in `docs/screenshots/` from the current 2.9.28 UI using only synthetic demo data.
+* Added `docs/demo/demo-export/` as a minimal safe Telegram Desktop JSON export fixture for screenshot capture and manual documentation checks.
+* Updated screenshot and demo-export docs with capture notes and privacy-review status for the refreshed PNG files.
 * Updated README to describe the current local/offline Telegram Desktop export reader without promising a visible archive manager, sidebar archive cards or visible multi-export UI.
 * Clarified current support for full JSON exports with `chats.list`, `left_chats.list`, single-chat exports, replies/edited metadata, service notices, text entities, audio metadata and special-content fallbacks.
 * Updated screenshot, demo-export, public-submission and dev docs that still described old multi-export library UI or old build-plan versions as current instructions.
-* Marked existing public screenshots as needing a refresh before publication because they show historical UI and local/path-like details.
+* Replaced the historical public screenshots that showed old UI and local/path-like details.
 * No app version, backend, frontend, parser, storage, media endpoint, build scripts or release/package logic changed.
 
 ## 2.9.28
