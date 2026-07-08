@@ -15,6 +15,11 @@ const state = {
   vaultMissing: false,
   missingVaultPath: '',
   exports: [],
+  archiveManagerOpen: false,
+  archiveManagerLoading: false,
+  archiveManagerError: '',
+  archiveManagerBusyId: '',
+  archiveManagerBusyAction: '',
   selectedChatId: null,
   lightboxPhotos: [],
   lightboxIndex: -1,
@@ -153,6 +158,15 @@ const text = {
   forgotExport: 'архив убран из библиотеки',
   openingExport: 'открываем архив...',
   savedExportOpenFailed: 'не удалось открыть сохранённый архив',
+  archives: 'архивы',
+  archiveManagerLoading: 'обновляем архивы...',
+  archiveManagerLoadFailed: 'не удалось обновить список архивов',
+  archiveManagerEmptyTitle: 'сохранённых архивов пока нет',
+  archiveManagerEmptyBody: 'выберите папку экспорта Telegram Desktop.',
+  currentArchive: 'текущий архив',
+  unavailableArchive: 'недоступен',
+  forgetFromLibrary: 'забыть из библиотеки',
+  forgettingExport: 'забываем...',
   storageReady: 'архив открыт',
   storageLoading: 'открываем локальный архив...',
   storageNotSelected: 'библиотека пуста',
@@ -517,20 +531,23 @@ function exportDisplayName(item) {
   return safeUiText(item?.label) || safeUiText(item?.folderName) || text.storageFolderFallback;
 }
 
-async function refreshExportCatalog() {
+async function refreshExportCatalog(options = {}) {
   try {
     const data = await api('/api/exports');
     state.exports = Array.isArray(data.exports) ? data.exports : [];
+    return true;
   } catch (e) {
     state.exports = Array.isArray(state.exports) ? state.exports : [];
     console.warn('TeleVault: failed to refresh export catalog', e);
+    if (options.throwOnError) throw e;
+    return false;
   }
 }
 
 async function openSavedExport(exportId, options = {}) {
-  if (!exportId) return;
+  if (!exportId) return false;
   const current = state.exports.find(item => item.id === exportId);
-  if (!options.force && current?.active && state.vaultLoaded && !current?.missing) return;
+  if (!options.force && current?.active && state.vaultLoaded && !current?.missing) return true;
 
   const hadOpenVault = state.vaultLoaded;
   if (!hadOpenVault) {
@@ -541,6 +558,7 @@ async function openSavedExport(exportId, options = {}) {
   try {
     const data = await api(`/api/exports/${encodeURIComponent(exportId)}/open`, { method: 'POST' });
     await afterLibraryLoaded(data);
+    return true;
   } catch (e) {
     const message = cleanErrorMessage(e) || text.savedExportOpenFailed;
     state.exports = state.exports.map(item => (
@@ -550,6 +568,7 @@ async function openSavedExport(exportId, options = {}) {
       setLibraryMessage(text.savedExportOpenFailed, 'warning', message);
       renderVaultWelcome({ mode: 'missing' });
     }
+    return false;
   } finally {
     await refreshExportCatalog();
   }
@@ -581,9 +600,9 @@ function clearCurrentLibraryForSwitch(message = text.openingExport) {
 }
 
 async function forgetSavedExport(exportId, options = {}) {
-  if (!exportId) return;
+  if (!exportId) return false;
   const item = state.exports.find(exportItem => exportItem.id === exportId) || {};
-  if (!options.skipConfirm && !window.confirm(forgetExportConfirmMessage(item))) return;
+  if (!options.skipConfirm && !window.confirm(forgetExportConfirmMessage(item))) return null;
 
   if (state.vaultMissing && item.missing) setForgetMissingButtonLoading(true);
 
@@ -594,18 +613,19 @@ async function forgetSavedExport(exportId, options = {}) {
     state.exports = state.exports.filter(exportItem => exportItem.id !== exportId);
     await refreshExportCatalog();
 
-    if (!wasActive) return;
+    if (!wasActive) return true;
 
     if (nextActiveExportId) {
       clearCurrentLibraryForSwitch(text.openingExport);
       await openSavedExport(nextActiveExportId, { force: true });
-      return;
+      return true;
     }
 
     setLibraryEmpty();
     setLibraryMessage(item.missing ? text.forgotUnavailableExport : text.forgotExport, 'empty', text.storageNotSelectedBody);
     renderConversationList();
     renderVaultWelcome({ mode: 'empty' });
+    return true;
   } catch (e) {
     await refreshExportCatalog();
     if (state.vaultMissing) {
@@ -614,6 +634,7 @@ async function forgetSavedExport(exportId, options = {}) {
       setLibraryMessage(text.savedVaultMissing, 'warning', cleanErrorMessage(e) || text.forgetExportFailed);
       renderVaultWelcome({ mode: 'missing' });
     }
+    return false;
   } finally {
     setForgetMissingButtonLoading(false);
   }
@@ -634,6 +655,199 @@ function setForgetMissingButtonLoading(isLoading) {
   button.disabled = isLoading;
   button.setAttribute('aria-busy', String(isLoading));
   button.innerHTML = `${icons.close}<span>${isLoading ? text.forgettingUnavailableExport : text.forgetUnavailableExport}</span>`;
+}
+
+function setArchiveManagerTriggerLoading(isLoading) {
+  const button = $('archiveManagerOpen');
+  if (!button) return;
+  button.disabled = isLoading && !state.archiveManagerOpen;
+  button.setAttribute('aria-busy', String(isLoading));
+}
+
+async function openArchiveManager() {
+  state.archiveManagerOpen = true;
+  state.archiveManagerLoading = true;
+  state.archiveManagerError = '';
+  state.archiveManagerBusyId = '';
+  state.archiveManagerBusyAction = '';
+  showArchiveManager();
+  renderArchiveManager();
+  setArchiveManagerTriggerLoading(true);
+
+  try {
+    await refreshExportCatalog({ throwOnError: true });
+  } catch (e) {
+    state.archiveManagerError = cleanErrorMessage(e) || text.archiveManagerLoadFailed;
+  } finally {
+    state.archiveManagerLoading = false;
+    setArchiveManagerTriggerLoading(false);
+    renderArchiveManager();
+    focusArchiveManagerClose();
+  }
+}
+
+function showArchiveManager() {
+  const manager = $('archiveManager');
+  if (!manager) return;
+  manager.hidden = false;
+  requestAnimationFrame(() => {
+    if (state.archiveManagerOpen) manager.classList.add('open');
+  });
+}
+
+function closeArchiveManager() {
+  const manager = $('archiveManager');
+  state.archiveManagerOpen = false;
+  state.archiveManagerLoading = false;
+  state.archiveManagerError = '';
+  state.archiveManagerBusyId = '';
+  state.archiveManagerBusyAction = '';
+  setArchiveManagerTriggerLoading(false);
+  if (!manager || manager.hidden) return;
+  manager.classList.remove('open');
+  setTimeout(() => {
+    if (!state.archiveManagerOpen) manager.hidden = true;
+  }, 140);
+}
+
+function focusArchiveManagerClose() {
+  const manager = $('archiveManager');
+  const closeButton = manager?.querySelector('.archive-manager__close');
+  if (!closeButton) return;
+  try {
+    closeButton.focus({ preventScroll: true });
+  } catch {
+    closeButton.focus();
+  }
+}
+
+function renderArchiveManager() {
+  const body = $('archiveManagerBody');
+  if (!body) return;
+
+  const errorHtml = state.archiveManagerError
+    ? `<div class="archive-manager__notice archive-manager__notice--error">${escapeHtml(state.archiveManagerError)}</div>`
+    : '';
+
+  if (state.archiveManagerLoading) {
+    body.innerHTML = `${errorHtml}${renderEmptyState(
+      text.archiveManagerLoading,
+      '',
+      { className: 'empty-state--archive-manager' }
+    )}`;
+    return;
+  }
+
+  const exports = Array.isArray(state.exports)
+    ? state.exports.filter(item => item && item.id)
+    : [];
+
+  if (!exports.length) {
+    body.innerHTML = `${errorHtml}${renderEmptyState(
+      text.archiveManagerEmptyTitle,
+      text.archiveManagerEmptyBody,
+      { className: 'empty-state--archive-manager' }
+    )}`;
+    return;
+  }
+
+  body.innerHTML = `
+    ${errorHtml}
+    <div class="archive-manager__list">
+      ${exports.map(renderArchiveManagerItem).join('')}
+    </div>
+  `;
+}
+
+function renderArchiveManagerItem(item) {
+  const id = String(item.id || '');
+  const name = exportDisplayName(item);
+  const isActive = item.active === true;
+  const isMissing = item.missing === true;
+  const isBusy = state.archiveManagerBusyId === id;
+  const isOpening = isBusy && state.archiveManagerBusyAction === 'open';
+  const isForgetting = isBusy && state.archiveManagerBusyAction === 'forget';
+  const itemClasses = [
+    'archive-manager__item',
+    isActive ? 'is-active' : '',
+    isMissing ? 'is-missing' : '',
+  ].filter(Boolean).join(' ');
+  const badges = [
+    isActive ? `<span class="archive-manager__badge archive-manager__badge--active">${text.currentArchive}</span>` : '',
+    isMissing ? `<span class="archive-manager__badge archive-manager__badge--missing">${text.unavailableArchive}</span>` : '',
+  ].filter(Boolean).join('');
+  const openButton = (!isActive && !isMissing)
+    ? `
+      <button type="button" class="archive-manager__action archive-manager__action--open" data-archive-open="${escapeAttr(id)}" ${state.archiveManagerBusyId ? 'disabled' : ''}>
+        ${isOpening ? text.openingExport : text.open}
+      </button>
+    `
+    : '';
+
+  return `
+    <article class="${itemClasses}">
+      <div class="archive-manager__item-main">
+        <strong>${escapeHtml(name)}</strong>
+        ${badges ? `<div class="archive-manager__badges">${badges}</div>` : ''}
+      </div>
+      <div class="archive-manager__actions">
+        ${openButton}
+        <button type="button" class="archive-manager__action archive-manager__action--forget" data-archive-forget="${escapeAttr(id)}" title="${escapeAttr(text.forgetFromLibrary)}" ${state.archiveManagerBusyId ? 'disabled' : ''}>
+          ${isForgetting ? text.forgettingExport : text.forgetFromLibrary}
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+async function openArchiveManagerExport(exportId) {
+  if (!exportId || state.archiveManagerBusyId) return;
+  const item = state.exports.find(exportItem => exportItem.id === exportId);
+  if (!item || item.active || item.missing) return;
+
+  state.archiveManagerBusyId = exportId;
+  state.archiveManagerBusyAction = 'open';
+  state.archiveManagerError = '';
+  renderArchiveManager();
+
+  const opened = await openSavedExport(exportId, { force: true });
+  state.archiveManagerBusyId = '';
+  state.archiveManagerBusyAction = '';
+
+  if (opened) {
+    closeArchiveManager();
+    return;
+  }
+
+  state.archiveManagerError = text.savedExportOpenFailed;
+  await refreshExportCatalog();
+  if (state.archiveManagerOpen) renderArchiveManager();
+}
+
+async function forgetArchiveManagerExport(exportId) {
+  if (!exportId || state.archiveManagerBusyId) return;
+
+  state.archiveManagerBusyId = exportId;
+  state.archiveManagerBusyAction = 'forget';
+  state.archiveManagerError = '';
+  renderArchiveManager();
+
+  const forgotten = await forgetSavedExport(exportId);
+  state.archiveManagerBusyId = '';
+  state.archiveManagerBusyAction = '';
+
+  if (forgotten === false) {
+    state.archiveManagerError = text.forgetExportFailed;
+  }
+  await refreshExportCatalog();
+  if (state.archiveManagerOpen) renderArchiveManager();
+}
+
+function handleArchiveManagerKeydown(event) {
+  if (!state.archiveManagerOpen) return;
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  closeArchiveManager();
 }
 
 function updateMediaTabs() {
@@ -3439,12 +3653,37 @@ function logPerformance(label, startedAt, details = {}) {
 }
 
 function bindControls() {
+  document.addEventListener('keydown', handleArchiveManagerKeydown);
   document.addEventListener('keydown', handleLightboxKeydown);
   document.addEventListener('play', handleRegularMediaPlay, true);
   document.addEventListener('play', handleVideoNoteMediaState, true);
   document.addEventListener('pause', handleVideoNoteMediaState, true);
   document.addEventListener('ended', handleVideoNoteMediaState, true);
   document.addEventListener('click', event => {
+    const archiveManagerClose = event.target.closest('[data-archive-manager-close]');
+    if (archiveManagerClose) {
+      event.preventDefault();
+      closeArchiveManager();
+      return;
+    }
+    const archiveManagerOpen = event.target.closest('[data-archive-manager-open]');
+    if (archiveManagerOpen) {
+      event.preventDefault();
+      openArchiveManager();
+      return;
+    }
+    const archiveOpenTrigger = event.target.closest('[data-archive-open]');
+    if (archiveOpenTrigger) {
+      event.preventDefault();
+      openArchiveManagerExport(archiveOpenTrigger.dataset.archiveOpen || '');
+      return;
+    }
+    const archiveForgetTrigger = event.target.closest('[data-archive-forget]');
+    if (archiveForgetTrigger) {
+      event.preventDefault();
+      forgetArchiveManagerExport(archiveForgetTrigger.dataset.archiveForget || '');
+      return;
+    }
     const forgetTrigger = event.target.closest('[data-forget-missing-export]');
     if (forgetTrigger) {
       event.preventDefault();
@@ -3495,6 +3734,7 @@ function bindControls() {
 async function init() {
   ensureLightbox();
   setFolderButtonLoading(false);
+  setArchiveManagerTriggerLoading(false);
   updateMediaTabs();
   bindControls();
   setLibraryEmpty();

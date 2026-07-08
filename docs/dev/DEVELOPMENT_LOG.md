@@ -38,6 +38,30 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.27 - compact archive manager
+
+Changed:
+- added a compact `архивы` button below the export picker instead of restoring the permanent sidebar archive block
+- added an archive manager modal that lists saved exports by safe label/folder name, marks the current archive and unavailable archives, and keeps full local paths out of visible manager UI
+- wired manager open actions to the existing `/api/exports/<id>/open` flow so successful archive switches refresh the conversation list through the existing library-load path
+- wired manager forget actions to the existing `/api/exports/<id>/forget` flow with confirmation that files on disk stay in place
+- added a calm empty state when there are no saved exports
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.27
+- backend parser/library/storage format, export catalog API/model, `/media`, media security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.27
+- confirm the sidebar still does not show a permanent `Архивы` block, export cards, active badges, opened dates or per-card `×` buttons
+- click `архивы` and confirm the archive manager opens
+- confirm saved exports are shown by safe labels without full paths such as `C:\Users\...`
+- confirm the current export is marked as current and unavailable exports are marked as unavailable
+- open another available saved export from the manager and confirm the conversation list refreshes
+- forget a missing export and confirm the confirmation says files stay on disk
+- confirm the existing add/export folder flow still works
+
 ## 2.9.26 - friendly corrupted result.json errors
 
 Changed:

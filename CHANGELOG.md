@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.27
+
+### Changed
+
+* Added a compact "архивы" button under the export picker that opens an archive manager modal instead of restoring permanent sidebar archive cards.
+* The archive manager lists saved exports by safe label/folder name, marks the current archive and unavailable archives, and keeps absolute local paths out of the normal UI.
+* Available non-active exports can be opened from the manager through the existing `/api/exports/<id>/open` flow, then the manager closes after the archive loads.
+* Saved exports can be forgotten from the manager with confirmation that files on disk stay in place, using the existing `/api/exports/<id>/forget` behavior.
+* Added an empty archive-manager state for libraries without saved exports.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.27.
+* Backend parser/library/storage format, export catalog API/model, media endpoint/security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, README and release packaging logic were not intentionally changed.
+
 ## 2.9.26
 
 ### Changed
