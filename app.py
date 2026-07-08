@@ -22,13 +22,15 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.28"
+APP_VERSION = "2.9.29"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
 FRONTEND = ROOT / "frontend"
 LIBRARY = ExportLibrary()
 MEDIA_CHUNK_SIZE = 1024 * 1024
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 def stable_app_root_id(root: Path) -> str:

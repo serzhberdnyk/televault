@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.29 - wire app icon
+
+Changed:
+- connected the prepared TeleVault icon assets in `frontend/index.html` through ICO, PNG favicon and manifest links
+- added `frontend/manifest.webmanifest` with TeleVault metadata, dark theme colors and 128/256/512 px icon entries
+- refreshed `frontend/favicon.ico` from `frontend/assets/icons/televault.ico` so `/favicon.ico` uses the selected archive-box concept
+- updated `tools/launcher/TeleVaultLauncher.rc` to embed `frontend/assets/icons/televault.ico` in future native launcher builds
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.29
+- did not change parser, library storage, media endpoint/security, search, message rendering behavior or release/package artifacts
+
+Manual test:
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.29
+- open `/favicon.ico`, `/manifest.webmanifest` and the manifest icon paths from the local app
+- confirm the browser tab uses the TeleVault favicon
+- rebuild the native launcher separately before release to confirm the generated `TeleVault.exe` embeds the TeleVault icon
+- remember that the window/taskbar icon can still show Edge in the current browser-hosted launch mode
+- run `git diff --check`
+- do not run package/release
+
 ## Branding after 2.9.28 - icon assets preparation
 
 Changed:

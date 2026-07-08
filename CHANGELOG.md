@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.29
+
+### Changed
+
+* Wired the prepared TeleVault archive-box icon into the frontend favicon links and web manifest.
+* Added `frontend/manifest.webmanifest` with TeleVault app metadata and icon entries from `frontend/assets/icons/`.
+* Updated `/favicon.ico` to use the prepared TeleVault icon bytes.
+* Updated the native launcher resource file so future `TeleVault.exe` builds embed `frontend/assets/icons/televault.ico`.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.29.
+* Parser, library storage, media endpoint/security, search, service notices, replies/edited, text entities, audio metadata, special content fallbacks and release/package artifacts were not intentionally changed.
+
 ## Docs after 2.9.28
 
 ### Changed

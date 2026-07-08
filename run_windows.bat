@@ -3,7 +3,7 @@ chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
 
-echo starting TeleVault v2.9.28...
+echo starting TeleVault v2.9.29...
 
 set "APP_SCRIPT=%~dp0app.py"
 set "BUNDLED_PYTHON=%~dp0runtime\python\python.exe"
