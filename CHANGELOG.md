@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.33
+
+### Changed
+
+* Replaced the old inline shield SVG in the central welcome empty state with `frontend/assets/icons/icon-128.png`.
+* Kept the existing welcome copy and card layout, with only small image sizing/spacing adjustments for the larger TeleVault archive-box icon.
+* Removed the now-unused old shield SVG paint styles from the frontend stylesheet.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.33.
+* Backend, parser, library storage, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks and release/package artifacts were not intentionally changed.
+
 ## 2.9.32
 
 ### Changed

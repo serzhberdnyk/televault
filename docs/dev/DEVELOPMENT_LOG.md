@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.33 - welcome icon
+
+Changed:
+- replaced the old inline shield SVG in the central welcome empty state with `frontend/assets/icons/icon-128.png`
+- kept the existing welcome text and card structure intact
+- adjusted only the welcome icon size/spacing so the TeleVault archive-box icon reads clearly in the empty state
+- removed unused old shield SVG paint styles from `frontend/styles.css`
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.33
+- did not change backend, parser, library storage, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks, README or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.33
+- visually confirm the welcome empty state uses the TeleVault archive-box icon instead of the old shield SVG
+- visually confirm the sidebar brand icon still renders and the add-export button, search and chat list layout did not shift
+- do not tag, push or build a release/package
+
 ## 2.9.32 - sidebar brand icon
 
 Changed:
