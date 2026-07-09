@@ -38,6 +38,24 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.32 - sidebar brand icon
+
+Changed:
+- replaced the old inline shield SVG in the sidebar brand block with `frontend/assets/icons/icon-64.png`
+- kept the existing sidebar header layout, title and subtitle intact
+- adjusted only the brand image size/object-fit so the TeleVault icon renders crisply on the dark sidebar without an extra frame or background
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.32
+- did not change backend, parser, library storage, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks, README or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.32
+- visually confirm the sidebar brand uses the TeleVault archive-box icon instead of the old shield mark
+- confirm the TeleVault title, subtitle, search, add-export button and conversation list layout did not shift
+- do not tag, push or build a release/package
+
 ## Docs after 2.9.31 - clarify launcher usage
 
 Changed:

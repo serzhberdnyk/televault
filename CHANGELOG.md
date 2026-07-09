@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.32
+
+### Changed
+
+* Replaced the old inline shield mark in the sidebar brand block with `frontend/assets/icons/icon-64.png`.
+* Kept the sidebar header structure intact and adjusted only the brand image sizing so the TeleVault icon stays crisp on the dark sidebar.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.32.
+* Backend, parser, library storage, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks and release/package artifacts were not intentionally changed.
+
 ## Docs after 2.9.31
 
 ### Changed
