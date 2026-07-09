@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.35
+
+### Changed
+
+* Restored the storage model to one active Telegram export stored as `lastVaultPath`.
+* Migrated legacy settings with `exports[]` and `activeExportId` to a single `lastVaultPath` without requiring manual settings cleanup.
+* Removed the hidden export catalog API and frontend refresh/open/forget catalog calls.
+* Kept wrong-folder and corrupted-export failures from changing `lastVaultPath` or clearing the already opened archive.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.35.
+* Parser, library parsing support, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks, icon/launcher identity and release/package artifacts were not intentionally changed.
+
 ## 2.9.34
 
 ### Changed

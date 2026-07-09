@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse, unquote
-import hashlib
 import json
 import mimetypes
 import os
@@ -22,7 +20,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.34"
+APP_VERSION = "2.9.35"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
@@ -106,10 +104,6 @@ def write_settings(data: dict) -> None:
     tmp.replace(path)
 
 
-def utc_now_text() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
 def resolved_export_path(folder: str) -> Path:
     path = Path(folder).expanduser()
     try:
@@ -118,177 +112,7 @@ def resolved_export_path(folder: str) -> Path:
         return path.absolute()
 
 
-def export_path_key(folder: str) -> str:
-    try:
-        value = str(resolved_export_path(folder))
-    except (OSError, RuntimeError):
-        value = str(Path(folder).expanduser())
-    return os.path.normcase(os.path.normpath(value))
-
-
-def export_id_for_path(folder: str) -> str:
-    digest = hashlib.sha256(export_path_key(folder).encode("utf-8")).hexdigest()[:16]
-    return f"exp_{digest}"
-
-
-def export_label_for_path(path: Path) -> str:
-    return path.name or "экспорт Telegram"
-
-
-def export_record_for_path(folder: str, opened_at: str | None = None, previous: dict | None = None, missing: bool = False) -> dict:
-    path = resolved_export_path(folder)
-    timestamp = opened_at or utc_now_text()
-    previous = previous if isinstance(previous, dict) else {}
-    added_at = str(previous.get("addedAt") or timestamp)
-    last_opened_at = str(previous.get("lastOpenedAt") or added_at)
-    if opened_at:
-        last_opened_at = opened_at
-    label = str(previous.get("label") or "").strip() or export_label_for_path(path)
-    return {
-        "id": export_id_for_path(str(path)),
-        "path": str(path),
-        "label": label,
-        "addedAt": added_at,
-        "lastOpenedAt": last_opened_at,
-        "missing": bool(missing),
-    }
-
-
-def normalize_export_catalog(settings: dict) -> tuple[dict, bool]:
-    if not isinstance(settings, dict):
-        settings = {}
-
-    changed = False
-    raw_exports = settings.get("exports")
-    exports: list[dict] = []
-    seen_paths: set[str] = set()
-
-    if isinstance(raw_exports, list):
-        for item in raw_exports:
-            if not isinstance(item, dict):
-                changed = True
-                continue
-            folder = str(item.get("path") or "").strip()
-            if not folder:
-                changed = True
-                continue
-            key = export_path_key(folder)
-            if key in seen_paths:
-                changed = True
-                continue
-            record = export_record_for_path(folder, previous=item, missing=bool(item.get("missing")))
-            exports.append(record)
-            seen_paths.add(key)
-            if record != item:
-                changed = True
-    elif raw_exports is not None:
-        changed = True
-
-    last_vault_path = str(settings.get("lastVaultPath") or "").strip()
-    if not exports and last_vault_path:
-        record = export_record_for_path(last_vault_path)
-        exports.append(record)
-        settings["activeExportId"] = record["id"]
-        settings["lastVaultPath"] = record["path"]
-        changed = True
-
-    if exports or isinstance(raw_exports, list) or raw_exports is not None:
-        if settings.get("exports") != exports:
-            settings["exports"] = exports
-            changed = True
-
-        active_export_id = str(settings.get("activeExportId") or "").strip()
-        active_ids = {record["id"] for record in exports}
-        if active_export_id and active_export_id not in active_ids:
-            settings.pop("activeExportId", None)
-            changed = True
-            active_export_id = ""
-
-        if not active_export_id and last_vault_path:
-            match = find_export_by_path(exports, last_vault_path)
-            if match:
-                settings["activeExportId"] = match["id"]
-                changed = True
-
-    return settings, changed
-
-
-def read_catalog_settings(persist_migration: bool = False) -> dict:
-    settings, changed = normalize_export_catalog(read_settings())
-    if persist_migration and changed:
-        write_settings(settings)
-    return settings
-
-
-def find_export_by_path(exports: list[dict], folder: str) -> dict | None:
-    key = export_path_key(folder)
-    for record in exports:
-        if export_path_key(str(record.get("path") or "")) == key:
-            return record
-    return None
-
-
-def active_export_record(settings: dict) -> dict | None:
-    exports = settings.get("exports")
-    if not isinstance(exports, list):
-        return None
-
-    active_export_id = str(settings.get("activeExportId") or "").strip()
-    if not active_export_id:
-        return None
-
-    for record in exports:
-        if isinstance(record, dict) and record.get("id") == active_export_id and record.get("path"):
-            return record
-    return None
-
-
-def safe_export_label(record: dict) -> str:
-    folder_name = export_label_for_path(Path(str(record.get("path") or "")))
-    label = str(record.get("label") or "").strip()
-    if label and "\\" not in label and "/" not in label and ":" not in label:
-        return label
-    return folder_name or "экспорт Telegram"
-
-
-def export_catalog_item(record: dict, active_export_id: str) -> dict:
-    folder_name = export_label_for_path(Path(str(record.get("path") or "")))
-    label = safe_export_label(record)
-    return {
-        "id": str(record.get("id") or ""),
-        "label": label,
-        "folderName": folder_name or label,
-        "pathDisplay": folder_name or label,
-        "active": bool(record.get("id") and record.get("id") == active_export_id),
-        "missing": bool(record.get("missing")),
-        "addedAt": str(record.get("addedAt") or ""),
-        "lastOpenedAt": str(record.get("lastOpenedAt") or ""),
-    }
-
-
-def export_catalog_response() -> dict:
-    settings = read_catalog_settings(persist_migration=False)
-    exports = settings.get("exports")
-    if not isinstance(exports, list):
-        exports = []
-    active_export_id = str(settings.get("activeExportId") or "")
-    items = [
-        export_catalog_item(record, active_export_id)
-        for record in exports
-        if isinstance(record, dict) and record.get("id")
-    ]
-    return {"exports": items, "activeExportId": active_export_id}
-
-
-def find_export_by_id(exports: list[dict], export_id: str) -> dict | None:
-    for record in exports:
-        if isinstance(record, dict) and record.get("id") == export_id:
-            return record
-    return None
-
-
-def export_record_is_available(record: dict) -> bool:
-    folder = str(record.get("path") or "").strip()
+def folder_is_available(folder: str) -> bool:
     if not folder:
         return False
     try:
@@ -298,105 +122,54 @@ def export_record_is_available(record: dict) -> bool:
         return False
 
 
-def most_recent_available_export(exports: list[dict]) -> dict | None:
-    available = [
-        record
-        for record in exports
-        if isinstance(record, dict)
-        and record.get("id")
-        and export_record_is_available(record)
-    ]
-    if not available:
-        return None
-    return max(available, key=lambda record: str(record.get("lastOpenedAt") or record.get("addedAt") or ""))
+def legacy_active_export_path(settings: dict) -> str:
+    raw_exports = settings.get("exports")
+    active_export_id = str(settings.get("activeExportId") or "").strip()
+    if not isinstance(raw_exports, list) or not active_export_id:
+        return ""
 
-
-def open_export_by_id(export_id: str) -> tuple[dict, int]:
-    settings = read_catalog_settings(persist_migration=False)
-    exports = settings.get("exports")
-    if not isinstance(exports, list):
-        exports = []
-
-    record = find_export_by_id(exports, export_id)
-    if not record:
-        return {"error": "экспорт не найден"}, 404
-
-    folder = str(record.get("path") or "").strip()
-    if not folder:
-        mark_saved_export_missing(folder, export_id)
-        return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
-
-    try:
-        path = Path(folder).expanduser()
-        if not path.exists() or not path.is_dir():
-            mark_saved_export_missing(folder, export_id)
-            return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
-    except OSError:
-        mark_saved_export_missing(folder, export_id)
-        return {"error": "папка экспорта недоступна", "missing": True, "exportId": export_id}, 400
-
-    try:
-        result = load_folder_and_remember(str(path))
-        result["loaded"] = True
-        return result, 200
-    except Exception as e:
-        return {"error": safe_api_error(e, "не удалось открыть сохранённый экспорт"), "exportId": export_id}, 400
-
-
-def remember_vault_path(folder: str) -> dict:
-    settings = read_catalog_settings()
-    exports = settings.get("exports")
-    if not isinstance(exports, list):
-        exports = []
-
-    opened_at = utc_now_text()
-    existing = find_export_by_path(exports, folder)
-    if existing:
-        record = export_record_for_path(folder, opened_at=opened_at, previous=existing, missing=False)
-        exports[exports.index(existing)] = record
-    else:
-        record = export_record_for_path(folder, opened_at=opened_at, missing=False)
-        exports.append(record)
-
-    settings["exports"] = exports
-    settings["activeExportId"] = record["id"]
-    settings["lastVaultPath"] = record["path"]
-    write_settings(settings)
-    return record
-
-
-def mark_saved_export_missing(folder: str, active_export_id: str = "") -> None:
-    settings = read_catalog_settings()
-    exports = settings.get("exports")
-    if not isinstance(exports, list):
-        return
-
-    changed = False
-    for record in exports:
-        if not isinstance(record, dict):
+    for item in raw_exports:
+        if not isinstance(item, dict) or str(item.get("id") or "") != active_export_id:
             continue
-        is_active = active_export_id and record.get("id") == active_export_id
-        is_same_path = folder and export_path_key(str(record.get("path") or "")) == export_path_key(folder)
-        if is_active or is_same_path:
-            if not record.get("missing"):
-                record["missing"] = True
-                changed = True
+        folder = str(item.get("path") or "").strip()
+        if folder and folder_is_available(folder):
+            return str(resolved_export_path(folder))
+    return ""
 
-    if changed:
-        settings["exports"] = exports
-        try:
-            write_settings(settings)
-        except Exception:
-            pass
+
+def single_vault_settings(settings: dict) -> dict:
+    if not isinstance(settings, dict):
+        return {}
+
+    folder = legacy_active_export_path(settings)
+    if not folder:
+        last_vault_path = str(settings.get("lastVaultPath") or "").strip()
+        if last_vault_path:
+            folder = str(resolved_export_path(last_vault_path))
+
+    return {"lastVaultPath": folder} if folder else {}
+
+
+def read_vault_settings(persist_migration: bool = False) -> dict:
+    raw_settings = read_settings()
+    settings = single_vault_settings(raw_settings)
+    if persist_migration and settings != raw_settings:
+        write_settings(settings)
+    return settings
+
+
+def remember_vault_path(folder: str) -> str:
+    path = str(resolved_export_path(folder))
+    write_settings({"lastVaultPath": path})
+    return path
 
 
 def load_folder_and_remember(folder: str) -> dict:
     result = LIBRARY.load_folder(folder)
     try:
-        record = remember_vault_path(folder)
-        result["lastVaultPath"] = record["path"]
-        result["activeExportId"] = record["id"]
+        result["lastVaultPath"] = remember_vault_path(folder)
     except Exception as e:
+        result["lastVaultPath"] = str(resolved_export_path(folder))
         result["settings_error"] = str(e)
     return result
 
@@ -414,111 +187,38 @@ def missing_saved_vault_response(folder: str, error: str = "") -> dict:
 
 
 def forget_saved_vault_path() -> dict:
-    settings = read_catalog_settings()
-    active_record = active_export_record(settings)
-    if active_record and active_record.get("id"):
-        result, _status = forget_export_by_id(str(active_record.get("id") or ""))
-        return result
-
-    removed_path = str(settings.get("lastVaultPath") or "")
-    exports = settings.get("exports")
-    if isinstance(exports, list) and removed_path:
-        record = find_export_by_path(exports, removed_path)
-        if record and record.get("id"):
-            result, _status = forget_export_by_id(str(record.get("id") or ""))
-            return result
-
-    removed_export_id = str(settings.pop("activeExportId", "") or "")
+    settings = read_vault_settings()
+    removed_path = str(settings.get("lastVaultPath") or "").strip()
     if removed_path:
-        settings.pop("lastVaultPath", None)
-    if removed_path or removed_export_id:
-        write_settings(settings)
-    return {"ok": True, "removed": bool(removed_path or removed_export_id), "lastVaultPath": removed_path}
-
-
-def forget_export_by_id(export_id: str) -> tuple[dict, int]:
-    settings = read_catalog_settings()
-    exports = settings.get("exports")
-    if not isinstance(exports, list):
-        exports = []
-
-    record = find_export_by_id(exports, export_id)
-    if not record:
-        return {"error": "архив не найден"}, 404
-
-    removed_path = str(record.get("path") or "")
-    active_export_id = str(settings.get("activeExportId") or "")
-    was_active = bool(active_export_id and record.get("id") == active_export_id)
-    remaining_exports = [
-        item
-        for item in exports
-        if not (isinstance(item, dict) and item.get("id") == export_id)
-    ]
-
-    # Forget only removes the catalog record from settings; it never deletes the export folder or media files.
-    settings["exports"] = remaining_exports
-    next_active_id = ""
-
-    if was_active:
-        next_record = most_recent_available_export(remaining_exports)
-        if next_record:
-            next_active_id = str(next_record.get("id") or "")
-            settings["activeExportId"] = next_active_id
-            settings["lastVaultPath"] = str(next_record.get("path") or "")
-        else:
-            settings.pop("activeExportId", None)
-            settings.pop("lastVaultPath", None)
-    else:
-        last_vault_path = str(settings.get("lastVaultPath") or "")
-        if removed_path and last_vault_path and export_path_key(last_vault_path) == export_path_key(removed_path):
-            active_record_after_forget = active_export_record(settings)
-            if active_record_after_forget:
-                settings["lastVaultPath"] = str(active_record_after_forget.get("path") or "")
-            else:
-                settings.pop("lastVaultPath", None)
-
-    write_settings(settings)
-    return {
-        "ok": True,
-        "removed": True,
-        "forgottenExportId": export_id,
-        "wasActive": was_active,
-        "nextActiveExportId": next_active_id,
-    }, 200
+        write_settings({})
+    return {"ok": True, "removed": bool(removed_path), "lastVaultPath": removed_path}
 
 
 def load_saved_vault() -> dict:
     try:
-        settings = read_catalog_settings(persist_migration=True)
+        settings = read_vault_settings(persist_migration=True)
     except Exception:
-        settings = read_settings()
+        settings = single_vault_settings(read_settings())
 
-    active_record = active_export_record(settings)
-    folder = str((active_record or {}).get("path") or settings.get("lastVaultPath") or "").strip()
+    folder = str(settings.get("lastVaultPath") or "").strip()
     if not folder:
         return {"loaded": False}
-    active_export_id = str((active_record or {}).get("id") or settings.get("activeExportId") or "")
     try:
         path = Path(folder).expanduser()
         if not path.exists() or not path.is_dir():
-            mark_saved_export_missing(folder, active_export_id)
             return missing_saved_vault_response(folder)
     except OSError:
-        mark_saved_export_missing(folder, active_export_id)
         return missing_saved_vault_response(folder)
     try:
         result = LIBRARY.load_folder(str(path))
         result["loaded"] = True
         try:
-            record = remember_vault_path(str(path))
-            result["lastVaultPath"] = record["path"]
-            result["activeExportId"] = record["id"]
+            result["lastVaultPath"] = remember_vault_path(str(path))
         except Exception as e:
             result["lastVaultPath"] = str(path.resolve())
             result["settings_error"] = str(e)
         return result
     except OSError:
-        mark_saved_export_missing(folder, active_export_id)
         return missing_saved_vault_response(folder)
     except Exception as e:
         return {"loaded": False, "lastVaultPath": folder, "error": safe_api_error(e, "не удалось открыть архив")}
@@ -829,13 +529,6 @@ class Handler(BaseHTTPRequestHandler):
             json_response(self, {"name": APP_NAME, "version": APP_VERSION, "ready": True, "app_root_id": APP_ROOT_ID})
             return
 
-        if path == "/api/exports":
-            try:
-                json_response(self, export_catalog_response())
-            except Exception as e:
-                json_response(self, {"error": safe_api_error(e, "не удалось прочитать библиотеку")}, 500)
-            return
-
         if path == "/api/startup-vault":
             json_response(self, load_saved_vault())
             return
@@ -902,25 +595,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         parsed = urlparse(self.path)
-        export_open_prefix = "/api/exports/"
-        if parsed.path.startswith(export_open_prefix) and parsed.path.endswith("/open"):
-            if not is_allowed_local_post(self):
-                json_response(self, {"error": "forbidden"}, 403)
-                return
-            export_id = unquote(parsed.path[len(export_open_prefix):-len("/open")]).strip("/")
-            result, status = open_export_by_id(export_id)
-            json_response(self, result, status)
-            return
-
-        if parsed.path.startswith(export_open_prefix) and parsed.path.endswith("/forget"):
-            if not is_allowed_local_post(self):
-                json_response(self, {"error": "forbidden"}, 403)
-                return
-            export_id = unquote(parsed.path[len(export_open_prefix):-len("/forget")]).strip("/")
-            result, status = forget_export_by_id(export_id)
-            json_response(self, result, status)
-            return
-
         if parsed.path == "/api/pick-folder":
             if not is_allowed_local_post(self):
                 json_response(self, {"error": "forbidden"}, 403)

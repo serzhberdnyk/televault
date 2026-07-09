@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.35 - restore single export storage
+
+Changed:
+- replaced the hidden multi-export settings catalog with a single `lastVaultPath`
+- migrated legacy settings with `exports[]` and `activeExportId` to only `lastVaultPath`
+- removed backend `/api/exports`, `/api/exports/<id>/open` and `/api/exports/<id>/forget` handling
+- removed frontend export catalog state, `refreshExportCatalog()` and saved-export open/forget calls
+- kept failed new-folder loads from changing `lastVaultPath` or clearing the already opened archive
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.35
+- did not change parser support for full exports, `left_chats.list`, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks, launcher identity or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.35
+- confirm choosing a wrong folder after a valid export shows an error while the previous export remains open and is still restored after restart
+- confirm legacy settings with `exports[]` / `activeExportId` rewrite to only `lastVaultPath`
+
 ## 2.9.34 - simplify choose-chat empty state
 
 Changed:

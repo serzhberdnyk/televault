@@ -14,7 +14,6 @@ const state = {
   vaultLoadDetail: '',
   vaultMissing: false,
   missingVaultPath: '',
-  exports: [],
   selectedChatId: null,
   lightboxPhotos: [],
   lightboxIndex: -1,
@@ -146,14 +145,7 @@ const text = {
   savedVaultMissingDetail: 'Возможно, папку перенесли или диск отключён.',
   forgetUnavailableExport: 'забыть недоступный архив',
   forgettingUnavailableExport: 'забываем...',
-  forgotUnavailableExport: 'недоступный архив убран из библиотеки',
-  forgetExportFailed: 'не удалось забыть архив',
-  forgetExportConfirm: 'Убрать этот архив из библиотеки TeleVault?\n\nФайлы на диске останутся на месте.',
-  forgetExportConfirmNamed: 'Убрать архив «{name}» из библиотеки TeleVault?\n\nФайлы на диске останутся на месте.',
-  forgotExport: 'архив убран из библиотеки',
-  openingExport: 'открываем архив...',
-  savedExportOpenFailed: 'не удалось открыть сохранённый архив',
-  storageReady: 'архив открыт',
+  forgetExportConfirm: 'Забыть последнюю папку экспорта?\n\nФайлы на диске останутся на месте.',
   storageLoading: 'открываем локальный архив...',
   storageNotSelected: 'библиотека пуста',
   storageNotSelectedBody: 'добавьте экспорт Telegram, чтобы хранить переписки локально и открывать их оффлайн.',
@@ -418,6 +410,11 @@ function handleFolderPickerCancelled(hadOpenVault) {
   renderVaultWelcome({ mode: 'empty' });
 }
 
+function showCurrentVaultLoadError(error) {
+  const friendly = formatLibraryError(error);
+  $('chatMeta').textContent = `${friendly.title}. Текущий архив не изменился.`;
+}
+
 function cleanErrorMessage(error) {
   const raw = String(error?.message || error || text.requestFailed);
   const lines = raw
@@ -430,113 +427,6 @@ function cleanErrorMessage(error) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat('ru-RU').format(Number(value || 0));
-}
-
-function exportDisplayName(item) {
-  return safeUiText(item?.label) || safeUiText(item?.folderName) || text.storageFolderFallback;
-}
-
-async function refreshExportCatalog(options = {}) {
-  try {
-    const data = await api('/api/exports');
-    state.exports = Array.isArray(data.exports) ? data.exports : [];
-    return true;
-  } catch (e) {
-    state.exports = Array.isArray(state.exports) ? state.exports : [];
-    console.warn('TeleVault: failed to refresh export catalog', e);
-    if (options.throwOnError) throw e;
-    return false;
-  }
-}
-
-async function openSavedExport(exportId, options = {}) {
-  if (!exportId) return false;
-  const current = state.exports.find(item => item.id === exportId);
-  if (!options.force && current?.active && state.vaultLoaded && !current?.missing) return true;
-
-  const hadOpenVault = state.vaultLoaded;
-  if (!hadOpenVault) {
-    renderVaultWelcome({ mode: 'loading', lead: text.openingExport });
-  }
-
-  try {
-    const data = await api(`/api/exports/${encodeURIComponent(exportId)}/open`, { method: 'POST' });
-    await afterLibraryLoaded(data);
-    return true;
-  } catch (e) {
-    state.exports = state.exports.map(item => (
-      item.id === exportId ? { ...item, missing: true, active: false } : item
-    ));
-    if (!hadOpenVault) {
-      renderVaultWelcome({ mode: 'missing' });
-    }
-    return false;
-  } finally {
-    await refreshExportCatalog();
-  }
-}
-
-function forgetExportConfirmMessage(item) {
-  const name = exportDisplayName(item);
-  if (!name) return text.forgetExportConfirm;
-  return text.forgetExportConfirmNamed.replace('{name}', name);
-}
-
-function clearCurrentLibraryForSwitch(message = text.openingExport) {
-  state.chats = [];
-  state.vaultLoaded = false;
-  state.vaultRoot = '';
-  state.vaultErrors = [];
-  state.vaultLoadError = '';
-  state.vaultLoadDetail = '';
-  state.vaultMissing = false;
-  state.missingVaultPath = '';
-  state.selectedChatId = null;
-  state.chatCache = {};
-  state.messagesRequestId += 1;
-  resetGlobalMessageSearch();
-  closeLightbox();
-  renderConversationList();
-  renderVaultWelcome({ mode: 'loading', lead: message });
-}
-
-async function forgetSavedExport(exportId, options = {}) {
-  if (!exportId) return false;
-  const item = state.exports.find(exportItem => exportItem.id === exportId) || {};
-  if (!options.skipConfirm && !window.confirm(forgetExportConfirmMessage(item))) return null;
-
-  if (state.vaultMissing && item.missing) setForgetMissingButtonLoading(true);
-
-  try {
-    const data = await api(`/api/exports/${encodeURIComponent(exportId)}/forget`, { method: 'POST' });
-    const wasActive = data.wasActive === true || item.active === true;
-    const nextActiveExportId = cleanVisibleText(data.nextActiveExportId || '');
-    state.exports = state.exports.filter(exportItem => exportItem.id !== exportId);
-    await refreshExportCatalog();
-
-    if (!wasActive) return true;
-
-    if (nextActiveExportId) {
-      clearCurrentLibraryForSwitch(text.openingExport);
-      await openSavedExport(nextActiveExportId, { force: true });
-      return true;
-    }
-
-    setLibraryEmpty();
-    renderConversationList();
-    renderVaultWelcome({ mode: 'empty' });
-    return true;
-  } catch (e) {
-    await refreshExportCatalog();
-    if (state.vaultMissing) {
-      const missingPath = state.missingVaultPath || state.vaultRoot;
-      setLibraryMissing({ lastVaultPath: missingPath });
-      renderVaultWelcome({ mode: 'missing' });
-    }
-    return false;
-  } finally {
-    setForgetMissingButtonLoading(false);
-  }
 }
 
 function setFolderButtonLoading(isLoading) {
@@ -786,43 +676,33 @@ async function pickFolder() {
       return;
     }
     await afterLibraryLoaded(data);
-    await refreshExportCatalog();
   } catch (e) {
     if (isFolderPickerCancelError(e)) {
       handleFolderPickerCancelled(hadOpenVault);
       return;
     }
     setLibraryError(e);
-    if (!state.vaultLoaded) renderVaultWelcome({ mode: 'error', error: e });
+    if (hadOpenVault && state.vaultLoaded) {
+      showCurrentVaultLoadError(e);
+      renderConversationList();
+    } else {
+      renderVaultWelcome({ mode: 'error', error: e });
+    }
   } finally {
     setFolderButtonLoading(false);
   }
 }
 
 async function forgetMissingExport() {
-  const missingExport = state.exports.find(item => item.active && item.missing)
-    || state.exports.find(item => item.missing);
-  if (!state.vaultMissing && !missingExport) return;
-  if (missingExport) {
-    await forgetSavedExport(missingExport.id);
-    return;
-  }
-
+  if (!state.vaultMissing) return;
   if (!window.confirm(text.forgetExportConfirm)) return;
   setForgetMissingButtonLoading(true);
   try {
-    const data = await api('/api/forget-missing-vault', { method: 'POST' });
-    await refreshExportCatalog();
-    if (data.nextActiveExportId) {
-      clearCurrentLibraryForSwitch(text.openingExport);
-      await openSavedExport(data.nextActiveExportId, { force: true });
-      return;
-    }
+    await api('/api/forget-missing-vault', { method: 'POST' });
     setLibraryEmpty();
     renderConversationList();
     renderVaultWelcome({ mode: 'empty' });
   } catch (e) {
-    await refreshExportCatalog();
     const missingPath = state.missingVaultPath || state.vaultRoot;
     setLibraryMissing({ lastVaultPath: missingPath });
     renderConversationList();
@@ -3421,7 +3301,6 @@ async function init() {
     const status = await api('/api/status');
     $('version').textContent = `v${status.version}`;
   } catch {}
-  await refreshExportCatalog();
   try {
     const savedVault = await api('/api/startup-vault');
     if (savedVault.loaded) {
@@ -3440,8 +3319,6 @@ async function init() {
   } catch (e) {
     setLibraryError(e);
     renderVaultWelcome({ mode: 'error', error: e });
-  } finally {
-    await refreshExportCatalog();
   }
 }
 
