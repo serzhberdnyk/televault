@@ -410,9 +410,38 @@ function handleFolderPickerCancelled(hadOpenVault) {
   renderVaultWelcome({ mode: 'empty' });
 }
 
-function showCurrentVaultLoadError(error) {
+function resetVisibleArchiveAfterLoadError(error) {
   const friendly = formatLibraryError(error);
-  $('chatMeta').textContent = `${friendly.title}. Текущий архив не изменился.`;
+  pendingMessagesLoad?.cancel?.();
+  state.chats = [];
+  state.vaultLoaded = false;
+  state.vaultRoot = '';
+  state.vaultErrors = [];
+  state.vaultLoadError = friendly.title;
+  state.vaultLoadDetail = friendly.body;
+  state.vaultMissing = false;
+  state.missingVaultPath = '';
+  state.selectedChatId = null;
+  state.mediaMode = 'all';
+  state.chatCache = {};
+  state.senderFilterSignature = '';
+  state.messagesRequestId += 1;
+  state.ownerSenderKey = '';
+  state.chatSearchQuery = '';
+  resetGlobalMessageSearch();
+  state.lightboxPhotos = [];
+  state.lightboxIndex = -1;
+  state.photoContexts = {};
+  state.photoContextIndexes = {};
+  closeLightbox();
+  const chatSearch = $('chatSearch');
+  const searchBox = $('searchBox');
+  const senderFilter = $('senderFilter');
+  if (chatSearch) chatSearch.value = '';
+  if (searchBox) searchBox.value = '';
+  if (senderFilter) senderFilter.value = '';
+  updateChatFilterControls();
+  updateMediaTabs();
 }
 
 function cleanErrorMessage(error) {
@@ -681,13 +710,9 @@ async function pickFolder() {
       handleFolderPickerCancelled(hadOpenVault);
       return;
     }
-    setLibraryError(e);
-    if (hadOpenVault && state.vaultLoaded) {
-      showCurrentVaultLoadError(e);
-      renderConversationList();
-    } else {
-      renderVaultWelcome({ mode: 'error', error: e });
-    }
+    resetVisibleArchiveAfterLoadError(e);
+    renderConversationList();
+    renderVaultWelcome({ mode: 'error', error: e });
   } finally {
     setFolderButtonLoading(false);
   }

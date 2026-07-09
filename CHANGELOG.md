@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.36
+
+### Changed
+
+* Reset the visible archive after a manual wrong-folder or corrupted-export load failure, so stale chats and the selected conversation disappear.
+* Kept failed manual loads from changing `lastVaultPath`; the previous valid saved path remains in settings.
+* Cleared frontend chat cache, selected chat, message filters, sidebar/global search state and photo lightbox state before showing the central import error.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.36.
+* Backend parser/library storage, media endpoint/security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, launcher identity and release/package artifacts were not intentionally changed.
+
 ## 2.9.35
 
 ### Changed

@@ -38,6 +38,24 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.36 - reset visible archive on invalid folder
+
+Changed:
+- reset the visible frontend archive when manual folder import fails after a valid export was already open
+- cleared `state.chats`, `state.selectedChatId`, `state.chatCache`, message filters, sidebar/global search state, media mode and photo lightbox state before showing the central error state
+- kept backend `lastVaultPath` behavior unchanged: only successful `load_folder_and_remember()` calls write the selected folder to settings
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.36
+- did not change backend parser/library storage, media endpoint/security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, launcher identity or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.36
+- open a valid export, then choose a wrong folder and confirm old chats disappear, selected chat is cleared and the central error is visible without a full local path
+- confirm the previous valid `lastVaultPath` remains in settings after the invalid folder attempt and can reopen on restart
+- choose another valid export and confirm it replaces the current visible archive normally
+
 ## 2.9.35 - restore single export storage
 
 Changed:
