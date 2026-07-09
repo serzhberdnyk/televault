@@ -1,5 +1,14 @@
 # Changelog
 
+## Docs after 2.9.31
+
+### Changed
+
+* Clarified that normal portable Windows usage is: download the zip, extract it and launch `TeleVault.exe`.
+* Documented `run_windows.bat` as a fallback/dev diagnostics path that can differ from launcher behavior.
+* Updated release/dev launcher notes so taskbar/start icon, repeat launch, window focus and owned-backend shutdown checks are performed through `TeleVault.exe`.
+* No app version, backend, frontend, launcher code, build scripts, package artifacts or screenshots were changed.
+
 ## 2.9.31
 
 ### Changed

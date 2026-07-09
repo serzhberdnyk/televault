@@ -8,7 +8,8 @@
 - `frontend/index.html` - UI shell
 - `frontend/app.js` - frontend logic/rendering
 - `frontend/styles.css` - UI styles
-- `run_windows.bat` - Windows launcher
+- `run_windows.bat` - fallback/dev Windows launcher for diagnostics
+- generated `TeleVault.exe` - normal user launcher in portable `dist/` builds
 - `CHANGELOG.md` - release history
 - `docs/dev/BUILD_ASSESSMENT.md` - historical build environment assessment
 - `docs/dev/BUILD_NOTES.md` - historical build preparation notes

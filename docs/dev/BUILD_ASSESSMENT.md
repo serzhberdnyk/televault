@@ -8,7 +8,7 @@ This document is historical. It is useful for understanding early packaging deci
 This is an assessment-only patch. It does not build an exe, add an installer, add
 dependencies, or change app runtime behavior.
 
-## Current Launch
+## Historical Launch Snapshot
 
 - Windows entry point: `run_windows.bat`
 - Server entry point: `app.py`
@@ -25,6 +25,8 @@ falls back to `python app.py` if the `py` launcher fails. There is no bundled
 Python runtime inside the TeleVault project. During Codex verification, the
 bundled Codex Python can be used as a test runtime, but it is not part of the
 app release package.
+
+Current portable builds use `TeleVault.exe` as the normal user launch path. `run_windows.bat` remains a fallback/dev path for development and diagnostics, and it should not be used to validate launcher taskbar/start identity or repeat-start behavior.
 
 ## Runtime Details
 

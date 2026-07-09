@@ -1,6 +1,6 @@
 # TeleVault: exe packaging plan
 
-TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.9.2 replaced the .NET Framework launcher with a native Windows launcher while keeping the launcher-style portable package. TeleVault 2.9.3 keeps that main package and adds a separate Windows 7 legacy package profile. `run_windows.bat` remains the debug/fallback launcher.
+TeleVault 2.8.0 added the first Windows `TeleVault.exe` launcher preview. TeleVault 2.9.2 replaced the .NET Framework launcher with a native Windows launcher while keeping the launcher-style portable package. TeleVault 2.9.3 keeps that main package and adds a separate Windows 7 legacy package profile. After the taskbar identity work, `TeleVault.exe` is the normal user launch path for portable builds. `run_windows.bat` remains the debug/fallback launcher for development and diagnostics.
 
 This is now a historical architecture plan for the launcher-style package. Use `docs/release/RELEASE_CHECKLIST.md` for current release checks and replace concrete version examples with the actual release version.
 
@@ -62,7 +62,7 @@ The launcher preview has moved beyond this planning stage. Keep these checks as 
 - `logs/launcher.log` remains runtime troubleshooting output and is not included in git or zip artifacts
 - when `assets/TeleVault.ico` exists, the launcher build compiles `tools/launcher/TeleVaultLauncher.rc` through MSVC `rc.exe`
 - when `assets/TeleVault.ico` is absent, the launcher build continues and reports that the default executable icon is used
-- `run_windows.bat` still works as a fallback
+- `run_windows.bat` still works as a fallback/dev path, but launcher identity, taskbar/start icon and repeat-start behavior are checked through `TeleVault.exe`
 - the app finds `frontend/` after packaging
 - the app finds backend modules after packaging
 - the folder picker still works
@@ -71,7 +71,7 @@ The launcher preview has moved beyond this planning stage. Keep these checks as 
 - Range request behavior stays intact: 200, 206, 416, and 403
 - `/api/search` still works
 - `TeleVault.exe` opens Edge/Chrome app-mode after the server is ready, or falls back to the default browser
-- `run_windows.bat` keeps the existing app auto-browser behavior
+- `run_windows.bat` keeps the existing app auto-browser behavior and may not match `TeleVault.exe` launcher-window behavior exactly
 - relative paths do not depend on the current working directory
 - bundled runtime files do not get committed to git
 - user settings, exports, and caches do not get included in the release package

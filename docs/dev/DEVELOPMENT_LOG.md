@@ -38,6 +38,22 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## Docs after 2.9.31 - clarify launcher usage
+
+Changed:
+- clarified in README that normal portable Windows usage is `download zip -> extract -> run TeleVault.exe`
+- documented `run_windows.bat` as a fallback/dev diagnostics launch path that may not reflect `TeleVault.exe` launcher behavior exactly
+- updated release checklist launcher checks so taskbar/start icon, repeat launch, focus and owned-backend shutdown validation use `TeleVault.exe`
+- refreshed historical dev docs that still described `run_windows.bat` as the Windows launcher/current entry point
+- did not change APP_VERSION, backend, frontend, launcher code, build scripts, package artifacts, screenshots, tags or release publishing
+
+Manual test:
+- run `git diff --check`
+- confirm `APP_VERSION`, frontend version placeholder, run_windows.bat startup text, portable package version and launcher `kAppVersion` still show 2.9.31
+- confirm `git diff --name-only` is limited to docs
+- confirm README does not promise an installer or Start Menu integration
+- do not build package/release, tag or push
+
 ## 2.9.31 - polish taskbar identity behavior
 
 Changed:
