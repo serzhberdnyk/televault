@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.38
+
+### Changed
+
+* Too-broad export folder errors now show a dedicated `папка слишком общая` message with guidance to choose a concrete Telegram Desktop export folder or a nearby folder that contains exports.
+* The new message does not expose local paths and keeps the existing `выбрать другую папку` recovery action.
+* Failed manual loads still clear stale visible chats and do not save the invalid folder as `lastVaultPath`.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.38.
+* Backend parser/library storage, import/export logic, media endpoint/security, search logic, launcher/build scripts, release/package artifacts and README were not intentionally changed.
+
 ## 2.9.37
 
 ### Changed

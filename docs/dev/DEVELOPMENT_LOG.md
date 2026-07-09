@@ -38,6 +38,27 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.38 - clarify too-broad export folder errors
+
+Changed:
+- added a dedicated frontend error variant for backend messages that say a selected folder is too broad
+- the central import error now says `папка слишком общая` and asks the user to choose a concrete Telegram Desktop export folder or a nearby folder containing exports
+- kept the existing `выбрать другую папку` action, local-path redaction and failed-load archive reset behavior
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.38
+- did not change backend parser/library storage, import/export logic, media endpoint/security, `lastVaultPath` behavior, tools launcher/build scripts, README, screenshots or release/package artifacts
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.38
+- open a valid Telegram Desktop export and confirm chats open normally
+- choose a too-broad folder and confirm the central error says `папка слишком общая`
+- confirm the too-broad error does not show a full local path, username, email, phone or debug details
+- confirm old chats are no longer visible after the error
+- use `выбрать другую папку` from the error card and open a valid export
+- confirm wrong-folder and corrupted/unreadable `result.json` messages from 2.9.37 still use their existing copy
+
 ## 2.9.37 - prominent invalid export folder error
 
 Changed:

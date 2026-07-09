@@ -161,6 +161,8 @@ const text = {
   invalidExportInstruction: 'Выберите папку, где лежит result.json, или общую папку с экспортами.',
   invalidExportNotSaved: 'Неверный путь не сохранён.',
   chooseAnotherFolder: 'выбрать другую папку',
+  tooBroadExportTitle: 'папка слишком общая',
+  tooBroadExportBody: 'Выберите конкретную папку экспорта Telegram Desktop или папку, где рядом лежат папки экспортов. Не выбирайте весь диск, «Загрузки» или «Документы».',
   resultJsonCorrupted: 'result.json повреждён или не читается',
   resultJsonCorruptedBody: 'Попробуйте заново сделать экспорт через Telegram Desktop.',
   resultJsonUnreadable: 'result.json не удалось прочитать',
@@ -371,6 +373,14 @@ function formatLibraryError(error) {
       title: text.invalidExportTitle,
       body: text.invalidExportBody,
       detail: text.invalidExportInstruction,
+      invalidExport: true,
+    };
+  }
+  if (lower.includes('слишком широкая папка')) {
+    return {
+      title: text.tooBroadExportTitle,
+      body: text.tooBroadExportBody,
+      detail: '',
       invalidExport: true,
     };
   }
