@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.37 - prominent invalid export folder error
+
+Changed:
+- added a dedicated prominent frontend error variant for wrong folders, missing `result.json`, corrupted `result.json` and unreadable `result.json`
+- replaced the calm wrong-folder copy with `не удалось открыть экспорт`, guidance to choose a folder containing `result.json`, and a visible `выбрать другую папку` action
+- changed the no-archive sidebar empty copy to `архив не открыт` / `выберите папку экспорта Telegram Desktop.` so it does not look like an empty library after an invalid folder
+- kept failed manual loads from saving the bad folder to `lastVaultPath`; only successful `load_folder_and_remember()` calls persist the selected folder
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.37
+- did not change backend parser/library storage, media endpoint/security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, launcher identity or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.37
+- clean launch without settings shows the usual welcome card, not the error variant
+- open a valid export, then choose a wrong folder and confirm old chats disappear, the central warning-style error card appears and no local path is shown
+- choose a folder without `result.json` and confirm the same prominent error card explains where `result.json` should be
+- choose a corrupted or unreadable `result.json` and confirm the card says `result.json повреждён или не читается` or `result.json не удалось прочитать`
+- use the error-card button and confirm it opens the same folder picker flow
+- confirm the invalid or corrupted folder is not written to `lastVaultPath`, then choose a valid export and confirm the error disappears
+
 ## 2.9.36 - reset visible archive on invalid folder
 
 Changed:

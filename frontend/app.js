@@ -13,6 +13,7 @@ const state = {
   vaultLoadError: '',
   vaultLoadDetail: '',
   vaultMissing: false,
+  vaultInvalidExport: false,
   missingVaultPath: '',
   selectedChatId: null,
   lightboxPhotos: [],
@@ -149,12 +150,19 @@ const text = {
   storageLoading: 'открываем локальный архив...',
   storageNotSelected: 'библиотека пуста',
   storageNotSelectedBody: 'добавьте экспорт Telegram, чтобы хранить переписки локально и открывать их оффлайн.',
+  storageNotOpen: 'архив не открыт',
+  storageNotOpenBody: 'выберите папку экспорта Telegram Desktop.',
   storageNoChatsBody: 'В этой папке не нашлось переписок из Telegram. Выбери папку экспорта или общую папку с экспортами.',
   storageLoadFailed: 'не удалось открыть архив',
   storageLoadFailedBody: 'Проверь, что выбрана папка экспорта Telegram.',
   storageTryAnotherFolder: 'Попробуй выбрать другую папку экспорта.',
-  resultJsonCorrupted: 'result.json повреждён',
-  resultJsonCorruptedBody: 'Попробуйте заново сделать экспорт из Telegram Desktop.',
+  invalidExportTitle: 'не удалось открыть экспорт',
+  invalidExportBody: 'это не похоже на папку экспорта Telegram Desktop.',
+  invalidExportInstruction: 'Выберите папку, где лежит result.json, или общую папку с экспортами.',
+  invalidExportNotSaved: 'Неверный путь не сохранён.',
+  chooseAnotherFolder: 'выбрать другую папку',
+  resultJsonCorrupted: 'result.json повреждён или не читается',
+  resultJsonCorruptedBody: 'Попробуйте заново сделать экспорт через Telegram Desktop.',
   resultJsonUnreadable: 'result.json не удалось прочитать',
   resultJsonUnreadableBody: 'Проверьте, что файл доступен, или сделайте экспорт заново.',
   storagePartialErrors: 'часть переписок не загрузилась',
@@ -294,6 +302,7 @@ function setLibraryEmpty() {
   state.vaultLoadError = '';
   state.vaultLoadDetail = '';
   state.vaultMissing = false;
+  state.vaultInvalidExport = false;
   state.missingVaultPath = '';
   state.selectedChatId = null;
   state.chatCache = {};
@@ -308,6 +317,7 @@ function setLibraryMissing(details = {}) {
   state.vaultLoadError = text.savedVaultMissing;
   state.vaultLoadDetail = text.savedVaultMissingBody;
   state.vaultMissing = true;
+  state.vaultInvalidExport = false;
   state.missingVaultPath = missingPath;
   state.selectedChatId = null;
   state.chatCache = {};
@@ -323,6 +333,7 @@ function setLibraryReady(data) {
   state.vaultLoadError = '';
   state.vaultLoadDetail = '';
   state.vaultMissing = false;
+  state.vaultInvalidExport = false;
   state.missingVaultPath = '';
 }
 
@@ -332,6 +343,7 @@ function setLibraryError(error, details = {}) {
   state.vaultLoadDetail = friendly.body;
   state.vaultRoot = details.root || details.lastVaultPath || state.vaultRoot || '';
   state.vaultMissing = false;
+  state.vaultInvalidExport = Boolean(friendly.invalidExport);
   state.missingVaultPath = '';
 }
 
@@ -343,13 +355,23 @@ function formatLibraryError(error) {
       title: 'папка не выбрана',
       body: 'Выбор папки отменён. Текущий архив не изменился.',
       detail: '',
+      invalidExport: false,
     };
   }
-  if (lower.includes('сохранённое хранилище') || lower.includes('папка не найдена')) {
+  if (lower.includes('сохранённое хранилище')) {
     return {
-      title: lower.includes('сохранённое') ? text.savedVaultMissing : 'папка недоступна',
-      body: lower.includes('сохранённое') ? text.savedVaultMissingBody : text.storageLoadFailedBody,
+      title: text.savedVaultMissing,
+      body: text.savedVaultMissingBody,
       detail: clean,
+      invalidExport: false,
+    };
+  }
+  if (lower.includes('папка не найдена') || lower.includes('папка недоступна')) {
+    return {
+      title: text.invalidExportTitle,
+      body: text.invalidExportBody,
+      detail: text.invalidExportInstruction,
+      invalidExport: true,
     };
   }
   if (lower.includes('result.json повреждён')) {
@@ -357,6 +379,7 @@ function formatLibraryError(error) {
       title: text.resultJsonCorrupted,
       body: text.resultJsonCorruptedBody,
       detail: '',
+      invalidExport: true,
     };
   }
   if (lower.includes('result.json не удалось прочитать')) {
@@ -364,33 +387,38 @@ function formatLibraryError(error) {
       title: text.resultJsonUnreadable,
       body: text.resultJsonUnreadableBody,
       detail: '',
+      invalidExport: true,
     };
   }
   if (lower.includes('result.json найдены') || lower.includes('ни один экспорт')) {
     return {
-      title: 'архив не прочитан',
-      body: 'TeleVault не распознал структуру папки или часть файлов повреждена.',
+      title: text.resultJsonCorrupted,
+      body: text.resultJsonCorruptedBody,
       detail: '',
+      invalidExport: true,
     };
   }
   if (lower.includes('result.json')) {
     return {
-      title: 'папка экспорта не найдена',
-      body: 'Выбери папку, которую создал Telegram Desktop при экспорте, или общую папку с несколькими экспортами.',
-      detail: '',
+      title: text.invalidExportTitle,
+      body: text.invalidExportBody,
+      detail: text.invalidExportInstruction,
+      invalidExport: true,
     };
   }
   if (lower.includes('не удалось прочитать')) {
     return {
-      title: 'архив не прочитан',
-      body: 'TeleVault не распознал структуру папки или часть файлов повреждена.',
+      title: text.resultJsonCorrupted,
+      body: text.resultJsonCorruptedBody,
       detail: '',
+      invalidExport: true,
     };
   }
   return {
     title: text.storageLoadFailed,
     body: text.storageTryAnotherFolder,
-    detail: clean,
+    detail: '',
+    invalidExport: true,
   };
 }
 
@@ -420,6 +448,7 @@ function resetVisibleArchiveAfterLoadError(error) {
   state.vaultLoadError = friendly.title;
   state.vaultLoadDetail = friendly.body;
   state.vaultMissing = false;
+  state.vaultInvalidExport = Boolean(friendly.invalidExport);
   state.missingVaultPath = '';
   state.selectedChatId = null;
   state.mediaMode = 'all';
@@ -461,9 +490,14 @@ function formatNumber(value) {
 function setFolderButtonLoading(isLoading) {
   state.isPickingFolder = isLoading;
   document.querySelectorAll('[data-pick-folder]').forEach(button => {
+    const idleLabel = button.id === 'welcomePickFolder' && state.vaultInvalidExport
+      ? text.chooseAnotherFolder
+      : state.vaultMissing && button.id === 'welcomePickFolder'
+        ? text.chooseExportFolder
+        : text.chooseFolder;
     button.disabled = isLoading;
     button.setAttribute('aria-busy', String(isLoading));
-    button.innerHTML = `${icons.folder}<span>${isLoading ? text.choosingFolder : text.chooseFolder}</span>`;
+    button.innerHTML = `${icons.folder}<span>${isLoading ? text.choosingFolder : idleLabel}</span>`;
   });
 }
 
@@ -501,10 +535,10 @@ function renderChats() {
   if (!hasSearch && !chats.length) {
     const emptyTitle = state.vaultMissing
       ? text.savedVaultMissing
-      : state.vaultLoaded ? text.conversationsNotFound : text.storageNotSelected;
+      : state.vaultLoaded ? text.conversationsNotFound : text.storageNotOpen;
     const emptyBody = state.vaultMissing
       ? text.savedVaultMissingBody
-      : state.vaultLoaded ? text.storageNoChatsBody : text.storageNotSelectedBody;
+      : state.vaultLoaded ? text.storageNoChatsBody : text.storageNotOpenBody;
     box.innerHTML = renderEmptyState(
       emptyTitle,
       emptyBody,
@@ -745,6 +779,7 @@ async function afterLibraryLoaded(data) {
   state.vaultLoadError = '';
   state.vaultLoadDetail = '';
   state.vaultMissing = false;
+  state.vaultInvalidExport = false;
   state.missingVaultPath = '';
   state.selectedChatId = null;
   state.mediaMode = 'all';
@@ -877,7 +912,7 @@ function renderVaultWelcome(options = {}) {
   } else if (mode === 'missing') {
     $('chatMeta').textContent = text.savedVaultMissing;
   } else if (mode === 'error') {
-    $('chatMeta').textContent = text.storageLoadFailed;
+    $('chatMeta').textContent = text.invalidExportTitle;
   } else {
     $('chatMeta').textContent = text.storageNotSelected;
   }
@@ -886,7 +921,9 @@ function renderVaultWelcome(options = {}) {
   updateChatFilterControls();
   const emptyState = $('emptyState');
   emptyState.classList.toggle('welcome--choose-chat', hasLoadedConversations);
+  emptyState.classList.toggle('welcome--error', mode === 'error');
   const title = emptyState.querySelector('.welcome-brand h3');
+  const eyebrow = emptyState.querySelector('.welcome-eyebrow');
   const lead = emptyState.querySelector('.welcome-lead');
   const body = emptyState.querySelector('.welcome-lockup > p:not(.welcome-lead):not(.welcome-note)');
   const action = emptyState.querySelector('#welcomePickFolder');
@@ -897,6 +934,7 @@ function renderVaultWelcome(options = {}) {
     forgetAction.hidden = true;
     setForgetMissingButtonLoading(false);
   }
+  if (eyebrow) eyebrow.textContent = 'TeleVault';
   if (actionLabel) actionLabel.textContent = text.chooseFolder;
   if (hasLoadedConversations) {
     title.textContent = text.chooseConversationTitle;
@@ -927,9 +965,11 @@ function renderVaultWelcome(options = {}) {
     const friendly = formatLibraryError(options.error || state.vaultLoadError || text.storageLoadFailed);
     title.textContent = friendly.title;
     lead.textContent = friendly.body;
-    body.textContent = friendly.detail || text.storageLoadFailedBody;
-    note.textContent = text.storageTryAnotherFolder;
-    body.hidden = false;
+    body.textContent = friendly.detail || '';
+    note.textContent = text.invalidExportNotSaved;
+    if (eyebrow) eyebrow.textContent = 'ошибка импорта';
+    if (actionLabel) actionLabel.textContent = text.chooseAnotherFolder;
+    body.hidden = !friendly.detail;
     action.hidden = false;
     note.hidden = false;
   } else {

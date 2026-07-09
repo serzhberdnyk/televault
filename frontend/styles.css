@@ -19,6 +19,8 @@
   --accent-soft: rgba(42, 171, 238, 0.14);
   --accent-selected: rgba(42, 171, 238, 0.18);
   --danger: #ff7784;
+  --warning: #f3b45b;
+  --warning-soft: rgba(243, 180, 91, 0.14);
   --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.24);
   --shadow-focus: 0 0 0 3px rgba(42, 171, 238, 0.22);
   --radius-sm: 8px;
@@ -2190,6 +2192,56 @@ code {
 .welcome--choose-chat .welcome-logo,
 .welcome--choose-chat .welcome-eyebrow {
   display: none;
+}
+
+.welcome--error .welcome-lockup {
+  border-color: rgba(243, 180, 91, 0.56);
+  background: rgba(34, 31, 27, 0.86);
+  box-shadow:
+    inset 4px 0 0 rgba(243, 180, 91, 0.86),
+    0 16px 38px rgba(0, 0, 0, 0.24);
+}
+
+.welcome--error .welcome-brand {
+  align-items: flex-start;
+}
+
+.welcome--error .welcome-brand::before {
+  content: "!";
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  margin-top: 1px;
+  border: 1px solid rgba(243, 180, 91, 0.46);
+  border-radius: 50%;
+  background: var(--warning-soft);
+  color: #ffd89a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.welcome--error .welcome-logo {
+  display: none;
+}
+
+.welcome--error .welcome-eyebrow {
+  color: var(--warning);
+}
+
+.welcome--error h3 {
+  color: #fff2df;
+}
+
+.welcome--error .welcome-lead,
+.welcome--error .welcome-lockup > p:not(.welcome-lead):not(.welcome-note) {
+  color: var(--text);
+}
+
+.welcome--error .welcome-note {
+  color: #f0c981;
 }
 
 .welcome h3 {

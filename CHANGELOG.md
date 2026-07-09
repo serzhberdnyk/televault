@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.9.37
+
+### Changed
+
+* Added a prominent central error state for wrong, missing `result.json`, corrupted and unreadable Telegram export folders.
+* The error card now uses a warning accent, clearer title/body copy and a visible `выбрать другую папку` action that reuses the existing folder picker flow.
+* Sidebar empty copy now says `архив не открыт` instead of the misleading `библиотека пуста` when no archive is open.
+* Failed manual folder loads still clear the visible archive state without saving the invalid folder as `lastVaultPath`.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.37.
+* Backend parser/library storage, media endpoint/security, search logic, service notices, replies/entities/audio metadata, special content fallbacks, launcher identity and release/package artifacts were not intentionally changed.
+
 ## 2.9.36
 
 ### Changed
