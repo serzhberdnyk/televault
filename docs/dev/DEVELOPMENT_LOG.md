@@ -38,6 +38,25 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.30 - prototype taskbar identity
+
+Changed:
+- added a small native launcher prototype that tries to set `TeleVault.TeleVault` on the Edge/Chrome app-mode HWND with `SHGetPropertyStoreForWindow`
+- set `PKEY_AppUserModel_ID`, `PKEY_AppUserModel_RelaunchCommand` and `PKEY_AppUserModel_RelaunchIconResource` when the browser app window is found
+- logged taskbar identity property-store and property-write success/failure without making startup depend on the result
+- kept the existing `--app=http://127.0.0.1:8766/` browser launch, default browser fallback, window-state restore and owned-backend monitor behavior
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.30
+- did not add WebView2, Electron, permanent Start Menu shortcuts, registry writes, backend/frontend feature changes or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- run `runtime\python\python.exe tools\build_exe_launcher.py` as a launcher build check only
+- launch the generated `TeleVault.exe`, confirm `/api/status` returns 2.9.30 and inspect `launcher.log` for taskbar identity results
+- manually check whether the taskbar/start icon changes; if it does not, Edge/Chrome is still controlling the app-mode window icon
+- do not tag, push or publish a release/package
+
 ## 2.9.29 - wire app icon
 
 Changed:

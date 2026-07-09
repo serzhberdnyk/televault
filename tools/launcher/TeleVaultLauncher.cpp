@@ -17,6 +17,9 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <shellapi.h>
+#include <propsys.h>
+#include <propkey.h>
+#include <propvarutil.h>
 #include <winhttp.h>
 
 #include <algorithm>
@@ -30,13 +33,16 @@
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "propsys.lib")
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "ws2_32.lib")
 
 namespace {
 
 constexpr wchar_t kAppName[] = L"TeleVault";
-constexpr wchar_t kAppVersion[] = L"2.9.29";
+constexpr wchar_t kAppVersion[] = L"2.9.30";
+constexpr wchar_t kAppUserModelId[] = L"TeleVault.TeleVault";
 constexpr wchar_t kNoAutoBrowserEnv[] = L"TELEVAULT_NO_AUTO_BROWSER";
 constexpr wchar_t kWindowStateDirectoryName[] = L"user_data";
 constexpr wchar_t kWindowStateFileName[] = L"launcher_window.json";
@@ -58,6 +64,7 @@ const std::wstring kStatusPath = L"/api/status";
 
 std::wstring g_logPath;
 std::wstring g_windowStatePath;
+bool g_taskbarIdentityAttempted = false;
 
 struct StatusInfo {
     std::wstring name;
@@ -267,6 +274,32 @@ std::wstring FormatLastError(DWORD error) {
     return message;
 }
 
+std::wstring FormatHResult(HRESULT hr) {
+    wchar_t code[32]{};
+    swprintf_s(code, L"0x%08lX", static_cast<unsigned long>(hr));
+
+    wchar_t* buffer = nullptr;
+    const DWORD length = FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        static_cast<DWORD>(hr),
+        0,
+        reinterpret_cast<LPWSTR>(&buffer),
+        0,
+        nullptr);
+
+    if (length == 0 || buffer == nullptr) {
+        return std::wstring(code);
+    }
+
+    std::wstring message(buffer, length);
+    LocalFree(buffer);
+    while (!message.empty() && (message.back() == L'\r' || message.back() == L'\n' || message.back() == L' ')) {
+        message.pop_back();
+    }
+    return std::wstring(code) + L" (" + message + L")";
+}
+
 std::wstring SafeLogValue(const std::wstring& value) {
     if (value.empty()) {
         return L"(missing)";
@@ -341,6 +374,20 @@ std::wstring GetAppRoot() {
         }
         if (length < buffer.size() - 1) {
             return DirectoryName(std::wstring(buffer.data(), length));
+        }
+        buffer.resize(buffer.size() * 2);
+    }
+}
+
+std::wstring GetLauncherExecutablePath() {
+    std::vector<wchar_t> buffer(MAX_PATH);
+    while (true) {
+        const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+        if (length == 0) {
+            return L"";
+        }
+        if (length < buffer.size() - 1) {
+            return std::wstring(buffer.data(), length);
         }
         buffer.resize(buffer.size() * 2);
     }
@@ -965,6 +1012,84 @@ HWND FindExistingTeleVaultWindow(bool logDetails) {
     return context.found;
 }
 
+bool SetTaskbarIdentityString(IPropertyStore* propertyStore, const PROPERTYKEY& key, const wchar_t* label, const std::wstring& value) {
+    PROPVARIANT propertyValue;
+    PropVariantInit(&propertyValue);
+
+    const HRESULT initResult = InitPropVariantFromString(value.c_str(), &propertyValue);
+    if (FAILED(initResult)) {
+        Log(L"taskbar identity property init failed: " + std::wstring(label) + L" -> " + FormatHResult(initResult));
+        return false;
+    }
+
+    const HRESULT setResult = propertyStore->SetValue(key, propertyValue);
+    PropVariantClear(&propertyValue);
+    if (FAILED(setResult)) {
+        Log(L"taskbar identity property set failed: " + std::wstring(label) + L" -> " + FormatHResult(setResult));
+        return false;
+    }
+
+    Log(L"taskbar identity property set: " + std::wstring(label));
+    return true;
+}
+
+void TryApplyTaskbarIdentity(HWND window) {
+    if (!window || g_taskbarIdentityAttempted) {
+        return;
+    }
+    g_taskbarIdentityAttempted = true;
+
+    wchar_t handleText[32]{};
+    swprintf_s(handleText, L"0x%p", window);
+    Log(L"taskbar identity applying: hwnd=" + std::wstring(handleText)
+        + L", app_user_model_id=" + std::wstring(kAppUserModelId));
+
+    IPropertyStore* propertyStore = nullptr;
+    const HRESULT storeResult = SHGetPropertyStoreForWindow(window, IID_PPV_ARGS(&propertyStore));
+    if (FAILED(storeResult) || propertyStore == nullptr) {
+        Log(L"taskbar identity property store failed: " + FormatHResult(storeResult));
+        return;
+    }
+    Log(L"taskbar identity property store opened");
+
+    const std::wstring launcherPath = GetLauncherExecutablePath();
+    if (launcherPath.empty()) {
+        Log(L"taskbar identity skipped: launcher exe path is unavailable");
+        propertyStore->Release();
+        return;
+    }
+
+    const std::wstring relaunchCommand = QuoteArgument(launcherPath);
+    const std::wstring relaunchIcon = launcherPath + L",0";
+    bool allPropertiesSet = true;
+    allPropertiesSet = SetTaskbarIdentityString(
+        propertyStore,
+        PKEY_AppUserModel_ID,
+        L"AppUserModelID",
+        kAppUserModelId) && allPropertiesSet;
+    allPropertiesSet = SetTaskbarIdentityString(
+        propertyStore,
+        PKEY_AppUserModel_RelaunchCommand,
+        L"RelaunchCommand",
+        relaunchCommand) && allPropertiesSet;
+    allPropertiesSet = SetTaskbarIdentityString(
+        propertyStore,
+        PKEY_AppUserModel_RelaunchIconResource,
+        L"RelaunchIconResource",
+        relaunchIcon) && allPropertiesSet;
+
+    const HRESULT commitResult = propertyStore->Commit();
+    propertyStore->Release();
+    if (FAILED(commitResult)) {
+        Log(L"taskbar identity commit failed: " + FormatHResult(commitResult));
+        return;
+    }
+
+    Log(allPropertiesSet
+        ? L"taskbar identity applied"
+        : L"taskbar identity commit completed with property failures");
+}
+
 bool TryFocusExistingWindow() {
     HWND window = FindExistingTeleVaultWindow(true);
     if (!window) {
@@ -972,6 +1097,7 @@ bool TryFocusExistingWindow() {
         return false;
     }
 
+    TryApplyTaskbarIdentity(window);
     ShowWindow(window, SW_RESTORE);
     const BOOL foreground = SetForegroundWindow(window);
     Log(std::wstring(L"window focused: existing TeleVault app window")
@@ -1027,12 +1153,10 @@ HWND WaitForTeleVaultWindow(int timeoutMs) {
     return nullptr;
 }
 
-void TryApplyWindowState(const LauncherWindowState* windowState) {
+void TryApplyWindowStateToWindow(HWND window, const LauncherWindowState* windowState) {
     if (!windowState) {
         return;
     }
-
-    HWND window = WaitForTeleVaultWindow(kWindowOpenWaitTimeoutMs);
     if (!window) {
         Log(L"window state not applied because the app window was not found");
         return;
@@ -1046,6 +1170,20 @@ void TryApplyWindowState(const LauncherWindowState* windowState) {
         ShowWindow(window, SW_SHOWMAXIMIZED);
         Log(L"maximized window state restored");
     }
+}
+
+void TryApplyOpenedWindowProperties(const LauncherWindowState* windowState) {
+    HWND window = WaitForTeleVaultWindow(kWindowOpenWaitTimeoutMs);
+    if (!window) {
+        Log(L"browser app window not found after open; taskbar identity not applied");
+        if (windowState) {
+            Log(L"window state not applied because the app window was not found");
+        }
+        return;
+    }
+
+    TryApplyTaskbarIdentity(window);
+    TryApplyWindowStateToWindow(window, windowState);
 }
 
 std::wstring GetEnvironmentValue(const std::wstring& name) {
@@ -1132,7 +1270,7 @@ bool StartAppModeBrowser(const std::wstring& browserPath, const std::wstring& ur
     CloseHandle(process.hThread);
     CloseHandle(process.hProcess);
     Log(L"browser app-mode opened: " + browserName);
-    TryApplyWindowState(windowState);
+    TryApplyOpenedWindowProperties(windowState);
     return true;
 }
 
@@ -1261,6 +1399,7 @@ int MonitorStartedProcess(HANDLE processHandle) {
             }
             sawWindow = true;
             missingWindowSince = 0;
+            TryApplyTaskbarIdentity(window);
 
             LauncherWindowState currentState;
             if (TryCaptureWindowState(window, &currentState)) {

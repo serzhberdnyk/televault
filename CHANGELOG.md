@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.30
+
+### Changed
+
+* Added a native launcher prototype that tries to assign TeleVault taskbar identity to the opened Edge/Chrome app-mode window through Windows Shell AppUserModelID relaunch properties.
+* The launcher now logs taskbar identity property-store success or failure without blocking startup when Windows or the browser ignores the properties.
+* Kept the existing `--app=http://127.0.0.1:8766/` browser app-mode launch and default browser fallback.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.30.
+* WebView2, Electron, backend, parser, library storage, media endpoint/security, search, service notices, replies/edited, text entities, audio metadata, special content fallbacks and release/package publishing were not intentionally changed.
+
 ## 2.9.29
 
 ### Changed

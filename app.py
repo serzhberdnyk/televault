@@ -22,7 +22,7 @@ if str(APP_DIR) not in sys.path:
 from backend.library import ExportLibrary
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.29"
+APP_VERSION = "2.9.30"
 NO_AUTO_BROWSER_ENV = "TELEVAULT_NO_AUTO_BROWSER"
 PORT = 8766
 ROOT = Path(__file__).parent.resolve()
