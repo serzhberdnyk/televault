@@ -10,6 +10,7 @@
 * Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.38.
 * Synced portable package version and launcher `kAppVersion` to 2.9.38 for release preparation.
 * Removed `docs/screenshots/*.png` from the portable package allowlist so screenshots are not included in the portable zip.
+* Portable package builds now write a package-safe `README.md` copy with `docs/screenshots/*.png` markdown image links removed while leaving the public repository README unchanged.
 * Backend parser/library storage, import/export logic, media endpoint/security, search logic, UI, README, tracked screenshots and release/package artifacts were not intentionally changed.
 
 ## 2.9.37

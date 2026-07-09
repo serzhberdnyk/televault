@@ -67,6 +67,8 @@ SKIP_FILE_SUFFIXES = {
     ".bak",
 }
 
+PACKAGE_README_SCREENSHOT_LINK = "](docs/screenshots/"
+
 
 def relative(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
@@ -97,9 +99,32 @@ def should_skip_file(path: Path) -> bool:
 def copy_file(source: Path, destination: Path) -> None:
     if should_skip_file(source):
         return
+    if source == ROOT / "README.md":
+        copy_package_readme(source, destination)
+        return
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
     print(f"copied file: {relative(source)}")
+
+
+def copy_package_readme(source: Path, destination: Path) -> None:
+    text = source.read_text(encoding="utf-8")
+    lines: list[str] = []
+    removed = 0
+    for line in text.splitlines(keepends=True):
+        normalized_line = line.replace("\\", "/")
+        if normalized_line.lstrip().startswith("![") and PACKAGE_README_SCREENSHOT_LINK in normalized_line:
+            removed += 1
+            continue
+        lines.append(line)
+
+    if removed == 0:
+        raise RuntimeError("package README copy did not find screenshot links to remove")
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text("".join(lines), encoding="utf-8")
+    shutil.copystat(source, destination)
+    print(f"copied package-safe README.md: removed {removed} screenshot links")
 
 
 def copy_tree(source: Path, destination: Path) -> int:

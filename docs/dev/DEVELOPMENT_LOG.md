@@ -47,6 +47,7 @@ Changed:
 - updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.38
 - synced portable package version and launcher `kAppVersion` to 2.9.38 for release preparation
 - removed `docs/screenshots/*.png` from the portable package allowlist so screenshots are not included in the portable zip
+- updated portable packaging to write a package-safe `README.md` copy with `docs/screenshots/*.png` markdown image links removed while leaving the public repository README unchanged
 - did not change backend parser/library storage, import/export logic, media endpoint/security, `lastVaultPath` behavior, UI, README, tracked screenshots or release/package artifacts
 
 Manual test:
@@ -55,6 +56,7 @@ Manual test:
 - run `git diff --check`
 - confirm active package/build/launcher versions are 2.9.38
 - confirm `tools\build_portable.py` no longer allowlists `docs\screenshots\*.png`
+- confirm `dist\TeleVault-v2.9.38.zip` contains `README.md` without `docs/screenshots` references and still excludes `docs/screenshots\*.png`
 - launch with `run_windows.bat` and confirm `/api/status` returns 2.9.38
 - open a valid Telegram Desktop export and confirm chats open normally
 - choose a too-broad folder and confirm the central error says `папка слишком общая`
