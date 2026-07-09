@@ -980,6 +980,7 @@ function renderVaultWelcome(options = {}) {
   $('filters').hidden = true;
   updateChatFilterControls();
   const emptyState = $('emptyState');
+  emptyState.classList.toggle('welcome--choose-chat', hasLoadedConversations);
   const title = emptyState.querySelector('.welcome-brand h3');
   const lead = emptyState.querySelector('.welcome-lead');
   const body = emptyState.querySelector('.welcome-lockup > p:not(.welcome-lead):not(.welcome-note)');

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.34
+
+### Changed
+
+* Added a compact choose-chat welcome variant for the state where an export is already open but no conversation is selected.
+* Removed the central TeleVault icon and small `TeleVault` eyebrow from the choose-chat card while keeping the useful title/body copy.
+* Kept the branded icon in the initial welcome/loading states and in the sidebar brand block.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.34.
+* Backend, parser, library storage, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks and release/package artifacts were not intentionally changed.
+
 ## 2.9.33
 
 ### Changed

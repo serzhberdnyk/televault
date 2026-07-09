@@ -38,6 +38,26 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.34 - simplify choose-chat empty state
+
+Changed:
+- added a compact `welcome--choose-chat` variant when an export is open and conversations are available but no chat is selected
+- hid the central TeleVault icon and small `TeleVault` eyebrow only in that choose-chat state
+- kept the initial welcome/loading states branded with the TeleVault icon
+- kept the sidebar brand icon and layout unchanged
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.34
+- did not change backend, parser, library storage, media endpoint/security, search, service notices, replies/entities/audio metadata, special content fallbacks, README or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- launch with `run_windows.bat` and confirm `/api/status` returns 2.9.34
+- open an export without selecting a chat and confirm the central "выберите переписку" card has no TeleVault icon or small `TeleVault` eyebrow
+- confirm the sidebar brand icon remains visible and the add-export button, search and chat list layout did not shift
+- confirm the initial welcome/loading state still shows the TeleVault icon
+- do not tag, push or build a release/package
+
 ## 2.9.33 - welcome icon
 
 Changed:

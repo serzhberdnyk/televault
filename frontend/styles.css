@@ -2178,6 +2178,20 @@ code {
   margin-bottom: 4px;
 }
 
+.welcome--choose-chat .welcome-lockup {
+  gap: 10px;
+  padding: 24px 26px;
+}
+
+.welcome--choose-chat .welcome-brand {
+  display: block;
+}
+
+.welcome--choose-chat .welcome-logo,
+.welcome--choose-chat .welcome-eyebrow {
+  display: none;
+}
+
 .welcome h3 {
   font-size: 22px;
   font-weight: 700;
