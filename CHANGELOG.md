@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.31
+
+### Changed
+
+* Polished launcher repeat-start behavior by logging existing-backend reuse before focusing the already-open Edge/Chrome app-mode window.
+* The existing-window focus path now restores, raises and requests foreground focus with concise per-step diagnostics.
+* Closing the app window now logs owned-backend shutdown confirmation, timeout or termination errors more clearly.
+* Taskbar identity remains non-critical: property-store, property-write or commit failures are logged briefly while startup continues.
+* Reduced normal launcher log path noise by keeping routine app-root and window-state entries to safe short values.
+* Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and project logs to 2.9.31.
+* WebView2, Electron, backend, parser, library storage, media endpoint/security, frontend behavior, search and release/package publishing were not intentionally changed.
+
 ## 2.9.30
 
 ### Changed

@@ -41,7 +41,7 @@
 namespace {
 
 constexpr wchar_t kAppName[] = L"TeleVault";
-constexpr wchar_t kAppVersion[] = L"2.9.30";
+constexpr wchar_t kAppVersion[] = L"2.9.31";
 constexpr wchar_t kAppUserModelId[] = L"TeleVault.TeleVault";
 constexpr wchar_t kNoAutoBrowserEnv[] = L"TELEVAULT_NO_AUTO_BROWSER";
 constexpr wchar_t kWindowStateDirectoryName[] = L"user_data";
@@ -310,6 +310,14 @@ std::wstring SafeLogValue(const std::wstring& value) {
     return result;
 }
 
+const wchar_t* BoolText(bool value) {
+    return value ? L"true" : L"false";
+}
+
+std::wstring WindowStateLogPath() {
+    return std::wstring(kWindowStateDirectoryName) + L"\\" + kWindowStateFileName;
+}
+
 void Log(const std::wstring& message) {
     if (g_logPath.empty()) {
         return;
@@ -413,7 +421,7 @@ void InitializeLogging(const std::wstring& appRoot) {
 
 void InitializeWindowState(const std::wstring& appRoot) {
     g_windowStatePath = JoinPath(JoinPath(appRoot, kWindowStateDirectoryName), kWindowStateFileName);
-    Log(L"window state initialized: " + g_windowStatePath);
+    Log(L"window state initialized: " + WindowStateLogPath());
 }
 
 std::wstring QuoteArgument(const std::wstring& value) {
@@ -840,7 +848,7 @@ std::wstring FormatWindowState(const LauncherWindowState& state) {
 }
 
 bool LoadWindowState(LauncherWindowState* state) {
-    Log(L"window state path: " + SafeLogValue(g_windowStatePath));
+    Log(L"window state path: " + WindowStateLogPath());
     if (g_windowStatePath.empty() || !FileExists(g_windowStatePath)) {
         Log(L"window state file missing");
         return false;
@@ -1018,18 +1026,17 @@ bool SetTaskbarIdentityString(IPropertyStore* propertyStore, const PROPERTYKEY& 
 
     const HRESULT initResult = InitPropVariantFromString(value.c_str(), &propertyValue);
     if (FAILED(initResult)) {
-        Log(L"taskbar identity property init failed: " + std::wstring(label) + L" -> " + FormatHResult(initResult));
+        Log(L"taskbar identity property failed: " + std::wstring(label) + L" init, " + FormatHResult(initResult));
         return false;
     }
 
     const HRESULT setResult = propertyStore->SetValue(key, propertyValue);
     PropVariantClear(&propertyValue);
     if (FAILED(setResult)) {
-        Log(L"taskbar identity property set failed: " + std::wstring(label) + L" -> " + FormatHResult(setResult));
+        Log(L"taskbar identity property failed: " + std::wstring(label) + L" set, " + FormatHResult(setResult));
         return false;
     }
 
-    Log(L"taskbar identity property set: " + std::wstring(label));
     return true;
 }
 
@@ -1047,10 +1054,9 @@ void TryApplyTaskbarIdentity(HWND window) {
     IPropertyStore* propertyStore = nullptr;
     const HRESULT storeResult = SHGetPropertyStoreForWindow(window, IID_PPV_ARGS(&propertyStore));
     if (FAILED(storeResult) || propertyStore == nullptr) {
-        Log(L"taskbar identity property store failed: " + FormatHResult(storeResult));
+        Log(L"taskbar identity skipped: property store unavailable, " + FormatHResult(storeResult));
         return;
     }
-    Log(L"taskbar identity property store opened");
 
     const std::wstring launcherPath = GetLauncherExecutablePath();
     if (launcherPath.empty()) {
@@ -1081,13 +1087,13 @@ void TryApplyTaskbarIdentity(HWND window) {
     const HRESULT commitResult = propertyStore->Commit();
     propertyStore->Release();
     if (FAILED(commitResult)) {
-        Log(L"taskbar identity commit failed: " + FormatHResult(commitResult));
+        Log(L"taskbar identity skipped: commit failed, " + FormatHResult(commitResult));
         return;
     }
 
     Log(allPropertiesSet
-        ? L"taskbar identity applied"
-        : L"taskbar identity commit completed with property failures");
+        ? L"taskbar identity applied: AppUserModelID, RelaunchCommand, RelaunchIconResource"
+        : L"taskbar identity incomplete: commit completed after property failures");
 }
 
 bool TryFocusExistingWindow() {
@@ -1098,10 +1104,23 @@ bool TryFocusExistingWindow() {
     }
 
     TryApplyTaskbarIdentity(window);
-    ShowWindow(window, SW_RESTORE);
+    const bool wasMinimized = IsIconic(window) != FALSE;
+    ShowWindow(window, wasMinimized ? SW_RESTORE : SW_SHOW);
+    const BOOL raised = SetWindowPos(
+        window,
+        HWND_TOP,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    const BOOL broughtToTop = BringWindowToTop(window);
     const BOOL foreground = SetForegroundWindow(window);
-    Log(std::wstring(L"window focused: existing TeleVault app window")
-        + (foreground ? L"" : L" (foreground request returned false)"));
+    Log(L"window focus requested: existing TeleVault app window"
+        + std::wstring(L", was_minimized=") + BoolText(wasMinimized)
+        + L", raised=" + BoolText(raised != FALSE)
+        + L", bring_to_top=" + BoolText(broughtToTop != FALSE)
+        + L", foreground=" + BoolText(foreground != FALSE));
     return true;
 }
 
@@ -1362,15 +1381,30 @@ void StopStartedProcessAfterWindowClosed(HANDLE processHandle) {
     if (!processHandle) {
         return;
     }
-    if (WaitForSingleObject(processHandle, 0) == WAIT_TIMEOUT) {
-        Log(L"stopping owned python process after app window close");
-        TerminateProcess(processHandle, 0);
-        WaitForSingleObject(processHandle, 3000);
+    const DWORD initialWait = WaitForSingleObject(processHandle, 0);
+    if (initialWait == WAIT_TIMEOUT) {
+        Log(L"stopping owned backend process after app window close");
+        if (!TerminateProcess(processHandle, 0)) {
+            Log(L"owned backend process terminate failed: " + FormatLastError(GetLastError()));
+        } else {
+            const DWORD stopWait = WaitForSingleObject(processHandle, 3000);
+            if (stopWait == WAIT_OBJECT_0) {
+                Log(L"owned backend process stop confirmed");
+            } else if (stopWait == WAIT_TIMEOUT) {
+                Log(L"owned backend process stop wait timed out");
+            } else {
+                Log(L"owned backend process stop wait failed: " + std::to_wstring(stopWait));
+            }
+        }
+    } else if (initialWait == WAIT_OBJECT_0) {
+        Log(L"owned backend process already exited before app window close shutdown");
+    } else {
+        Log(L"owned backend process state check failed: " + std::to_wstring(initialWait));
     }
 
     DWORD exitCode = 0;
     if (GetExitCodeProcess(processHandle, &exitCode)) {
-        Log(L"owned python process exited with code " + std::to_wstring(exitCode));
+        Log(L"owned backend process exit code " + std::to_wstring(exitCode));
     }
 }
 
@@ -1584,8 +1618,6 @@ bool StartPythonBackend(const std::wstring& appRoot, const RuntimeSelection& run
     startup.cb = sizeof(startup);
 
     SetEnvironmentVariableW(kNoAutoBrowserEnv, L"1");
-    Log(L"selected runtime path: " + runtime.relativePath);
-    Log(runtime.exists ? L"selected pythonw.exe: found" : L"selected pythonw.exe: missing");
     Log(L"launch command: " + runtime.relativePath + L" app.py");
     Log(L"new backend start");
     Log(L"starting pythonw process");
@@ -1621,7 +1653,7 @@ int RunLauncher() {
     Log(L"launcher start");
     Log(L"launcher version: " + std::wstring(kAppVersion));
     Log(L"detected architecture: " + GetArchitectureText());
-    Log(L"app root: " + appRoot);
+    Log(L"app root folder: " + SafeLogValue(FileName(appRoot)));
     const std::wstring currentAppRootId = BuildAppRootId(appRoot);
     Log(L"app root id: " + currentAppRootId);
 
@@ -1634,6 +1666,7 @@ int RunLauncher() {
     const ExistingInstanceResult existingInstance = CheckExistingInstance(currentAppRootId);
     if (existingInstance.state == ExistingInstanceState::CurrentVersionTeleVaultRunning) {
         Log(L"existing instance check: current TeleVault version already running");
+        Log(L"existing backend reused; no new backend start");
         if (TryFocusExistingWindow()) {
             Log(L"launcher finished: existing window focused");
             return 0;

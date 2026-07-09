@@ -38,6 +38,28 @@ After every future patch:
 - update DEVELOPMENT_LOG.md
 - write what changed and what to test manually
 
+## 2.9.31 - polish taskbar identity behavior
+
+Changed:
+- kept the launcher on the existing Python backend plus Edge/Chrome app-mode architecture; did not add WebView2, Electron, shortcuts, registry writes or browser profile hacks
+- made repeat launches log existing-backend reuse before focusing the already-open TeleVault app window, so diagnostics show that no second backend is started
+- refined existing-window focus to restore, raise and request foreground focus, with concise `launcher.log` results for each step
+- made owned-backend shutdown after app-window close log terminate success, wait timeout/failure and final exit code more clearly
+- kept taskbar identity non-critical: property-store, property-write and commit failures stay as short diagnostics while the app continues opening
+- reduced routine launcher log path noise by logging the app root folder name and `user_data\launcher_window.json` instead of full local paths in normal startup/window-state entries
+- updated APP_VERSION, frontend version placeholder, run_windows.bat startup text, portable package version, launcher `kAppVersion` and CHANGELOG.md to 2.9.31
+- did not change backend, parser, library storage, media endpoint/security, frontend behavior, search, README or release/package publishing
+
+Manual test:
+- run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
+- run `node --check frontend\app.js`
+- run `git diff --check`
+- rebuild the launcher with `runtime\python\python.exe tools\build_exe_launcher.py`
+- launch the generated `TeleVault.exe`, confirm `/api/status` returns 2.9.31 and inspect `launcher.log` for concise taskbar identity diagnostics
+- launch `TeleVault.exe` again while TeleVault is open and confirm it reuses the existing backend, focuses/raises the existing window and keeps the TeleVault taskbar/start icon
+- close the app window and confirm the owned backend and launcher process exit
+- do not tag, push or publish a release/package
+
 ## 2.9.30 - prototype taskbar identity
 
 Changed:
