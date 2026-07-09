@@ -5,20 +5,13 @@ import shutil
 
 
 APP_NAME = "TeleVault"
-APP_VERSION = "2.9.37"
+APP_VERSION = "2.9.38"
 PACKAGE_NAME = f"{APP_NAME}-v{APP_VERSION}"
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST_ROOT = ROOT / "dist"
 PACKAGE_ROOT = DIST_ROOT / PACKAGE_NAME
 ZIP_PATH = DIST_ROOT / f"{PACKAGE_NAME}.zip"
-
-PUBLIC_SCREENSHOT_FILES = [
-    "docs/screenshots/01-library.png",
-    "docs/screenshots/02-chat-reading.png",
-    "docs/screenshots/03-media-viewer.png",
-    "docs/screenshots/04-media-in-library.png",
-]
 
 ALLOWLIST_FILES = [
     "app.py",
@@ -29,7 +22,7 @@ ALLOWLIST_FILES = [
     "docs/release/RELEASE_CHECKLIST.md",
     "docs/dev/EXE_PACKAGING_PLAN.md",
     "docs/dev/DEVELOPMENT_LOG.md",
-] + PUBLIC_SCREENSHOT_FILES
+]
 
 ALLOWLIST_DIRS = [
     "assets",

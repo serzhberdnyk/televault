@@ -8,7 +8,9 @@
 * The new message does not expose local paths and keeps the existing `выбрать другую папку` recovery action.
 * Failed manual loads still clear stale visible chats and do not save the invalid folder as `lastVaultPath`.
 * Updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and project logs to 2.9.38.
-* Backend parser/library storage, import/export logic, media endpoint/security, search logic, launcher/build scripts, release/package artifacts and README were not intentionally changed.
+* Synced portable package version and launcher `kAppVersion` to 2.9.38 for release preparation.
+* Removed `docs/screenshots/*.png` from the portable package allowlist so screenshots are not included in the portable zip.
+* Backend parser/library storage, import/export logic, media endpoint/security, search logic, UI, README, tracked screenshots and release/package artifacts were not intentionally changed.
 
 ## 2.9.37
 

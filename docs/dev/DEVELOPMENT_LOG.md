@@ -45,19 +45,23 @@ Changed:
 - the central import error now says `папка слишком общая` and asks the user to choose a concrete Telegram Desktop export folder or a nearby folder containing exports
 - kept the existing `выбрать другую папку` action, local-path redaction and failed-load archive reset behavior
 - updated APP_VERSION, frontend version placeholder, run_windows.bat startup text and CHANGELOG.md to 2.9.38
-- did not change backend parser/library storage, import/export logic, media endpoint/security, `lastVaultPath` behavior, tools launcher/build scripts, README, screenshots or release/package artifacts
+- synced portable package version and launcher `kAppVersion` to 2.9.38 for release preparation
+- removed `docs/screenshots/*.png` from the portable package allowlist so screenshots are not included in the portable zip
+- did not change backend parser/library storage, import/export logic, media endpoint/security, `lastVaultPath` behavior, UI, README, tracked screenshots or release/package artifacts
 
 Manual test:
 - run `runtime\python\python.exe -m py_compile app.py backend\parser.py backend\library.py tools\build_exe_launcher.py tools\build_portable.py`
 - run `node --check frontend\app.js`
 - run `git diff --check`
+- confirm active package/build/launcher versions are 2.9.38
+- confirm `tools\build_portable.py` no longer allowlists `docs\screenshots\*.png`
 - launch with `run_windows.bat` and confirm `/api/status` returns 2.9.38
 - open a valid Telegram Desktop export and confirm chats open normally
 - choose a too-broad folder and confirm the central error says `папка слишком общая`
 - confirm the too-broad error does not show a full local path, username, email, phone or debug details
 - confirm old chats are no longer visible after the error
 - use `выбрать другую папку` from the error card and open a valid export
-- confirm wrong-folder and corrupted/unreadable `result.json` messages from 2.9.37 still use their existing copy
+- confirm wrong-folder and corrupted/unreadable `result.json` messages still use their existing copy
 
 ## 2.9.37 - prominent invalid export folder error
 
